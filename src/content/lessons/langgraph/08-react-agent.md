@@ -1,7 +1,7 @@
 ---
 id: lg-react
 track: langgraph
-order: 6
+order: 8
 title: "Boss: Build an Agent From Scratch"
 tagline: The ReAct loop (reason, act, observe) in about 25 lines.
 kind: boss

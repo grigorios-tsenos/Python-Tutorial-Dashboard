@@ -1,7 +1,7 @@
 ---
 id: db-incremental-events
 track: databricks
-order: 5
+order: 6
 title: Make an Event Batch Safe to Replay
 tagline: Retries should add new events once and preserve the events already stored.
 kind: build

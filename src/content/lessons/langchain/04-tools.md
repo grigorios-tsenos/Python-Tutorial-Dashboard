@@ -1,7 +1,7 @@
 ---
 id: lc-tools
 track: langchain
-order: 3
+order: 4
 title: Give the Model Hands
 tagline: A tool is a function plus a description the model can read.
 kind: build

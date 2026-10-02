@@ -1,7 +1,7 @@
 ---
 id: pd-features
 track: pandas
-order: 6
+order: 8
 title: "Boss: Feature Factory"
 tagline: Turn a raw event log into the table a model can learn from.
 kind: boss

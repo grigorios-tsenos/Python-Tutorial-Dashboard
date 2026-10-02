@@ -137,7 +137,7 @@ try {
   await page.waitForTimeout(800)
   await page.screenshot({ path: `${shots}/03-pandas.png` })
   assert.deepEqual(errors, [], 'no page errors')
-  console.log('✓ All 48 mobile layouts fit; no page errors')
+  console.log(`✓ All ${ids.length} mobile layouts fit; no page errors`)
 } catch (error) {
   if (page) {
     console.log('Failed page:', page.url(), 'solution cards:', await page.locator('.hint-card.solution').count(), 'walkthrough code:', await page.locator('.lesson-pane > .lab code').count())

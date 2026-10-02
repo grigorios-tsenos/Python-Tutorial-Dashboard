@@ -1,7 +1,7 @@
 ---
 id: lg-memory
 track: langgraph
-order: 5
+order: 6
 title: Remember the Conversation
 tagline: Append new turns without mixing up different people.
 kind: build

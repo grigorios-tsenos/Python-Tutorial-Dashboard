@@ -1,7 +1,7 @@
 ---
 id: ml-registry
 track: mlflow
-order: 3
+order: 4
 title: "Puzzle: From Run to Champion"
 tagline: Log a model, register it, crown it with an alias.
 kind: parsons

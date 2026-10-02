@@ -19,14 +19,14 @@ First load downloads the Python runtime (~15 MB from the jsDelivr CDN); the brow
 
 ## What's inside
 
-**Map** of 8 constellations / 48 stars (pan, zoom, ⌘K): NumPy · Pandas · Python for AI · LangChain · LangGraph · MLflow · Databricks · Claude Code. Each has six exercises and ends with a boss.
+**Map** of 8 constellations / 64 stars (pan, zoom, ⌘K): NumPy · Pandas · Python for AI · LangChain · LangGraph · MLflow · Databricks · Claude Code. Each has eight exercises that build like a real project (e.g. impute → standardize → classify → search in NumPy, or chunk → pack → retrieve in LangChain) and ends with a boss.
 
 **Lesson kinds:** Run & Tweak · Visual Lab · Predict the output · Bug Hunt · Parsons puzzle · Build (auto-graded) · Boss.
-**Visual walkthroughs:** all 48 lessons explain their purpose with animated teaching examples, Play/Back/Next controls and a check-your-reasoning prompt. Walkthrough code appears only after explicitly revealing the solution.
+**Visual walkthroughs:** all 64 lessons explain their purpose with animated teaching examples, Play/Back/Next controls and a check-your-reasoning prompt. Walkthrough code appears only after explicitly revealing the solution.
 **Visual labs:** NumPy broadcasting, LangGraph step-through trace, MLflow run table + model registry.
 
 **Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, 13 achievements, stats page (skill radar, activity heatmap), command palette, light/dark theme, reduced-motion.
-**Difficulty:** Guided → Practice → Challenge → Advanced → Expert → Boss in each section. Later exercises use unfamiliar inputs and edge cases; the difficulty path shows your current step and completed exercises.
+**Difficulty:** Guided → Practice → Challenge → Applied → Advanced → Production → Expert → Boss in each section. Later exercises use unfamiliar inputs and edge cases; the difficulty path shows your current step and completed exercises.
 **Editor:** CodeMirror 6 with **Vim mode** (`:w` runs, `:q` returns to the map, cheat sheet), ⌘/Ctrl+Enter to run.
 **Your data:** IndexedDB, versioned and validated; export/import JSON in Settings.
 

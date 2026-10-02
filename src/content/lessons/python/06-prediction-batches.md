@@ -1,7 +1,7 @@
 ---
 id: py-prediction-batches
 track: python
-order: 5
+order: 6
 title: Validate a Batch without Losing Good Results
 tagline: One malformed model reply should not erase every valid prediction beside it.
 kind: build

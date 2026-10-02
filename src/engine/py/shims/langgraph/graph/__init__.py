@@ -208,6 +208,13 @@ class CompiledStateGraph:
                 if not isinstance(res, dict):
                     raise InvalidUpdateError(f"Expected dict, got {res!r} for node '{node}'. Nodes must return a dict of state updates.")
                 updates.append((node, res))
+            writers = {}
+            for node, upd in updates:
+                for key in upd:
+                    writers.setdefault(key, []).append(node)
+            for key, nodes in writers.items():
+                if len(nodes) > 1 and self.reducers.get(key) is None:
+                    raise InvalidUpdateError(f"At key '{key}': Can receive only one value per step. Use an Annotated key to handle multiple values. (written by {', '.join(nodes)} in the same step)")
             nxt = []
             for node, upd in updates:
                 self._apply(state, upd)

@@ -10,13 +10,14 @@ describe('curriculum shape', () => {
   it('has unique ids and every track is populated', () => {
     const ids = LESSONS.map((l) => l.id)
     expect(new Set(ids).size).toBe(ids.length)
-    for (const t of TRACKS) expect(LESSONS.filter((l) => l.track === t.id).length, t.id).toBe(6)
+    for (const t of TRACKS) expect(LESSONS.filter((l) => l.track === t.id).length, t.id).toBe(8)
   })
   it('every track ends with a boss and has sequential order', () => {
     for (const t of TRACKS) {
       const ls = LESSONS.filter((l) => l.track === t.id)
-      expect(ls.map((l) => l.order)).toEqual([1, 2, 3, 4, 5, 6])
-      expect(ls[5].kind).toBe('boss')
+      expect(ls.map((l) => l.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+      expect(ls[7].kind).toBe('boss')
+      expect(ls.slice(0, -1).every((l) => l.kind !== 'boss')).toBe(true)
     }
   })
   it.each(LESSONS.map((l) => [l.id, l] as const))('%s is well-formed', (_id, l) => {

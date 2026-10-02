@@ -59,8 +59,8 @@ class Row(tuple):
         return "<Row(" + ", ".join(repr(v) for v in self) + ")>"
 
 
-def _sql_run(frames, query):
-    """Run `query` over pandas frames using sqlite as a stand-in SQL engine."""
+def _sql_run(frames, query, params=None):
+    """Run `query` over pandas frames using sqlite as a stand-in SQL engine (`:name` markers bind `params`)."""
     conn = sqlite3.connect(":memory:")
     try:
         names = sorted(frames, key=len, reverse=True)
@@ -70,7 +70,7 @@ def _sql_run(frames, query):
             if "." in n:
                 query = re.sub(r"(?<![\w.])" + re.escape(n) + r"(?![\w.])", n.replace(".", "__").replace("-", "_"), query)
         try:
-            return pd.read_sql_query(query, conn)
+            return pd.read_sql_query(query, conn, params=params)
         except Exception as e:  # noqa: BLE001
             raise AnalysisException(f"[SQL_ERROR] {e}. Query: {query.strip()[:120]}") from None
     finally:
@@ -538,7 +538,9 @@ class SparkSession:
     def table(self, name):
         return self.read.table(name)
 
-    def sql(self, query):
+    def sql(self, query, args=None, **kwargs):
+        if args is not None and not isinstance(args, dict):
+            raise NotImplementedError("Orbit's mini Spark SQL supports named parameter markers only: spark.sql('... WHERE x = :x', args={'x': 1}).")
         q = query.strip().rstrip(";")
         m = re.match(r"^DESCRIBE\s+HISTORY\s+(\S+)$", q, re.I)
         if m:
@@ -559,7 +561,7 @@ class SparkSession:
         used = {n: p for n, p in frames.items() if re.search(r"(?<![\w.])" + re.escape(n) + r"(?![\w.])", q)}
         if not used and re.match(r"^(select|with)\b", q, re.I) is None:
             raise AnalysisException(f"[PARSE_SYNTAX_ERROR] Unsupported statement in Orbit's mini Spark SQL: {q[:60]}")
-        return DataFrame(_sql_run(used, q))
+        return DataFrame(_sql_run(used, q, args or None))
 
     def stop(self):
         pass

@@ -1,7 +1,7 @@
 ---
 id: ml-eval
 track: mlflow
-order: 6
+order: 8
 title: "Boss: The Prompt Bake-Off"
 tagline: Stop guessing which prompt is better. Measure it.
 kind: boss

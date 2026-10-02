@@ -1,7 +1,7 @@
 ---
 id: lc-context-budget
 track: langchain
-order: 5
+order: 7
 title: Pack the Context Window
 tagline: Keep useful passages without cutting a sentence in half.
 kind: build

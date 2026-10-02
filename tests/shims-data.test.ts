@@ -69,4 +69,30 @@ print(df.filter((F.col("id") > 1) & (F.col("tag") != "a")).count())
     expect(r.error).toBeNull()
     expect(r.stdout).toBe('1\n1\n')
   })
+  it('AND/OR follow three-valued logic, isin keeps NULL, try_cast nulls bad text', async () => {
+    const r = await run(`
+from pyspark.sql import SparkSession
+import pyspark.sql.functions as F
+spark = SparkSession.builder.getOrCreate()
+df = spark.createDataFrame([(1, None, "2.5"), (2, "b", "n/a"), (3, "c", None)], "id int, tag string, amount string")
+print([r["v"] for r in df.select((F.col("tag").isNull() | (F.col("tag") == "x")).alias("v")).collect()])
+print([r["v"] for r in df.select((F.col("tag").isNotNull() & (F.col("tag") == "x")).alias("v")).collect()])
+print([r["v"] for r in df.select(F.col("tag").isin(["b"]).alias("v")).collect()])
+print(df.filter(~F.col("tag").isin(["b"])).count())
+print([r["v"] for r in df.select(F.col("amount").try_cast("double").alias("v")).collect()])
+`)
+    expect(r.error).toBeNull()
+    expect(r.stdout).toBe('[True, False, False]\n[False, False, False]\n[None, True, False]\n1\n[2.5, None, None]\n')
+  })
+  it('spark.sql binds named parameters as values', async () => {
+    const r = await run(`
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+spark.createDataFrame([("St. John's", 3), ("Oslo", 5)], ["city", "n"]).createOrReplaceTempView("cities")
+print(spark.sql("SELECT n FROM cities WHERE city = :city AND n >= :min", args={"city": "St. John's", "min": 1}).collect())
+print(spark.sql("SELECT n FROM cities WHERE city = :city", args={"city": "x' OR '1'='1"}).count())
+`)
+    expect(r.error).toBeNull()
+    expect(r.stdout).toBe('[Row(n=3)]\n0\n')
+  })
 })
