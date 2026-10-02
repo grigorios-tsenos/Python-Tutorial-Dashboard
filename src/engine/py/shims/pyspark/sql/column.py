@@ -5,7 +5,8 @@ import pandas as pd
 
 from pyspark.errors import AnalysisException
 
-_NULLABLE = {"=", "!=", "<", "<=", ">", ">=", "AND", "OR"}
+# comparisons with NULL yield NULL; AND/OR use the "boolean" dtype's Kleene logic (TRUE OR NULL is TRUE)
+_NULLABLE = {"=", "!=", "<", "<=", ">", ">="}
 _CASTS = {"int": "Int64", "integer": "Int64", "long": "Int64", "bigint": "Int64", "double": "float64", "float": "float64", "boolean": "boolean"}
 
 
@@ -86,6 +87,7 @@ class Column:
         return Column(f, f"CAST({self._name} AS {d.upper()})")
 
     astype = cast
+    try_cast = cast  # Orbit's cast already returns NULL for unparseable values, like try_cast in ANSI mode
 
     def isNull(self):
         return Column(lambda pdf: self._eval(pdf).isna(), f"({self._name} IS NULL)")
@@ -95,7 +97,11 @@ class Column:
 
     def isin(self, *vals):
         flat = list(vals[0]) if len(vals) == 1 and isinstance(vals[0], (list, tuple, set)) else list(vals)
-        return Column(lambda pdf: self._eval(pdf).isin(flat), f"({self._name} IN ({', '.join(map(str, flat))}))")
+        def f(pdf):
+            s = self._eval(pdf)
+            return s.isin(flat).astype("boolean").mask(s.isna(), pd.NA)  # NULL IN (...) is NULL
+
+        return Column(f, f"({self._name} IN ({', '.join(map(str, flat))}))")
 
     def between(self, lo, hi):
         return Column(lambda pdf: self._eval(pdf).between(lo, hi), f"(({self._name} >= {lo}) AND ({self._name} <= {hi}))")

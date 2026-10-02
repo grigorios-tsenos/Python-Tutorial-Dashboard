@@ -65,4 +65,33 @@ except Exception as e:
     expect(r.stdout).toContain("{'log': ['a', 'b'], 'n': 1}")
     expect(r.stdout).toContain('GraphRecursionError')
   })
+  it('parallel writes need a reducer', async () => {
+    const r = await run(`
+import operator
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.errors import InvalidUpdateError
+
+def build(reduced):
+    class S(TypedDict):
+        items: Annotated[list, operator.add] if reduced else list
+    g = StateGraph(S)
+    g.add_node("a", lambda s: {"items": ["a"]})
+    g.add_node("b", lambda s: {"items": ["b"]})
+    g.add_node("join", lambda s: {})
+    for n in ("a", "b"):
+        g.add_edge(START, n)
+        g.add_edge(n, "join")
+    g.add_edge("join", END)
+    return g.compile()
+
+print(sorted(build(True).invoke({})["items"]))
+try:
+    build(False).invoke({"items": []})
+except InvalidUpdateError as e:
+    print("InvalidUpdateError", "items" in str(e))
+`)
+    expect(r.error).toBeNull()
+    expect(r.stdout).toBe("['a', 'b']\nInvalidUpdateError True\n")
+  })
 })

@@ -1,7 +1,7 @@
 ---
 id: np-pairwise
 track: numpy
-order: 5
+order: 7
 title: Compare Every Vector with Every Other
 tagline: Broadcasting turns two sets of points into a whole distance table.
 kind: build

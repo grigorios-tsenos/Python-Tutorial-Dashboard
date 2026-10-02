@@ -1,7 +1,7 @@
 ---
 id: ml-artifacts
 track: mlflow
-order: 4
+order: 5
 title: Save More Than the Final Score
 tagline: Metric history tells the story; an artifact keeps the summary.
 kind: build

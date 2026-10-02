@@ -12,13 +12,27 @@ import { Difficulty } from './Difficulty'
 
 const { w: W, h: H } = MAP_SIZE
 
-function starSpots(t: Track, count: number): { x: number; y: number }[] {
+const STAR_GAP = 82
+
+/** Stars zigzag along a tilted arc: odd stars sit above the line (label above), even stars below (label below). */
+function starSpots(t: Track, count: number): { x: number; y: number; up: boolean }[] {
   const rad = (t.tilt * Math.PI) / 180
-  const local = Array.from({ length: count }, (_, i) => [count === 1 ? 0 : -205 + i * 410 / (count - 1), i === 0 ? 28 : i % 2 ? -42 : 34])
-  return local.map(([lx, ly]) => ({ x: t.x + lx * Math.cos(rad) - ly * Math.sin(rad), y: t.y + lx * Math.sin(rad) + ly * Math.cos(rad) }))
+  const local = Array.from({ length: count }, (_, i) => [(i - (count - 1) / 2) * STAR_GAP, i % 2 ? -46 : 38])
+  return local.map(([lx, ly]) => ({ x: t.x + lx * Math.cos(rad) - ly * Math.sin(rad), y: t.y + lx * Math.sin(rad) + ly * Math.cos(rad), up: ly < 0 }))
 }
 
-const SPOTS: Record<string, { x: number; y: number }> = {}
+/** Greedy word wrap so neighbouring labels on the same row don't collide. */
+function wrapLabel(title: string, max = 22): string[] {
+  const lines: string[] = []
+  for (const word of title.split(' ')) {
+    const last = lines.at(-1)
+    if (last !== undefined && (last + ' ' + word).length <= max) lines[lines.length - 1] = last + ' ' + word
+    else lines.push(word)
+  }
+  return lines
+}
+
+const SPOTS: Record<string, { x: number; y: number; up: boolean }> = {}
 for (const t of TRACKS) {
   const ls = lessonsOf(t.id)
   const spots = starSpots(t, ls.length)
@@ -32,6 +46,16 @@ const DUST = (() => {
 })()
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v))
+
+function StarLabel({ title, up, offset }: { title: string; up: boolean; offset: number }) {
+  const lines = wrapLabel(title)
+  const first = up ? -offset - (lines.length - 1) * 14 : offset + 8
+  return (
+    <text className="star-label" y={first} textAnchor="middle">
+      {lines.map((line, i) => <tspan key={i} x={0} dy={i ? 14 : 0}>{line}</tspan>)}
+    </text>
+  )
+}
 
 export function MapView() {
   const completed = useStore((s) => s.completed)
@@ -189,7 +213,7 @@ export function MapView() {
                     const half = !!completed[l.id]
                     return <line key={l.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`link ${lit ? 'lit' : half ? 'half' : ''}`} />
                   })}
-                  <g className="track-label" transform={`translate(${t.x} ${t.y - 110})`} onClick={() => focusPoint(t.x, t.y)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && focusPoint(t.x, t.y)} aria-label={`Focus ${t.name}`}>
+                  <g className="track-label" transform={`translate(${t.x} ${t.y - 150})`} onClick={() => focusPoint(t.x, t.y)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && focusPoint(t.x, t.y)} aria-label={`Focus ${t.name}`}>
                     <text textAnchor="middle" className="tl-name">{t.glyph} {t.name}</text>
                     <text textAnchor="middle" y="22" className="tl-count">{p.done}/{p.total}{p.pct === 1 ? ' ★' : ''}</text>
                   </g>
@@ -223,7 +247,7 @@ export function MapView() {
                           <circle className="core" r={st === 'done' ? 9 : 7} />
                         )}
                         {st === 'done' && <path className="tick" d="M-4 0 L-1 3 L4 -3" />}
-                        <text className="star-label" y={boss ? 38 : 30} textAnchor="middle">{l.title.replace(/^Boss: /, '')}</text>
+                        <StarLabel title={l.title.replace(/^Boss: /, '')} up={pt.up} offset={boss ? 30 : 22} />
                       </g>
                     )
                   })}

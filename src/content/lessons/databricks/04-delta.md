@@ -1,7 +1,7 @@
 ---
 id: db-delta
 track: databricks
-order: 3
+order: 4
 title: Undo a Disaster With Time Travel
 tagline: Delta tables remember every version. Someone just broke prod.
 kind: build

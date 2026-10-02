@@ -1,7 +1,7 @@
 ---
 id: db-service-metrics
 track: databricks
-order: 4
+order: 5
 title: Service Health by Region
 tagline: Count requests, measured latencies and distinct users without mixing them up.
 kind: build

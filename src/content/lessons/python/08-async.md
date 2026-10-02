@@ -1,7 +1,7 @@
 ---
 id: py-async
 track: python
-order: 6
+order: 8
 title: "Boss: Fan Out 100 LLM Calls"
 tagline: Concurrency with a speed limit and a safety net.
 kind: boss

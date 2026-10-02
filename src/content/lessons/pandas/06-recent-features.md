@@ -1,7 +1,7 @@
 ---
 id: pd-recent-features
 track: pandas
-order: 5
+order: 6
 title: Build Features from a Time Window
 tagline: A model at noon must never learn from an event that happened at one.
 kind: build

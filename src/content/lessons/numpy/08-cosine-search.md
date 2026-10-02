@@ -1,7 +1,7 @@
 ---
 id: np-cosine
 track: numpy
-order: 6
+order: 8
 title: "Boss: Semantic Search in 6 Lines"
 tagline: Rank documents by meaning with nothing but NumPy.
 kind: boss

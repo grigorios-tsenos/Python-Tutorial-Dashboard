@@ -1,7 +1,7 @@
 ---
 id: cc-report
 track: claude
-order: 6
+order: 8
 title: "Boss: The Agent Run Report"
 tagline: Automate Claude in CI? Then you need to know what it actually did.
 kind: boss

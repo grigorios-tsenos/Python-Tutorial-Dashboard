@@ -1,7 +1,7 @@
 ---
 id: np-standardize
 track: numpy
-order: 4
+order: 5
 title: Put Features on the Same Scale
 tagline: A useful model should not confuse a large unit with an important feature.
 kind: build

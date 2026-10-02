@@ -1,7 +1,7 @@
 ---
 id: lc-rag
 track: langchain
-order: 6
+order: 8
 title: "Boss: Mini RAG"
 tagline: Retrieve, then generate. Build the pattern that powers most enterprise AI.
 kind: boss

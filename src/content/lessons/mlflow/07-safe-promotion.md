@@ -1,7 +1,7 @@
 ---
 id: ml-promotion
 track: mlflow
-order: 5
+order: 7
 title: Move the Alias Only When It Wins
 tagline: A new version is a candidate, not an automatic champion.
 kind: build

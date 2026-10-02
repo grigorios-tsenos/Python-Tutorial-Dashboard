@@ -8,7 +8,9 @@ const STAGES = [
   { label: 'Guided', detail: 'Follow an example and complete a focused task.' },
   { label: 'Practice', detail: 'Apply the idea yourself and check what happens.' },
   { label: 'Challenge', detail: 'Reason through behavior and combine what you have learned.' },
+  { label: 'Applied', detail: 'Solve a realistic task from a short written requirement.' },
   { label: 'Advanced', detail: 'Build a reusable solution for unfamiliar inputs.' },
+  { label: 'Production', detail: 'Make the solution hold up against messy data and repeated runs.' },
   { label: 'Expert', detail: 'Handle boundaries and connect ideas with less scaffolding.' },
   { label: 'Boss', detail: 'Build a complete workflow that also handles edge cases.' },
 ]
@@ -26,7 +28,7 @@ export function Difficulty({ lesson }: { lesson: Lesson }) {
           <li key={l.id}>
             <a className={`difficulty-step ${completed[l.id] ? 'done' : ''}`} href={lessonPath(l.id)} aria-current={l.id === lesson.id ? 'step' : undefined} aria-label={`${STAGES[l.order - 1].label}: ${l.title}${completed[l.id] ? ', completed' : ''}`}>
               <span className="difficulty-number" aria-hidden>{completed[l.id] ? '✓' : `0${l.order}`}</span>
-              <span>{STAGES[l.order - 1].label}</span>
+              <span className="difficulty-label">{STAGES[l.order - 1].label}</span>
             </a>
           </li>
         ))}

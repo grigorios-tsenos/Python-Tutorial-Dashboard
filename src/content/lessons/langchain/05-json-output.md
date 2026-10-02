@@ -1,7 +1,7 @@
 ---
 id: lc-json
 track: langchain
-order: 4
+order: 5
 title: Make Model Output Usable
 tagline: Parsing JSON is only the first half of a structured answer.
 kind: build

@@ -1,7 +1,7 @@
 ---
 id: db-medallion
 track: databricks
-order: 6
+order: 8
 title: "Boss: The Medallion Pipeline"
 tagline: Bronze, silver, gold. How every serious lakehouse is organised.
 kind: boss

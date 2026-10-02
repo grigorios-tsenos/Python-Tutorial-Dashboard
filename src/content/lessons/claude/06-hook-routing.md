@@ -1,7 +1,7 @@
 ---
 id: cc-hook-routing
 track: claude
-order: 5
+order: 6
 title: Route Hook Decisions with JSON
 tagline: Block forbidden writes, ask about dependency changes and preserve normal permissions elsewhere.
 kind: build
