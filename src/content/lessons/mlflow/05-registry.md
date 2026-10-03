@@ -9,18 +9,18 @@ xp: 35
 minutes: 5
 ---
 @@body
-# The model lifecycle in five moves
+# The model lifecycle
 
-A good run isn't a deployable model yet. The **Model Registry** gives models names, versions and *aliases*:
+The **Model Registry**: names, versions, *aliases*.
 
 1. **Log** the model artifact inside a run
-2. **Register** it under a name → creates **version 1**, 2, 3…
-3. **Alias** a version (`champion`) so serving code never hard-codes a version number
-4. **Load** it by alias: `models:/name@champion`
+2. **Register** it under a name → **version 1**, 2, 3…
+3. **Alias** a version (`champion`) so serving code never hard-codes a version
+4. **Load** by alias: `models:/name@champion`
 
-Re-point the `champion` alias to version 4 tomorrow, and every consumer switches over with no code change.
+Re-point the alias and every consumer switches with no code change.
 
-Arrange the lines so the script runs top to bottom and prints the model's answer. (Mind the indentation: it's part of the puzzle.)
+Arrange the lines to run top to bottom and print the model's answer. Indentation matters.
 @@lines
 import mlflow
 class Echo(mlflow.pyfunc.PythonModel):

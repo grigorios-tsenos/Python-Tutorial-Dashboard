@@ -11,9 +11,7 @@ minutes: 7
 @@body
 # Ask the tracking server, don't scroll the table
 
-After a few sweeps an experiment holds hundreds of runs, some of them crashed halfway. Product has a hard requirement: answers within **150 ms**. You need the best model **that meets the budget**, not the best model overall.
-
-`mlflow.search_runs` filters on the server with a small SQL-like language and returns a pandas DataFrame:
+An experiment soon holds hundreds of runs, some crashed. The latency budget is **150 ms**, so you want the best model *within budget*, not overall. `mlflow.search_runs` filters server-side with a small SQL-like language:
 
 ```python
 mlflow.search_runs(
@@ -31,7 +29,7 @@ mlflow.search_runs(
 
 > **Mission:** implement `best_within_budget(experiment, max_latency_ms)`. Return a dict `{"run_id", "model", "accuracy", "latency_ms"}` for the most accurate **finished** run in **that experiment** whose `latency_ms` metric is **at most** the budget. Break accuracy ties with the lower latency. Return `None` when nothing qualifies. Don't log any runs.
 
-The supplied `log_candidate` helper fills the history, including one crashed run that looks best on paper.
+`log_candidate` fills the history, including one crashed run that looks best on paper.
 @@starter
 import mlflow
 
@@ -120,4 +118,4 @@ How do you exclude crashed runs from `search_runs`?
 @@a
 Filter on `attributes.status = 'FINISHED'`.
 @@real
-The MLflow UI's search box and Databricks experiment pages accept the same filter syntax. `MlflowClient().search_runs(...)` returns `Run` objects instead of a DataFrame, which is handy inside automation such as the promotion step later in this chapter.
+The MLflow UI's search box and Databricks experiment pages accept the same filter syntax. `MlflowClient().search_runs(...)` returns `Run` objects instead of a DataFrame, handy in automation.

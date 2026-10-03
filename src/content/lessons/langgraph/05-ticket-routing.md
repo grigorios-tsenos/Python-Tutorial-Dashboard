@@ -11,11 +11,11 @@ minutes: 6
 @@body
 # Choose a branch before doing the work
 
-Conditional edges can route from `START`, so a graph can select a specialist before running any node. A router reads the input state and returns a branch name; the path map connects that name to a node.
+Conditional edges can route from `START`: the router reads the input state and returns a branch name, and the path map connects that name to a node.
 
 > **Mission:** implement `build_router(threshold)` to return a compiled graph. Route priorities **greater than or equal to** the threshold to the supplied `urgent` node; route lower priorities to `standard`. Run exactly one branch, then finish at `END`. Keep the input question and priority in the final state.
 
-The graph must use the threshold passed to the builder, so different teams can compile different routing rules.
+The graph must use the threshold passed to the builder.
 @@starter
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
@@ -89,4 +89,4 @@ Can a conditional edge start at START?
 @@a
 Yes. It chooses the first node from the input state before any node runs.
 @@real
-The same routing pattern chooses support specialists, model sizes or processing queues. Keep the rule in the graph builder so each compiled graph has a clear policy.
+The same pattern routes to support specialists, model sizes or processing queues. Keep the rule in the graph builder so each compiled graph has a clear policy.

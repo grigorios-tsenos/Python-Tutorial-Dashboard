@@ -11,23 +11,23 @@ minutes: 8
 @@body
 # A decorator that knows when to try again
 
-LLM APIs fail in two very different ways:
+LLM APIs fail two ways:
 
 | failure | example | retry? |
 |---|---|---|
 | **transient** | rate limited (429), overloaded (529), timeout | yes, after waiting |
 | **permanent** | invalid request (400), bad API key (401) | no, it will fail the same way forever |
 
-Retrying instantly hammers a service that's already overloaded. **Exponential backoff** waits longer each time, `base`, `2 × base`, `4 × base`, …, up to a cap. When the server says exactly how long to wait (a `Retry-After` header), believe it.
+**Exponential backoff** avoids hammering an overloaded service: wait `base`, `2 × base`, `4 × base`, …, up to a cap. When the server sends a `Retry-After` header, believe it.
 
-A **decorator factory** packages this so any function can opt in:
+A **decorator factory** packages this:
 
 ```python
 @retry(attempts=4, base_delay=0.5)
 def ask(question): ...
 ```
 
-`retry(...)` returns `decorate`, `decorate(fn)` returns `wrapper`, and `wrapper(*args, **kwargs)` does the trying. `functools.wraps(fn)` keeps the original name and docstring for logs and debuggers. Injecting `sleep` lets tests check the waits without actually waiting.
+`retry(...)` returns `decorate`, `decorate(fn)` returns `wrapper`, and `wrapper(*args, **kwargs)` does the trying. `functools.wraps(fn)` keeps the original name and docstring. Injecting `sleep` lets tests check the waits without waiting.
 
 > **Mission:** implement `retry(attempts=4, base_delay=0.5, max_delay=8.0, retry_on=(RateLimitError, TimeoutError), sleep=time.sleep)`:
 >
@@ -37,8 +37,6 @@ def ask(question): ...
 > - any other exception propagates immediately, with no sleep and no retry
 > - `attempts < 1` or `base_delay < 0` raises `ValueError` when `retry(...)` is called
 > - keep the wrapped function's `__name__` and `__doc__`; every call starts its backoff from the beginning
-
-Where this fits: the boss runs 100 calls concurrently with retries. Here you get the retry policy right for one call first.
 @@starter
 import functools
 import time
@@ -190,4 +188,4 @@ What does `functools.wraps(fn)` do for a decorator's wrapper?
 @@a
 Copies the wrapped function's `__name__`, `__doc__` and other metadata, so logs and tracebacks show the real function.
 @@real
-The anthropic and openai SDKs already retry 429 and 5xx responses (`max_retries=2` by default) with backoff that respects `retry-after`. Add random **jitter** (`random.uniform(0, delay)`) so thousands of clients don't retry in lockstep; libraries like `tenacity` package all of this.
+The anthropic and openai SDKs already retry 429 and 5xx (`max_retries=2` by default), respecting `retry-after`. Add random **jitter** (`random.uniform(0, delay)`) so clients don't retry in lockstep; `tenacity` packages all of this.

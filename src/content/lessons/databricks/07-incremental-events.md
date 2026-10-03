@@ -11,14 +11,14 @@ minutes: 8
 @@body
 # Insert only the events you have not seen
 
-A scheduled job may receive the same batch twice. Appending the whole batch twice inflates every downstream metric. An **anti join** selects rows on the left with no matching key on the right:
+A job may receive the same batch twice; appending it twice inflates downstream metrics. An **anti join** keeps left rows with no matching key on the right:
 
 ```python
 new_events = batch.join(current.select("event_id"), "event_id", "left_anti")
 combined = current.unionByName(new_events)
 ```
 
-`unionByName` aligns columns by name, even when the batch presents them in another order.
+`unionByName` aligns columns by name regardless of batch column order.
 
 > **Mission:** write `append_events(current, batch)` returning the combined DataFrame:
 > - discard batch rows whose `event_id` is NULL, empty or only whitespace;
@@ -26,7 +26,7 @@ combined = current.unionByName(new_events)
 > - keep only batch IDs absent from `current`;
 > - append these rows to `current`, preserving its column order.
 
-Existing events always win: this is an **insert-only** operation, so a repeated ID must not overwrite its stored payload. Current IDs are valid and unique, and duplicate IDs within a batch carry identical payloads. Both frames have the same named columns. Keep both inputs unchanged and handle empty batches and an empty current frame. Row order is not part of the result contract.
+This is **insert-only**: a repeated ID must not overwrite its stored payload. Current IDs are valid and unique; duplicate IDs within a batch carry identical payloads; both frames have the same named columns. Keep both inputs unchanged; handle empty batches and an empty current frame. Row order is not part of the result contract.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
@@ -106,4 +106,4 @@ Why use unionByName for incremental batches?
 @@a
 It aligns columns by their names, preventing payloads from being mixed up when column order changes.
 @@real
-This exercise computes insert-only results in memory. A production Delta table can use an atomic MERGE with a when-not-matched insert to enforce the same intent during writes. This mini-Spark exercise does not implement MERGE or coordinate concurrent writers. See [Databricks insert-only merge](https://docs.databricks.com/aws/en/delta/merge#data-deduplication-when-writing-into-delta-lake-tables).
+A production Delta table enforces the same intent atomically with a when-not-matched MERGE insert. See [Databricks insert-only merge](https://docs.databricks.com/aws/en/delta/merge#data-deduplication-when-writing-into-delta-lake-tables).

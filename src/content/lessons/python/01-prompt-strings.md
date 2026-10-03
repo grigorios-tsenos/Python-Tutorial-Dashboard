@@ -9,11 +9,11 @@ xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: AI apps are mostly string assembly
+# AI apps are mostly string assembly
 
-Strip away the frameworks and an AI application does two things: **build a string** (the prompt) and **send it to a model**. This chapter teaches the Python that makes the building part safe and tidy; the LangChain chapter then automates it.
+An AI application **builds a string** (the prompt) and **sends it to a model**. This chapter covers the building; LangChain automates it later.
 
-The workhorse is the **f-string**: put `f` before the quotes and anything inside `{curly braces}` is filled in from your variables.
+The workhorse is the **f-string**: with `f` before the quotes, anything inside `{curly braces}` is filled in from your variables.
 
 ```python
 name = "Ada"
@@ -24,7 +24,7 @@ prompt = f"""You are a {role}.
 Question: {question}"""         # triple quotes keep the line breaks
 ```
 
-Why a *function* and not copy-pasted strings? Because the same template gets filled with a thousand different questions, and when the wording needs to change, you change it in exactly one place.
+Use a function, not copy-pasted strings: one template, many fillings, one place to change the wording.
 
 > **Mission:** finish `build_prompt(role, question)`. It returns exactly two lines:
 >
@@ -67,4 +67,4 @@ Why build prompts in one function instead of writing the string wherever it's ne
 @@a
 One template, many fillings: every call stays consistent, and a wording change happens in one place.
 @@real
-This is genuinely how prompt templates work: LangChain's `ChatPromptTemplate` (two lessons from now in the LangChain chapter) is this function with placeholders checked and messages attached. Production code also strips and length-limits user input before it goes into a prompt.
+LangChain's `ChatPromptTemplate` is this function with placeholders checked and messages attached. Production code also strips and length-limits user input before it goes into a prompt.

@@ -9,9 +9,9 @@ xp: 55
 minutes: 8
 ---
 @@body
-# What Claude actually reads at startup
+# What Claude reads at startup
 
-`CLAUDE.md` is Claude Code's **project memory**: build commands, conventions and gotchas, loaded into context at the start of every session. Long memory files get split up, so a memory file can **import** another with `@path`:
+`CLAUDE.md` is Claude Code's **project memory**, loaded into context every session. A memory file can **import** another with `@path`:
 
 ```markdown
 # Orbit
@@ -20,12 +20,12 @@ Use pnpm, never npm.
 @docs/style.md
 ```
 
-Claude Code documents the first three rules below; the fourth is this exercise's policy. Each one prevents a real problem:
+Claude Code documents the first three rules; the fourth is this exercise's policy:
 
 - relative paths resolve from the **importing file's** directory, so `docs/testing.md` can import `@fixtures.md` (meaning `docs/fixtures.md`) or `@../STYLE.md`
-- imports can nest, but only up to **5 hops** deep, which bounds the context cost
-- text inside code blocks is never an import, so a Python sample with `@dataclass` stays a sample
-- a file that is already in the current import chain is not expanded again, so two files that import each other don't paste each other's text repeatedly until the depth limit stops them
+- imports nest up to **5 hops** deep, bounding the context cost
+- text inside code blocks is never an import, so `@dataclass` in a Python sample stays a sample
+- a file already in the current import chain is not expanded again, so mutual imports don't paste each other repeatedly
 
 > **Mission:** implement `expand_memory(files, entry="CLAUDE.md", max_depth=5)`. `files` maps POSIX paths to text (a fake project). Return `(text, loaded)`:
 >
@@ -35,7 +35,7 @@ Claude Code documents the first three rules below; the fourth is this exercise's
 > - `text` is the resulting lines joined with `"\n"`; `loaded` lists every file that was expanded, once each, in first-expanded order
 > - a missing `entry` raises `FileNotFoundError`; don't modify `files`
 
-This exercise follows the documented import rules with a simplified line-based syntax; real memory files can also mention `@paths` inline in a sentence.
+This exercise uses a simplified line-based syntax; real memory files can also mention `@paths` inline in a sentence.
 @@starter
 import posixpath
 
@@ -142,4 +142,4 @@ Why do memory imports need a cycle check and a depth limit?
 @@a
 Files can import each other; without limits expansion would loop forever or flood the context window.
 @@real
-Run `/memory` in Claude Code to see which memory files were loaded and open them for editing. Claude Code also reads `~/.claude/CLAUDE.md` (your personal preferences for every project) and CLAUDE.md files in subdirectories when it works there. See [CLAUDE.md imports](https://code.claude.com/docs/en/memory#claude-md-imports).
+`/memory` shows which memory files were loaded; Claude Code also reads `~/.claude/CLAUDE.md` and CLAUDE.md files in subdirectories. See [CLAUDE.md imports](https://code.claude.com/docs/en/memory#claude-md-imports).

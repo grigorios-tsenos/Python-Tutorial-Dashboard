@@ -12,7 +12,7 @@ answer: 0
 @@body
 # Predict the output
 
-SQL (and so Spark) uses **three-valued logic**: a comparison can be true, false, or **unknown** (NULL). A `filter` keeps only rows where the condition is *true*. Unknown doesn't count.
+SQL (and so Spark) uses **three-valued logic**: a comparison is true, false, or **unknown** (NULL). `filter` keeps only rows where the condition is *true*; unknown doesn't count.
 
 One row has a missing `tag`. How many rows survive `tag != "a"`?
 @@starter

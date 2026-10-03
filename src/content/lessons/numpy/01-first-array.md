@@ -9,24 +9,22 @@ xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: AI runs on arrays
+# AI runs on arrays
 
-Every input an AI system touches becomes **a list of numbers** first. A sentence becomes an *embedding* (say, 384 numbers). An image becomes a grid of pixel values. A user becomes a row of features. All the chapters ahead (pandas tables, embeddings, model scores) are arrays underneath.
+Every AI input becomes **a list of numbers** first: a sentence becomes an embedding, an image a grid of pixels, a user a row of features. Everything ahead — tables, embeddings, model scores — is arrays underneath.
 
-NumPy's array is Python's list with a superpower: **math applies to every number at once**.
+A NumPy array is a list where **math applies to every element at once**.
 
 ```python
 import numpy as np
 
-scores = np.array([0.2, 0.5, 0.9])   # a Python list, upgraded
-scores + 0.1       # [0.3, 0.6, 1.0]  <- no loop! every value at once
-scores.mean()      # 0.533...          one number summarizing all of them
-scores > 0.4       # [False, True, True]  a yes/no per value
+scores = np.array([0.2, 0.5, 0.9])
+scores + 0.1       # [0.3, 0.6, 1.0]  <- no loop
+scores.mean()      # 0.533...
+scores > 0.4       # [False, True, True]
 ```
 
-With a plain list you would write a `for` loop for each of those. With an array, you say *what* you want and NumPy does it to everything. That one idea powers this whole chapter.
-
-One habit to start today: **when in doubt, print it.** `print(scores)` and `print(len(scores))` tell you exactly what you're holding. (The next lessons add `.shape` for grids.)
+No `for` loops: say *what* you want and NumPy applies it to everything.
 
 > **Mission:** a search engine returned similarity scores as a plain Python list. Turn it into an array called `scores`, make `boosted` by adding `0.05` to every score at once (no loop), and print the average of the boosted scores.
 @@starter

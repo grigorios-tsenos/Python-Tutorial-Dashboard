@@ -11,17 +11,17 @@ minutes: 7
 @@body
 # Temp views, HAVING, and parameter markers
 
-On Databricks, dashboards and analysts speak SQL. Register a DataFrame as a **temporary view** and query it with `spark.sql`: same engine, same result type, a DataFrame back.
+Register a DataFrame as a **temporary view** and query it with `spark.sql`: same engine, a DataFrame back.
 
 ```python
 trips.createOrReplaceTempView("trips")           # visible to spark.sql in this session
 spark.sql("SELECT zone, COUNT(*) AS n_trips FROM trips GROUP BY zone")
 ```
 
-This report has **two** bugs, one of each classic kind:
+This report has **two** bugs:
 
-1. **`WHERE` vs `HAVING`.** `WHERE` filters **rows before** grouping; it can't use an aggregate such as `COUNT(*)`. `HAVING` filters **groups after** aggregation.
-2. **String formatting a query.** An f-string pastes `city` straight into the SQL. A city like `St. John's` breaks the quote, and a value like `x' OR '1'='1` rewrites the query: SQL injection. Use **named parameter markers** and pass values separately:
+1. **`WHERE` vs `HAVING`.** `WHERE` filters rows **before** grouping and can't use an aggregate like `COUNT(*)`; `HAVING` filters groups **after** aggregation.
+2. **String formatting a query.** An f-string pastes `city` into the SQL: `St. John's` breaks the quote, and `x' OR '1'='1` rewrites the query — SQL injection. Use **named parameter markers**:
 
 ```python
 spark.sql("SELECT * FROM trips WHERE city = :city", args={"city": city})
@@ -117,4 +117,4 @@ Why pass values with `args={...}` instead of formatting them into the SQL string
 @@a
 Parameters are sent as values, never parsed as SQL, so quotes can't break the query and input can't inject SQL.
 @@real
-Named parameter markers work in `spark.sql` since Spark 3.4 and in the Databricks SQL editor and dashboards (`:param`). A temp view lives only for the current Spark session; publish shared data as a Unity Catalog table instead. Orbit runs this SQL on SQLite under the hood, so stick to standard SQL here.
+Named parameter markers work in `spark.sql` since Spark 3.4 and in Databricks SQL (`:param`). A temp view lives only for the current session; publish shared data as a Unity Catalog table.

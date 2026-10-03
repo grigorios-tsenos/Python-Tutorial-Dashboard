@@ -11,11 +11,11 @@ minutes: 8
 @@body
 # Messages need both a reducer and a checkpointer
 
-`MessagesState` appends each new message to the conversation. A `MemorySaver` keeps that state between invocations, keyed by `thread_id`. Send only the new user message on the next turn: sending the full history again would duplicate it.
+`MessagesState` appends new messages; a `MemorySaver` keeps that state between invocations, keyed by `thread_id`. Send only the new user message each turn — resending the history would duplicate it.
 
 > **Mission:** implement `make_chat()` to return a compiled `MessagesState` graph with one node named `reply` and a fresh `MemorySaver`. The node counts **human messages** in the saved conversation and appends an `AIMessage` with content `turn N: TEXT`, where `N` is that count and `TEXT` is the newest human message in uppercase. Wire `START → reply → END`.
 
-A second turn in the same thread must remember the first. A different thread, or a newly built chat, starts at turn 1.
+A second turn in the same thread must remember the first; a different thread, or a newly built chat, starts at turn 1.
 @@starter
 from langchain_core.messages import AIMessage
 from langgraph.graph import StateGraph, MessagesState, START, END

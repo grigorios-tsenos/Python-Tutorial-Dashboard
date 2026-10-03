@@ -122,7 +122,7 @@ function IntroPlayer({ lessonId, solutionRevealed }: { lessonId: string; solutio
   return (
     <section className={`lab lesson-intro ${reduceMotion ? 'motion-reduced' : ''}`} aria-label="Guided intro: warm-up and demo">
       <div className="intro-head">
-        <div className="lab-title">Guided intro <span className="lab-sub">a small teaching example; it does not execute your editor code</span></div>
+        <div className="lab-title">Guided intro <span className="lab-sub">worked example · separate from your editor code</span></div>
         <button className="btn small ghost" onClick={skip}>Skip to the exercise ↓</button>
       </div>
       {hasDemo && (

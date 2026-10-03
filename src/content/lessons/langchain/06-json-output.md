@@ -11,11 +11,9 @@ minutes: 6
 @@body
 # Structured output needs a contract
 
-`JsonOutputParser` turns an `AIMessage` into Python data, including JSON wrapped in a Markdown code fence. But valid JSON can still have the wrong shape: a list, a missing answer, or a source that isn't text.
+`JsonOutputParser` turns an `AIMessage` into Python data, even when the JSON sits inside a Markdown code fence. But valid JSON can still have the wrong shape: a list, a missing answer, a non-string source. Validate at the boundary.
 
 > **Mission:** implement `parse_answer(message)` using the supplied parser. Return exactly `{"answer": ..., "sources": ...}`. The answer must be a non-empty string after stripping surrounding whitespace; return that stripped answer. Sources must be a list of strings (an empty list is valid). Ignore extra fields. Raise `ValueError` for invalid JSON, a non-object response, missing fields, or invalid field types.
-
-Validate the result before downstream code treats it as a trustworthy answer.
 @@starter
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser

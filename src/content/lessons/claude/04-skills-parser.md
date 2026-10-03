@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # Skills and subagents are just files
 
-Two of Claude Code's most powerful extension points are plain Markdown with **frontmatter**: a small `key: value` header between `---` lines.
+Both are plain Markdown with **frontmatter**: a `key: value` header between `---` lines.
 
 ```markdown
 ---
@@ -27,9 +27,9 @@ You are a careful reviewer. Focus on correctness first...
 | `.claude/skills/<name>/SKILL.md` | a **skill**: instructions Claude loads when the `description` matches the task |
 | `.claude/agents/<name>.md` | a **subagent**: a specialist with its own prompt (the body) and tool access |
 
-The `description` is the most important line: it's how Claude decides *when* to use the file.
+The `description` is the critical line: it's how Claude decides *when* to use the file.
 
-Assemble `parse_frontmatter(text)`, which returns `(meta_dict, body)`. Careful: values can contain colons (`description: Use when: reviewing`), so split only at the **first** one.
+Assemble `parse_frontmatter(text)`, which returns `(meta_dict, body)`. Values can contain colons (`description: Use when: reviewing`), so split only at the **first** one.
 @@lines
 def parse_frontmatter(text):
     head, _, body = text.removeprefix("---\n").partition("\n---\n")

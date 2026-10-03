@@ -9,18 +9,18 @@ xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: an agent you can see is an agent you can govern
+# An agent you can see is an agent you can govern
 
-Claude Code is an AI agent: it reads files, edits code and runs shell commands on a real machine. This whole chapter is about **staying in control** of that, with permission rules, hooks and audit logs. All of those work on the same tiny thing: a **tool event**, a small dict describing one action the agent wants to take:
+Claude Code reads files, edits code and runs shell commands on a real machine. Permission rules, hooks and audit logs all work on the same thing: a **tool event**, a small dict describing one action the agent wants to take:
 
 ```python
 {"tool_name": "Bash",  "tool_input": {"command": "ls -la"}}
 {"tool_name": "Edit",  "tool_input": {"file_path": "src/app.py"}}
 ```
 
-`tool_name` says *which capability* (run a command, edit a file); `tool_input` carries the details. Read these fluently and the rest of the chapter clicks: permissions decide on events (next lesson), hooks inspect them, and the boss summarizes a whole log of them.
+`tool_name` says *which capability*; `tool_input` carries the details. Permissions decide on events, hooks inspect them, and the boss summarizes a log of them.
 
-One habit: use **`.get(key, default)`** instead of `event["key"]`. Real event streams contain surprises, and `.get` gives you a default instead of a crash.
+Use **`.get(key, default)`** instead of `event["key"]`: real event streams contain surprises, and `.get` returns a default instead of crashing.
 
 > **Mission:** implement `describe(event)` → a one-line human summary:
 >
@@ -80,4 +80,4 @@ Why read event fields with .get(key, default) instead of event[key]?
 @@a
 Real event streams have missing or unexpected fields; .get returns a default instead of crashing your guardrail.
 @@real
-These are the real shapes: Claude Code pipes exactly this JSON to permission checks and PreToolUse hooks, and `claude -p` can emit a JSON log of every event. Two lessons from now you'll write the rules that decide which of these events are allowed to run.
+These are the real shapes: Claude Code pipes exactly this JSON to permission checks and PreToolUse hooks, and `claude -p` can emit a JSON log of every event. Next you write the rules that decide which events run.

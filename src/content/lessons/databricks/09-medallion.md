@@ -11,7 +11,7 @@ minutes: 15
 @@body
 # Boss: raw mess in, trusted numbers out
 
-The **medallion architecture** is how Databricks teams stage data quality:
+The **medallion architecture** stages data quality in three layers:
 
 | layer | contents | rule |
 |---|---|---|
@@ -19,7 +19,7 @@ The **medallion architecture** is how Databricks teams stage data quality:
 | 🥈 **silver** | cleaned, validated, de-duplicated | drop or fix the junk |
 | 🥇 **gold** | business-ready aggregates | what dashboards and models read |
 
-Your raw orders are messy: a **duplicate** `o2`, an order with **no user**, an amount of `"n/a"`, and amounts stored as **text**.
+The raw orders: a **duplicate** `o2`, a **missing user**, an amount of `"n/a"`, and amounts stored as **text**.
 
 > **Mission:** write `run_pipeline(spark, raw_rows)` that saves three Delta tables and returns the gold DataFrame:
 > - `main.shop.bronze`: the raw rows untouched
@@ -28,7 +28,7 @@ Your raw orders are messy: a **duplicate** `o2`, an order with **no user**, an a
 >
 > It must be **re-runnable**: use `mode("overwrite")` so a second run doesn't crash.
 
-The boss changes cities and order IDs, includes negative amounts (valid refunds), and finishes with an empty batch. Give bronze an explicit schema (`order_id`, `user`, `amount`, `city`, all strings) so an empty batch still creates all three tables. Keep `raw_rows` unchanged.
+The boss changes cities and order IDs, includes negative amounts (valid refunds), and ends with an empty batch. Give bronze an explicit schema (`order_id`, `user`, `amount`, `city`, all strings) so an empty batch still creates all three tables. Keep `raw_rows` unchanged.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
@@ -132,4 +132,4 @@ Why must pipelines be idempotent (safe to re-run)?
 @@a
 Jobs get retried and re-scheduled; a re-run must produce the same result, not duplicates or crashes.
 @@real
-On Databricks you'd schedule this with Lakeflow Jobs, or declare it as a Lakeflow Declarative Pipeline (formerly Delta Live Tables) with `EXPECT` quality constraints, which gives you the same bronze/silver/gold flow with monitoring built in.
+On Databricks, schedule this with Lakeflow Jobs, or declare it as a Lakeflow Declarative Pipeline (formerly Delta Live Tables) with `EXPECT` constraints — the same bronze/silver/gold flow with monitoring built in.

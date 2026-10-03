@@ -12,13 +12,13 @@ packages: pydantic
 @@body
 # Put a schema at the batch boundary
 
-A model can return valid JSON with invalid values, or text that is not JSON at all. `Prediction.model_validate_json(text)` handles both parsing and schema validation; failures raise `ValidationError`.
+A model can return valid JSON with invalid values, or no JSON at all. `Prediction.model_validate_json(text)` parses and validates in one step; failures raise `ValidationError`.
 
-The provided schema accepts labels `"spam"` and `"ham"`, a numeric confidence from `0` to `1`, and no extra fields. Confidence uses strict validation: strings and booleans do not count as numbers.
+The schema accepts labels `"spam"` and `"ham"`, a numeric confidence from `0` to `1`, and no extra fields. Confidence is strict: strings and booleans do not count as numbers.
 
 > **Mission:** implement `validate_predictions(payloads)` for an iterable of JSON strings. Return `(accepted, rejected)`: `accepted` contains validated `Prediction` objects in input order; `rejected` contains the zero-based indices of bad replies in input order. Keep processing after a validation error. Support a one-shot generator and empty input, and keep each call independent.
 
-Do not replace bad replies with invented predictions. Reporting their original indices lets the caller retry only those requests.
+Do not invent predictions for bad replies; the original indices let the caller retry only those requests.
 @@starter
 from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
@@ -95,4 +95,4 @@ What does model_validate_json validate beyond JSON syntax?
 @@a
 The parsed object's fields, types, allowed labels, numeric bounds and extra-field policy.
 @@real
-Structured model output still needs validation at the application boundary. Separating accepted results from rejected indices also makes partial retries and batch quality metrics straightforward.
+Structured model output still needs validation at the application boundary. Separating accepted results from rejected indices makes partial retries and batch quality metrics straightforward.

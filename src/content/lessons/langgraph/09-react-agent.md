@@ -11,7 +11,7 @@ minutes: 15
 @@body
 # Boss: no frameworks, just the loop
 
-Every agent, from a toy to a coding assistant, is this cycle:
+Every agent is this cycle:
 
 ```
         ┌────────── tool calls? ──────────┐
@@ -20,16 +20,14 @@ START ─> agent ─(yes)─> tools ─> agent ... │
 ```
 
 1. **agent** calls the model with the conversation so far
-2. If the reply asks for tools, **tools** runs them and appends the results, then back to the agent
-3. If not, the model gave its final answer: **END**
+2. If the reply requests tools, **tools** runs them and appends the results, then back to the agent
+3. If not, that's the final answer: **END**
 
-`MessagesState` is a ready-made state with a `messages` list that *appends* instead of overwriting.
-
-The fake model is scripted: first it asks for `multiply(17, 3)`, then it answers in plain text.
+`MessagesState` provides a `messages` list that *appends* instead of overwriting. The fake model is scripted: first it asks for `multiply(17, 3)`, then it answers in plain text.
 
 > **Mission:** implement `agent`, `tools` and `should_continue`, build the graph with nodes named exactly **`agent`** and **`tools`**, compile it into `app`, and keep the `out = app.invoke(...)` line at the bottom.
 
-Your loop must handle multiple tool calls in one reply, different registered tools, and repeated tool rounds. Preserve each call's `id` in its `ToolMessage` and keep message order. A reply with no tool calls must finish immediately; tool results must reach the next model call.
+Handle multiple tool calls in one reply, different registered tools, and repeated tool rounds. Preserve each call's `id` in its `ToolMessage` and keep message order. A reply with no tool calls must finish immediately; tool results must reach the next model call.
 @@starter
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage, ToolMessage
@@ -160,4 +158,4 @@ What stops the ReAct loop?
 @@a
 The router sending to END when the model's latest message has no tool calls.
 @@real
-Real LangGraph ships this as `create_react_agent(model, tools)` in `langgraph.prebuilt`. Now you know exactly what's inside it, which is what makes debugging agents possible.
+Real LangGraph ships this as `create_react_agent(model, tools)` in `langgraph.prebuilt`. Now you know what's inside it.

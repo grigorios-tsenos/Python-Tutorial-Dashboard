@@ -11,7 +11,7 @@ minutes: 8
 @@body
 # A hook can make a precise decision
 
-An exit-code hook can block a call. A `PreToolUse` hook can also print structured JSON with a `deny` or `ask` decision and a reason:
+Beyond exit codes, a `PreToolUse` hook can print structured JSON with a `deny` or `ask` decision and a reason:
 
 ```json
 {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "Review dependency changes."}}
@@ -26,7 +26,7 @@ An exit-code hook can block a call. A `PreToolUse` hook can also print structure
 5. Deny any path component equal to `.git`, `.env`, or starting with `.env.`, except `.env.example`. Include `protected` in the reason.
 6. Ask for confirmation when the filename is `package.json`, `pyproject.toml` or `requirements.txt`, with `dependencies` in the reason. Otherwise return `{}`.
 
-Rules run in this order. Every deny/ask result has exactly the wrapper shown above, the chosen decision, and a non-empty reason. Do not modify the event. `posixpath.normpath`, `join` and `commonpath` handle paths without requiring filesystem access. A string-prefix test alone would incorrectly treat `/repo-old` as inside `/repo`.
+Rules run in this order. Every deny/ask result has exactly the wrapper shown above, the chosen decision, and a non-empty reason. Do not modify the event. `posixpath.normpath`, `join` and `commonpath` handle paths without filesystem access; a string-prefix test alone would treat `/repo-old` as inside `/repo`.
 @@starter
 import json
 import posixpath
@@ -103,4 +103,4 @@ Why is startswith(project_dir) insufficient for a path boundary?
 @@a
 An unrelated sibling such as /repo-old starts with /repo too. Normalize the path and compare complete path components.
 @@real
-Print the returned dict with `json.dumps(...)` on stdout and exit with code 0 so Claude Code can read the structured decision. This exercise's POSIX path policy is an application rule; symlink resolution and filesystem enforcement need the actual filesystem or a sandbox. See [PreToolUse decision control](https://code.claude.com/docs/en/hooks#pretooluse-decision-control).
+Print the dict with `json.dumps(...)` on stdout and exit 0 so Claude Code reads the structured decision; symlink resolution and real enforcement need the filesystem or a sandbox. See [PreToolUse decision control](https://code.claude.com/docs/en/hooks#pretooluse-decision-control).

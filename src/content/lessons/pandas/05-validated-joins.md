@@ -11,9 +11,9 @@ minutes: 6
 @@body
 # Validate the relationship before trusting the join
 
-An event table has many rows per user. A user lookup should have **one** plan per user. If the lookup contains a duplicate user, a normal merge copies every matching event: totals inflate while the code still runs.
+Events have many rows per user; a user lookup should have **one** plan per user. A duplicate lookup key makes a normal merge copy every matching event: totals inflate while the code still runs.
 
-Pandas can enforce this relationship in the merge itself: `validate="many_to_one"` raises `pd.errors.MergeError` when the right-side keys are duplicated. A **left join** keeps events whose users are missing from the lookup.
+`validate="many_to_one"` enforces the relationship in the merge itself, raising `pd.errors.MergeError` when right-side keys are duplicated. A **left join** keeps events whose users are missing from the lookup.
 
 > **Mission:** implement `attach_plans(events, users)`. `events` has columns `event_id`, `user_id`, `amount`; `users` has `user_id`, `plan`. Return those event columns plus `plan`, keeping the event rows in their original order. Fill missing plans with `"unknown"`. Reject duplicate user lookup keys through merge validation, and keep both input frames unchanged.
 

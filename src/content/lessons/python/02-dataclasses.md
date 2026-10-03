@@ -9,9 +9,9 @@ xp: 40
 minutes: 6
 ---
 @@body
-# Model your data before you model anything else
+# Model your data first
 
-Open any LLM SDK and you'll find the same shape: a **message** has a *role* and *content*, and a **conversation** is a list of messages. Python's `@dataclass` writes the boring parts (`__init__`, `__repr__`, `__eq__`) for you.
+Every LLM SDK uses the same shape: a **message** has a *role* and *content*; a **conversation** is a list of messages. `@dataclass` writes `__init__`, `__repr__` and `__eq__` for you.
 
 ```python
 from dataclasses import dataclass, field
@@ -26,7 +26,7 @@ class Bag:
     items: list = field(default_factory=list)   # mutable defaults need a factory!
 ```
 
-> That last line is a classic trap. `items: list = []` is rejected by dataclasses, because every instance would share *one* list.
+> The last line is the trap: `items: list = []` is rejected, because every instance would share *one* list.
 
 > **Mission:** finish `Conversation`. It needs a list of `Message`s (a fresh list per instance), an `add(role, content)` method, and a `word_count` property: the total number of words across all messages.
 @@starter

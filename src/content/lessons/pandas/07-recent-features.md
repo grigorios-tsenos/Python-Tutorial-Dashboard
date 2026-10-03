@@ -11,9 +11,9 @@ minutes: 8
 @@body
 # Aggregate only what was known at prediction time
 
-A lifetime total and a last-week total answer different questions. Time-bounded features describe recent behaviour, and the upper bound prevents **future data leakage**: events after prediction time cannot influence a prediction.
+Time-bounded features describe recent behaviour, and the upper bound prevents **future data leakage**: events after prediction time cannot influence a prediction.
 
-Parse event times with `pd.to_datetime(..., errors="coerce", utc=True)`. Bad timestamps become `NaT` and do not belong to any window. Converting everything to UTC lets equivalent timezone offsets compare correctly.
+Parse event times with `pd.to_datetime(..., errors="coerce", utc=True)`: bad timestamps become `NaT` and belong to no window, and UTC makes equivalent offsets compare correctly.
 
 > **Mission:** implement `recent_features(events, as_of, days=7)`. Inputs have `user`, `at` and `amount` columns. Keep events where `as_of - days < at <= as_of`, then return `user`, `n_events` and `revenue` per user, sorted by user. Include only users with an event in the window. Invalid amounts count as `0`; invalid times are excluded. Keep the input unchanged. Empty results retain the output columns, and `days < 1` raises `ValueError`.
 

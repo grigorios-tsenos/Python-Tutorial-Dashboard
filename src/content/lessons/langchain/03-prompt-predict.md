@@ -12,7 +12,7 @@ answer: 0
 @@body
 # Predict the output
 
-`ChatPromptTemplate.from_messages` takes a list of `(role, template)` pairs. Calling `.invoke()` fills in the variables and returns a **prompt value** holding real message objects.
+`ChatPromptTemplate.from_messages` takes `(role, template)` pairs; `.invoke()` fills the variables and returns a **prompt value** of real message objects.
 
 How many messages come out, and what does the second one say?
 @@starter

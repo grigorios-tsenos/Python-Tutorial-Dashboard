@@ -11,13 +11,13 @@ minutes: 9
 @@body
 # Data quality expectations
 
-Every pipeline needs rules: *an order has a user*, *the amount is a number*, *the country is one we sell to*. What happens to rows that break them?
+Pipelines have rules: *an order has a user*, *the amount is a number*. What happens to rows that break them?
 
 | policy | effect |
 |---|---|
 | fail the job | one bad row blocks every good one |
 | drop silently | the dashboard looks fine while an upstream bug eats 30% of orders |
-| **quarantine** | good rows flow on; bad rows go to a side table **with the reason**, where you can count them and alert |
+| **quarantine** | good rows flow on; bad rows go to a side table **with the reason** |
 
 `F.when` chains evaluate in order, so the **first** broken rule names the reason:
 
@@ -26,10 +26,10 @@ reason = (F.when(rule_1_broken, "rule_1")
            .when(rule_2_broken, "rule_2"))        # NULL when no rule is broken
 ```
 
-Two NULL traps from earlier in this chapter apply here:
+Two NULL traps:
 
-- `F.col("country").isin(...)` on a NULL country is **NULL**, not false, and `when` skips NULL conditions. A missing country would sail through as valid unless you test `isNull()` explicitly.
-- On modern runtimes with ANSI mode on, `cast("double")` **raises** on text like `"n/a"`. `try_cast("double")` returns NULL instead, which is what a quality check needs.
+- `F.col("country").isin(...)` on a NULL country is **NULL**, not false, and `when` skips NULL conditions — test `isNull()` explicitly.
+- With ANSI mode on, `cast("double")` **raises** on text like `"n/a"`. `try_cast("double")` returns NULL instead, which is what a quality check needs.
 
 > **Mission:** implement `apply_expectations(df, countries)` returning `(valid, quarantine)`. Input columns are `order_id`, `user`, `amount`, `country`, all strings. Check these rules in order:
 >
@@ -39,7 +39,7 @@ Two NULL traps from earlier in this chapter apply here:
 >
 > `valid` holds the rows that pass every rule, with the original columns and `amount` as a **double**. `quarantine` holds every other row **unchanged** (raw `amount` text, so you can see what arrived) plus a `reason` column naming the first broken rule. Every input row lands in exactly one output. Keep the input unchanged; an empty input gives two empty outputs with those schemas.
 
-Where this fits: the boss builds a full bronze → silver → gold pipeline. This is the silver layer's safety net.
+The boss builds a full bronze → silver → gold pipeline; this is the silver layer's safety net.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
@@ -139,4 +139,4 @@ What does `F.col("c").isin(["a"])` return when `c` is NULL?
 @@a
 NULL, so `F.when` skips it. Test `isNull()` explicitly to catch missing values.
 @@real
-Lakeflow Declarative Pipelines (formerly Delta Live Tables) express these rules as expectations, `@dp.expect_or_drop("valid_amount", "try_cast(amount AS DOUBLE) IS NOT NULL")`, and report pass/fail counts per rule in the pipeline UI. Teams commonly write the quarantine table to Delta and alert when its daily count spikes.
+Lakeflow Declarative Pipelines (formerly Delta Live Tables) express these rules as expectations, e.g. `@dp.expect_or_drop("valid_amount", "try_cast(amount AS DOUBLE) IS NOT NULL")`, with per-rule pass/fail counts in the pipeline UI. Teams write the quarantine table to Delta and alert when its daily count spikes.

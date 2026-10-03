@@ -179,7 +179,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
         <header>
           <div className="lesson-meta">
             <span className={`kind kind-${lesson.kind}`}>{KIND_LABEL[lesson.kind]}</span>
-            <span className="dim">{lesson.xp} XP · ~{lesson.minutes} min</span>
+            <span className="dim">Step {lesson.order}/9 · {lesson.xp} XP · ~{lesson.minutes} min</span>
             {done && <span className="done-chip">✓ Completed</span>}
           </div>
           <h1>{lesson.title}</h1>
@@ -314,13 +314,13 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
                 </button>
               )
             })}
-            {picked.length > 0 && !solved && <p className="dim">Missed it. That's fine: this one is now in your Review deck. Try another option{hintsUsed < 2 ? ' or reveal a hint' : ''}.</p>}
+            {picked.length > 0 && !solved && <p className="dim">Added to your Review deck. Try another option{hintsUsed < 2 ? ' or reveal a hint' : ''}.</p>}
           </div>
         )}
 
         <OutputPanel key={attempts.current} result={result} running={running} graded={graded} completed={!!done} visualFirst={lesson.kind === 'lab'} />
         {verdict === false && !running && result && (
-          <p className="nudge">Not there yet. Read the failing checks above. Each one tells you what it expected.</p>
+          <p className="nudge">Not yet — each failing check above says what it expected.</p>
         )}
       </section>
     </div>

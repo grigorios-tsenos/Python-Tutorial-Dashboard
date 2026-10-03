@@ -11,7 +11,7 @@ minutes: 8
 @@body
 # Permissions: allow, deny, ask
 
-Claude Code can read files, edit code and run shell commands. You control that with rules in **`.claude/settings.json`**:
+Rules in **`.claude/settings.json`** control what Claude Code may do:
 
 ```json
 {
@@ -22,7 +22,7 @@ Claude Code can read files, edit code and run shell commands. You control that w
 }
 ```
 
-A rule is `Tool(specifier)`. `Bash(npm run test:*)` is a **prefix** match (anything starting with `npm run test`); without `:*` the specifier must match exactly. Evaluation order:
+A rule is `Tool(specifier)`. `Bash(npm run test:*)` is a **prefix** match; without `:*` the specifier must match exactly. Evaluation order:
 
 1. any matching **deny** rule → blocked, always (deny beats allow)
 2. else any matching **allow** rule → runs without asking
@@ -102,4 +102,4 @@ What does the `:*` suffix mean in `Bash(npm run test:*)`?
 @@a
 Prefix match: any command that starts with `npm run test`.
 @@real
-Settings can live in `.claude/settings.json` (shared with your team), `.claude/settings.local.json` (just you) or `~/.claude/settings.json` (all projects). Use `/permissions` inside Claude Code to review the active rules.
+Settings live in `.claude/settings.json` (team), `.claude/settings.local.json` (just you) or `~/.claude/settings.json` (all projects). `/permissions` shows the active rules.

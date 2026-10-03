@@ -11,14 +11,14 @@ minutes: 8
 @@body
 # Train/serve skew starts with get_dummies
 
-Models need numbers, so a categorical column such as `plan` becomes one **indicator column per category** (one-hot encoding). `pd.get_dummies` builds those columns from whatever values appear **in the frame you pass it**:
+One-hot encoding turns a categorical column into one **indicator column per category**. `pd.get_dummies` builds those columns from whatever values appear **in the frame you pass it**:
 
 ```python
 pd.get_dummies(train["plan"])     # free, pro, team   -> 3 columns
 pd.get_dummies(request["plan"])   # pro               -> 1 column (!)
 ```
 
-A model trained on three plan columns now receives one. Depending on the library it crashes, or worse, it silently reads the wrong columns. The fix is to **freeze the vocabulary at training time** and encode every later batch against it:
+A model trained on three plan columns now receives one: a crash, or worse, silently misread columns. The fix: **freeze the vocabulary at training time** and encode every later batch against it:
 
 ```python
 known = values.where(values.isin(vocabulary), "other")       # unseen and missing -> "other"
@@ -26,11 +26,11 @@ pd.get_dummies(known, prefix="plan", prefix_sep="=", dtype=int) \
   .reindex(columns=["plan=free", "plan=pro", "plan=team", "plan=other"], fill_value=0)
 ```
 
-`reindex(columns=...)` adds the columns that are missing from this batch (as zeros) and puts them in the training order.
+`reindex(columns=...)` adds columns missing from this batch (as zeros) and restores the training order.
 
 > **Mission:** implement both halves:
 >
-> 1. `fit_vocabulary(values, min_count=1)` → a **sorted** list of the categories seen at least `min_count` times, ignoring missing values. Rarer categories are left out on purpose: too few examples to learn from.
+> 1. `fit_vocabulary(values, min_count=1)` → a **sorted** list of the categories seen at least `min_count` times, ignoring missing values. Rarer categories are deliberately left out.
 > 2. `encode(frame, column, vocabulary)` → a new frame with `column` replaced by integer indicator columns named `column=value`, one per vocabulary entry **in vocabulary order**, then `column=other` for anything unseen or missing. Every row has exactly one `1` among them. Other columns keep their order and come first; the index is preserved; the input is unchanged. An empty frame still gets every indicator column.
 @@starter
 import pandas as pd

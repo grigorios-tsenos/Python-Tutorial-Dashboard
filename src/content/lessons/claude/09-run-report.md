@@ -11,7 +11,7 @@ minutes: 12
 @@body
 # Boss: turn an agent's event log into a PR comment
 
-Once Claude Code runs unattended (in CI, in a scheduled job), you need an audit trail. Imagine each run writes a **JSONL** log, one JSON object per line:
+Claude Code running unattended (CI, scheduled jobs) needs an audit trail: a **JSONL** log, one JSON object per line:
 
 ```
 {"type": "tool_use", "tool": "Bash"}
@@ -20,7 +20,7 @@ Once Claude Code runs unattended (in CI, in a scheduled job), you need an audit 
 {"type": "usage", "input_tokens": 1200, "output_tokens": 300}
 ```
 
-Logs are messy in real life: blank lines, truncated writes, junk. A good parser **skips what it can't read and counts it**, instead of crashing the whole report.
+Real logs are messy: blank lines, truncated writes, junk. A good parser **skips what it can't read and counts it** instead of crashing.
 
 > **Mission:** write `summarize(log_text)` returning a dict:
 >
@@ -161,4 +161,4 @@ What is JSONL?
 @@a
 JSON Lines: one complete JSON object per line, ideal for append-only logs.
 @@real
-Claude Code can run non-interactively (`claude -p "..."`) for CI and scripts, and hooks can write exactly this kind of audit log. The parser pattern here (tolerant, counting, pure function) is what you'd wire into a GitHub Action.
+Claude Code runs non-interactively (`claude -p "..."`) for CI and scripts, and hooks can write exactly this kind of audit log. This tolerant, counting, pure-function parser is what you'd wire into a GitHub Action.

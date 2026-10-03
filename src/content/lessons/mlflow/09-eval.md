@@ -11,9 +11,7 @@ minutes: 12
 @@body
 # Boss: an evaluation harness for LLM prompts
 
-"This prompt feels better" is not engineering. The professional loop is: **fixed dataset → run each candidate → log a score → compare**. MLflow turns every candidate into a run you can sort, share and reproduce.
-
-Here the three "prompt versions" are tiny functions standing in for model calls.
+The loop: **fixed dataset → run each candidate → log a score → compare**. Each candidate becomes a run you can sort and reproduce. The "prompt versions" here are stub functions.
 
 > **Mission:** write `evaluate_prompts(candidates, dataset)`:
 > - `candidates` is `{name: fn(question) -> answer}`; `dataset` is a list of `(question, expected)`

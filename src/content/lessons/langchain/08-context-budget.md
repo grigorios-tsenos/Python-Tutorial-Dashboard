@@ -11,11 +11,11 @@ minutes: 8
 @@body
 # Retrieval has a budget
 
-A retriever can find more text than a prompt can hold. Before building the prompt, pack complete passages in their retrieval order. This exercise uses a **character** limit so you can see the accounting; model APIs usually count tokens.
+A retriever can return more text than a prompt can hold, so pack complete passages, in retrieval order, into a budget. This exercise counts **characters** to keep the accounting visible; real APIs count tokens.
 
 > **Mission:** implement `pack_context(documents, max_chars)`. Strip surrounding whitespace from each passage, skip blank passages, and join included passages with exactly two newlines. Include a whole passage only if it fits, counting those separators too. Skip an oversized passage and keep trying later passages. Return `""` for an empty collection or a non-positive budget. Keep the input list unchanged.
 
-The supplied chain inserts your packed context beside the original question. Do not truncate passages or reorder them.
+Do not truncate or reorder passages; the supplied chain inserts your packed context beside the question.
 @@starter
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate

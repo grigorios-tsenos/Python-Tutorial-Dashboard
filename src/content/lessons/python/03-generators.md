@@ -12,9 +12,9 @@ answer: 1
 @@body
 # Predict the output
 
-When an LLM streams a response, your code receives tokens one at a time. In Python that's a **generator**: a function with `yield` that *pauses* and resumes. The subtle part is *when* the code inside actually runs.
+A streaming LLM response arrives one token at a time. In Python that's a **generator**: a function with `yield` that pauses and resumes. The subtle part is *when* its body runs.
 
-Read the code and decide the exact order of the printed lines.
+Decide the exact order of the printed lines.
 @@starter
 def tokens():
     print("start")
