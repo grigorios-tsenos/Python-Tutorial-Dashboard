@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LESSONS, LESSON_BY_ID } from '../content'
+import { LESSON_BY_ID, lessonsOf, nextLessonId } from '../content'
 import { LessonWalkthrough } from '../labs/LessonWalkthrough'
 import { TRACK_BY_ID } from '../content/tracks'
 import { KIND_LABEL, type Lesson } from '../content/types'
@@ -11,7 +11,7 @@ import { seededShuffle } from '../lib/shuffle'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/ui'
 import { CodeEditor, setVimActions } from './CodeEditor'
-import { Difficulty } from './Difficulty'
+import { Difficulty, STAGES } from './Difficulty'
 import { Hints } from './Hints'
 import { Markdown } from './Markdown'
 import { OutputPanel } from './OutputPanel'
@@ -161,9 +161,12 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     setResult(null)
   }
 
-  const idx = LESSONS.findIndex((l) => l.id === id)
-  const prev = LESSONS[idx - 1]
-  const next = LESSONS[idx + 1]
+  const trackLessons = lessonsOf(lesson.track)
+  const idx = trackLessons.findIndex((l) => l.id === id)
+  const prev = trackLessons[idx - 1]
+  const next = trackLessons[idx + 1]
+  const nextChapterId = next ? null : nextLessonId(id)
+  const nextChapter = nextChapterId ? LESSON_BY_ID[nextChapterId] : null
   const verdict = result && graded && result.tests.length > 0 ? allPassed(result) : null
   const phaseLabel = runtime.phase === 'error' ? 'Python offline' : runtime.phase === 'booting' ? 'Loading Python…' : runtime.phase === 'running' ? 'Running…' : runtime.phase === 'ready' ? 'Python ready' : 'Python idle'
 
@@ -227,8 +230,27 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           </>
         )}
         <footer className="lesson-nav">
-          {prev ? <a href={lessonPath(prev.id)} className="btn ghost">← {prev.title}</a> : <span />}
-          {next ? <a href={lessonPath(next.id)} className="btn ghost">{next.title} →</a> : <span />}
+          {prev ? (
+            <a href={lessonPath(prev.id)} className="btn ghost nav-step">
+              <span className="nav-kicker">← {STAGES[prev.order - 1].label}</span>
+              <span className="nav-title">{prev.title}</span>
+            </a>
+          ) : (
+            <a href="#/" className="btn ghost nav-step"><span className="nav-kicker">← Map</span><span className="nav-title">All chapters</span></a>
+          )}
+          {next ? (
+            <a href={lessonPath(next.id)} className="btn ghost nav-step nav-next">
+              <span className="nav-kicker">{STAGES[next.order - 1].label} →</span>
+              <span className="nav-title">{next.title}</span>
+            </a>
+          ) : nextChapter ? (
+            <a href={lessonPath(nextChapter.id)} className="btn ghost nav-step nav-next">
+              <span className="nav-kicker">Next chapter →</span>
+              <span className="nav-title">{TRACK_BY_ID[nextChapter.track].glyph} {TRACK_BY_ID[nextChapter.track].name}: {nextChapter.title}</span>
+            </a>
+          ) : (
+            <span />
+          )}
         </footer>
       </article>
 

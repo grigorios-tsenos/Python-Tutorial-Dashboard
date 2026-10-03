@@ -47,15 +47,42 @@ it('keeps reshaped values identifiable while their positions change', () => {
   expect(after.find(c => c.id === 'd')!.y).toBeGreaterThan(before.find(c => c.id === 'd')!.y)
 })
 
+import { useStore } from '../src/store/useStore'
+// renderToStaticMarkup reads the store's initial snapshot (zustand's server-render path),
+// so these tests shape that snapshot directly instead of calling setState.
+const initial = useStore.getInitialState()
+const setIntroStyle = (style: 'full' | 'quick' | 'code') => { initial.settings.introStyle = style }
+
 describe.each(LESSONS.map(l => l.id))('%s code visibility', id => {
   it('omits code until the solution has been explicitly revealed', () => {
+    setIntroStyle('full')
     const locked = renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: id, solutionRevealed: false }))
     expect(locked).toContain('What’s the point?')
     expect(locked).not.toContain('<code>')
     expect(locked).not.toContain('Connect this step to code')
+    // "start at the demo" jumps straight to steps that carry code, so gate it there too
+    setIntroStyle('quick')
+    const lockedDemo = renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: id, solutionRevealed: false }))
+    expect(lockedDemo).not.toContain('<code>')
     const revealed = renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: id, solutionRevealed: true }))
     expect(revealed).toContain('<code>')
+    setIntroStyle('full')
   })
+})
+
+it('collapses the intro when completed or set to straight-to-code, and remembers per-lesson choices', () => {
+  initial.completed['np-shapes'] = { at: 1, xp: 1, hints: 0, attempts: 1 }
+  expect(renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: 'np-shapes', solutionRevealed: false }))).toContain('Show the intro')
+  initial.intro['np-shapes'] = 'open'
+  expect(renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: 'np-shapes', solutionRevealed: false }))).toContain('What’s the point?')
+  delete initial.completed['np-shapes']
+  delete initial.intro['np-shapes']
+  setIntroStyle('code')
+  expect(renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: 'np-views', solutionRevealed: false }))).toContain('Show the intro')
+  initial.intro['np-views'] = 'open'
+  expect(renderToStaticMarkup(createElement(LessonWalkthrough, { lessonId: 'np-views', solutionRevealed: false }))).toContain('What’s the point?')
+  delete initial.intro['np-views']
+  setIntroStyle('full')
 })
 
 import { WARMUPS } from '../src/content/warmups'

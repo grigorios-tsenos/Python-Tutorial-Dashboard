@@ -12,12 +12,18 @@ export interface Completion {
 
 export type MapLabels = 'all' | 'focus' | 'off'
 
+/** how lesson intros open by default: full warm-up first, straight to the core demo, or collapsed */
+export type IntroStyle = 'full' | 'quick' | 'code'
+export const DEMO_SPEEDS = [5000, 3000, 1500] as const
+
 export interface Settings {
   vim: boolean
   theme: 'dark' | 'light'
   reduceMotion: boolean
   /** star-title visibility on the map: every star, only next + hovered, or hover tooltips only */
   mapLabels: MapLabels
+  introStyle: IntroStyle
+  demoSpeed: number
 }
 
 export interface Persisted {
@@ -29,6 +35,8 @@ export interface Persisted {
   cards: Record<string, Card>
   badges: Record<string, number>
   settings: Settings
+  /** per-lesson intro visibility chosen by the learner; absent means "use the default rules" */
+  intro: Record<string, 'open' | 'collapsed'>
   quest: { date: string; done: number; claimed: boolean }
   stats: { runs: number; vimRuns: number; reviews: number; predictMisses: number }
   lastLesson: string | null
@@ -43,7 +51,8 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all' },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000 },
+    intro: {},
     quest: { date: '', done: 0, claimed: false },
     stats: { runs: 0, vimRuns: 0, reviews: 0, predictMisses: 0 },
     lastLesson: null,
@@ -91,6 +100,11 @@ export function sanitize(raw: unknown): Persisted {
     d.settings.theme = raw.settings.theme === 'light' ? 'light' : 'dark'
     d.settings.reduceMotion = raw.settings.reduceMotion === true
     d.settings.mapLabels = raw.settings.mapLabels === 'focus' || raw.settings.mapLabels === 'off' ? raw.settings.mapLabels : 'all'
+    d.settings.introStyle = raw.settings.introStyle === 'quick' || raw.settings.introStyle === 'code' ? raw.settings.introStyle : 'full'
+    d.settings.demoSpeed = (DEMO_SPEEDS as readonly number[]).includes(num(raw.settings.demoSpeed, 3000)) ? num(raw.settings.demoSpeed, 3000) : 3000
+  }
+  if (isObj(raw.intro)) {
+    for (const [id, v] of Object.entries(raw.intro)) if (LESSON_BY_ID[id] && (v === 'open' || v === 'collapsed')) d.intro[id] = v
   }
   if (isObj(raw.quest) && typeof raw.quest.date === 'string') {
     d.quest = { date: raw.quest.date, done: Math.max(0, Math.floor(num(raw.quest.done))), claimed: raw.quest.claimed === true }
