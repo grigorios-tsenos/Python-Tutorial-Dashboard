@@ -43,7 +43,7 @@ export function CommandPalette() {
     const actions: Item[] = [
       { id: 'a-map', label: 'Go to the map', hint: 'page', icon: '✦', run: () => go('#/') },
       { id: 'a-review', label: 'Open Review', hint: 'page', icon: '🧠', run: () => go('#/review') },
-      { id: 'a-stats', label: 'Open Stats', hint: 'page', icon: '◔', run: () => go('#/stats') },
+      { id: 'a-stats', label: 'Open Dashboard', hint: 'page', icon: '◔', run: () => go('#/stats') },
       { id: 'a-vim', label: `Turn Vim mode ${settings.vim ? 'off' : 'on'}`, hint: 'setting', icon: '⌨', run: () => st.setSetting('vim', !settings.vim) },
       { id: 'a-theme', label: `Switch to ${settings.theme === 'dark' ? 'light' : 'dark'} theme`, hint: 'setting', icon: '◐', run: () => st.setSetting('theme', settings.theme === 'dark' ? 'light' : 'dark') },
       { id: 'a-settings', label: 'Open settings / export progress', hint: 'setting', icon: '⚙', run: () => useUi.getState().set({ settingsOpen: true }) },

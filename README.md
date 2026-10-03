@@ -25,7 +25,7 @@ First load downloads the Python runtime (~15 MB from the jsDelivr CDN); the brow
 **Visual walkthroughs:** all 72 lessons explain their purpose with animated teaching examples, Play/Back/Next controls and a check-your-reasoning prompt. Walkthrough code appears only after explicitly revealing the solution.
 **Visual labs:** NumPy broadcasting, LangGraph step-through trace, MLflow run table + model registry.
 
-**Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, 13 achievements, stats page (skill radar, activity heatmap), command palette, light/dark theme, reduced-motion.
+**Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, 13 achievements, a customizable dashboard (level, XP per week, first-try rate, chapter ladders, skill radar, lesson-type and review-deck breakdowns, recent completions, activity heatmap; hide the panels you don't need), five accent colours, command palette, light/dark theme, reduced-motion.
 **Difficulty:** Basics → Guided → Practice → Challenge → Applied → Advanced → Production → Expert → Boss in each section. Later exercises use unfamiliar inputs and edge cases; the difficulty path shows your current step and completed exercises.
 **Editor:** CodeMirror 6 with **Vim mode** (`:w` runs, `:q` returns to the map, cheat sheet), ⌘/Ctrl+Enter to run.
 **Your data:** IndexedDB, versioned and validated; export/import JSON in Settings.
@@ -77,9 +77,9 @@ Add a tailored teaching example in `src/content/walkthroughs.ts` with a purpose,
 ```
 src/engine    Pyodide worker, runner (timeout + restart), shared installer, Python harness + shims
 src/content   lesson parser, tracks, lessons/*.md
-src/lib       pure logic: gamification, spaced repetition, achievements, router
+src/lib       pure logic: gamification, spaced repetition, achievements, dashboard metrics, router
 src/store     zustand + IndexedDB, validation of untrusted data
-src/ui        map, lesson, review, stats, settings, palette
+src/ui        map, lesson, review, dashboard, settings, palette
 src/labs      visual labs
 .10x/         specs, ADRs, decision log and reviews from the build
 ```
