@@ -10,10 +10,14 @@ export interface Completion {
   attempts: number
 }
 
+export type MapLabels = 'all' | 'focus' | 'off'
+
 export interface Settings {
   vim: boolean
   theme: 'dark' | 'light'
   reduceMotion: boolean
+  /** star-title visibility on the map: every star, only next + hovered, or hover tooltips only */
+  mapLabels: MapLabels
 }
 
 export interface Persisted {
@@ -39,7 +43,7 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all' },
     quest: { date: '', done: 0, claimed: false },
     stats: { runs: 0, vimRuns: 0, reviews: 0, predictMisses: 0 },
     lastLesson: null,
@@ -86,6 +90,7 @@ export function sanitize(raw: unknown): Persisted {
     d.settings.vim = raw.settings.vim === true
     d.settings.theme = raw.settings.theme === 'light' ? 'light' : 'dark'
     d.settings.reduceMotion = raw.settings.reduceMotion === true
+    d.settings.mapLabels = raw.settings.mapLabels === 'focus' || raw.settings.mapLabels === 'off' ? raw.settings.mapLabels : 'all'
   }
   if (isObj(raw.quest) && typeof raw.quest.date === 'string') {
     d.quest = { date: raw.quest.date, done: Math.max(0, Math.floor(num(raw.quest.done))), claimed: raw.quest.claimed === true }

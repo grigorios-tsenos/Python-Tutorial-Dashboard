@@ -12,7 +12,7 @@ import { Difficulty } from './Difficulty'
 
 const { w: W, h: H } = MAP_SIZE
 
-const STAR_GAP = 82
+const STAR_GAP = 74
 
 /** Stars zigzag along a tilted arc: odd stars sit above the line (label above), even stars below (label below). */
 function starSpots(t: Track, count: number): { x: number; y: number; up: boolean }[] {
@@ -47,6 +47,8 @@ const DUST = (() => {
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v))
 
+const LABEL_MODE = { all: 'all', focus: 'next', off: 'hover' } as const
+
 function StarLabel({ title, up, offset }: { title: string; up: boolean; offset: number }) {
   const lines = wrapLabel(title)
   const first = up ? -offset - (lines.length - 1) * 14 : offset + 8
@@ -64,6 +66,8 @@ export function MapView() {
   const quest = useStore((s) => s.quest)
   const activity = useStore((s) => s.activity)
   const reduceMotion = useStore((s) => s.settings.reduceMotion)
+  const mapLabels = useStore((s) => s.settings.mapLabels)
+  const setSetting = useStore((s) => s.setSetting)
 
   const today = dayKey()
   const streak = currentStreak(Object.keys(activity), today)
@@ -247,7 +251,9 @@ export function MapView() {
                           <circle className="core" r={st === 'done' ? 9 : 7} />
                         )}
                         {st === 'done' && <path className="tick" d="M-4 0 L-1 3 L4 -3" />}
-                        <StarLabel title={l.title.replace(/^Boss: /, '')} up={pt.up} offset={boss ? 30 : 22} />
+                        {(mapLabels === 'all' || hover === l.id || (mapLabels === 'focus' && st === 'next')) && (
+                          <StarLabel title={l.title.replace(/^Boss: /, '')} up={pt.up} offset={boss ? 30 : 22} />
+                        )}
                       </g>
                     )
                   })}
@@ -286,7 +292,24 @@ export function MapView() {
             <p className="dim">Revisit any lesson, or keep your memory sharp in Review.</p>
           </>
         )}
-        {next && <a className="btn primary" href={lessonPath(next.id)}>{first ? 'Light your first star' : 'Continue'} →</a>}
+        {next && <a className="btn primary" href={lessonPath(next.id)}>{first ? 'Light your first star' : `Continue: ${next.title}`} →</a>}
+        {first && <p className="hero-feats">72 hands-on lessons · 9 steps per chapter · XP, streaks & bosses</p>}
+        <div className="hero-tracks" role="list" aria-label="Jump to a chapter">
+          {progress.map(({ track: t, done, total }) => (
+            <button
+              key={t.id}
+              role="listitem"
+              className={`hero-track ${next && next.track === t.id ? 'active' : ''}`}
+              style={{ ['--tc' as string]: t.color }}
+              title={`${t.name}: ${t.blurb}`}
+              aria-label={`${t.name}, ${done} of ${total} done. Focus on the map`}
+              onClick={() => focusPoint(t.x, t.y)}
+            >
+              <span className="ht-glyph" aria-hidden>{t.glyph}</span>
+              <span className="ht-count">{done}/{total}</span>
+            </button>
+          ))}
+        </div>
         {next && <Difficulty lesson={next} />}
         <div className="hero-tip"><span aria-hidden>💡</span> {tipOfTheDay(today)}</div>
       </div>
@@ -334,6 +357,15 @@ export function MapView() {
         <button className="icon-btn" onClick={() => zoomBy(0.8)} aria-label="Zoom out">－</button>
         <button className="icon-btn" onClick={fit} aria-label="Show the whole sky" title="Fit">⤢</button>
         {next && <button className="icon-btn" onClick={() => { const p = SPOTS[next.id]; focusPoint(p.x, p.y, 1.3) }} aria-label="Center on next star" title="Next star">◎</button>}
+        <button
+          className="icon-btn label-mode"
+          onClick={() => setSetting('mapLabels', mapLabels === 'all' ? 'focus' : mapLabels === 'focus' ? 'off' : 'all')}
+          aria-label={`Star titles: ${LABEL_MODE[mapLabels]}. Click to change`}
+          title={`Star titles: ${LABEL_MODE[mapLabels]}`}
+        >
+          <span aria-hidden>Aa</span>
+          <small aria-hidden>{LABEL_MODE[mapLabels]}</small>
+        </button>
       </div>
     </div>
   )
