@@ -11,18 +11,15 @@ minutes: 12
 @@body
 # Boss: an evaluation harness for LLM prompts
 
-"This prompt feels better" is not engineering. The professional loop is: **fixed dataset → run each candidate → log a score → compare**. MLflow turns every candidate into a run you can sort, share and reproduce.
-
-Here the three "prompt versions" are tiny functions standing in for model calls.
+"This prompt feels better" is not engineering. The loop is **fixed dataset → run each candidate → log a score → compare**, and MLflow makes every candidate a run you can sort and reproduce. Here the "prompt versions" are tiny functions standing in for model calls.
 
 > **Mission:** write `evaluate_prompts(candidates, dataset)`:
 > - `candidates` is `{name: fn(question) -> answer}`; `dataset` is a list of `(question, expected)`
 > - for **each** candidate, start a run **named after it**, log param `prompt_version=<name>` and metric `accuracy` (fraction answered exactly right)
-> - **return the name** of the candidate with the highest accuracy
-> - ties go to the first candidate in the input dict; no candidates returns `None`
-> - an empty dataset raises `ValueError` before any runs are logged
+> - **return the name** with the highest accuracy; ties go to the first candidate; no candidates returns `None`
+> - an empty dataset raises `ValueError` before any run is logged
 
-The boss uses new candidate names and a different dataset: the winner must come from measured results, and every new run must log the new score.
+The boss uses new names and a different dataset: the winner must come from measured results.
 @@starter
 import mlflow
 

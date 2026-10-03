@@ -11,24 +11,24 @@ minutes: 15
 @@body
 # Boss: raw mess in, trusted numbers out
 
-The **medallion architecture** is how Databricks teams stage data quality:
+The **medallion architecture** stages data quality:
 
-| layer | contents | rule |
-|---|---|---|
-| 🥉 **bronze** | raw data exactly as received | never modify; it's your safety net |
-| 🥈 **silver** | cleaned, validated, de-duplicated | drop or fix the junk |
-| 🥇 **gold** | business-ready aggregates | what dashboards and models read |
+| layer | contents |
+|---|---|
+| 🥉 **bronze** | raw data exactly as received; never modified |
+| 🥈 **silver** | cleaned, validated, de-duplicated |
+| 🥇 **gold** | business-ready aggregates for dashboards and models |
 
-Your raw orders are messy: a **duplicate** `o2`, an order with **no user**, an amount of `"n/a"`, and amounts stored as **text**.
+Your raw orders contain a duplicate `o2`, an order with no user, an amount of `"n/a"`, and amounts stored as text.
 
-> **Mission:** write `run_pipeline(spark, raw_rows)` that saves three Delta tables and returns the gold DataFrame:
+> **Mission:** write `run_pipeline(spark, raw_rows)`, saving three Delta tables and returning the gold DataFrame:
 > - `main.shop.bronze`: the raw rows untouched
-> - `main.shop.silver`: drop rows with a null, empty or whitespace-only `user`, cast `amount` to **double** and drop rows where it isn't a number, then drop duplicate `order_id`s
-> - `main.shop.gold_revenue`: per `city`: `revenue` (sum of amount, rounded to 2 decimals) and `orders` (count), **biggest revenue first**, with ties sorted by city
+> - `main.shop.silver`: drop rows with a null, empty or whitespace-only `user`; cast `amount` to **double** and drop non-numbers; drop duplicate `order_id`s
+> - `main.shop.gold_revenue`: per `city`, `revenue` (sum, rounded to 2 decimals) and `orders` (count), biggest revenue first, ties by city
 >
-> It must be **re-runnable**: use `mode("overwrite")` so a second run doesn't crash.
+> Use `mode("overwrite")` so a second run doesn't crash.
 
-The boss changes cities and order IDs, includes negative amounts (valid refunds), and finishes with an empty batch. Give bronze an explicit schema (`order_id`, `user`, `amount`, `city`, all strings) so an empty batch still creates all three tables. Keep `raw_rows` unchanged.
+The boss changes cities and IDs, includes negative amounts (valid refunds) and ends with an empty batch: give bronze an explicit all-string schema (`order_id`, `user`, `amount`, `city`) so even an empty batch creates all three tables. Keep `raw_rows` unchanged.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

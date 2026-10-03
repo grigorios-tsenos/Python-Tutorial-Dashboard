@@ -11,28 +11,24 @@ minutes: 7
 @@body
 # Fan out, fan in
 
-Before a support bot sends a drafted reply, it runs guardrail checks: does the draft leak an email address? Is it too long? Is the tone off? The checks don't depend on each other, so they shouldn't wait in line.
+Guardrail checks on a drafted reply (PII? too long? wrong tone?) don't depend on each other, so run them together.
 
-**Fan out:** add an edge from `START` to each check. Nodes that become ready together run in the same **step** (a "superstep").
-**Fan in:** add an edge from each check to `decide`. It runs once, after all three have finished.
+**Fan out:** an edge from `START` to each check; nodes that become ready together run in one **step**. **Fan in:** an edge from each check to `decide`, which runs once after all three finish.
 
-The catch: all three checks write `findings` in the same step. Plain state keys hold **one** value per step, so LangGraph raises `InvalidUpdateError` rather than guess which write should win. Declare a **reducer** to say how parallel writes combine:
+The catch: all three write `findings` in the same step. A plain key holds one value per step, so LangGraph raises `InvalidUpdateError`. A **reducer** says how parallel writes combine:
 
 ```python
-import operator
-from typing import Annotated, TypedDict
-
 class Review(TypedDict):
     findings: Annotated[list, operator.add]   # parallel lists are concatenated
 ```
 
-> **Mission:** implement `build_review()` and return the compiled graph:
+> **Mission:** implement `build_review()` → the compiled graph:
 >
 > 1. give `findings` an `operator.add` reducer
-> 2. fan out from `START` to the supplied checks as nodes **`pii`**, **`length`** and **`tone`**; fan in from all three to **`decide`**, then `END`
-> 3. `decide` sets `verdict` to `"send"` when there are no findings, otherwise `"revise"`, and `summary` to the findings **sorted** and joined with `"; "` (`""` when there are none). Parallel writes can arrive in any order, so sort before you join.
+> 2. fan out from `START` to the supplied checks as nodes **`pii`**, **`length`** and **`tone`**; fan in to **`decide`**, then `END`
+> 3. `decide` sets `verdict` to `"send"` with no findings, else `"revise"`, and `summary` to the findings **sorted** and joined with `"; "` (`""` when none). Parallel writes arrive in any order, so sort first.
 >
-> Run the starter first to see the error LangGraph raises without the reducer.
+> Run the starter first to see the error without the reducer.
 @@starter
 import re
 from typing import TypedDict

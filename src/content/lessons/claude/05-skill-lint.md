@@ -11,16 +11,16 @@ minutes: 6
 @@body
 # Turn project conventions into useful errors
 
-The previous puzzle parsed a skill's frontmatter. Now validate the resulting metadata **without executing the skill**. Your team's review skills follow a deliberately small project policy; it is stricter than Claude Code's full frontmatter format.
+The previous puzzle parsed a skill's frontmatter. Now validate the metadata **without executing the skill**, against a deliberately small project policy (stricter than Claude Code's full format).
 
-> **Mission:** write `validate_skill(meta, body)` returning a list of invalid field names in this fixed order: `name`, `description`, `allowed-tools`, `body`.
+> **Mission:** write `validate_skill(meta, body)` → a list of invalid field names in this fixed order: `name`, `description`, `allowed-tools`, `body`.
 
-- `name`: a string of 1–64 characters, starting with a lowercase letter, followed by lowercase letters/digits and optional single hyphens between non-empty segments. Examples: `review-code`, `lint2`; reject `Review`, `-lint`, `lint--code` and `lint-`.
+- `name`: 1–64 characters, starting with a lowercase letter, then lowercase letters/digits with single hyphens between non-empty segments. OK: `review-code`, `lint2`. Invalid: `Review`, `-lint`, `lint--code`, `lint-`.
 - `description`: a string whose stripped length is 1–1024.
-- `allowed-tools`: optional; when present, a comma-separated string of one or more tool names from `Read`, `Grep`, `Glob`. Spaces around each name are fine; empty or unknown names are invalid.
-- `body`: a non-empty string after stripping whitespace.
+- `allowed-tools`: optional; when present, comma-separated names from `Read`, `Grep`, `Glob` (spaces around names are fine; empty or unknown names are invalid).
+- `body`: non-empty after stripping.
 
-If `meta` is not a dict, return only `["metadata"]`. A valid skill returns `[]`. Ignore extra metadata keys and leave the input untouched. This is the team's lint policy, not a complete YAML parser or a proof that a skill is safe.
+If `meta` is not a dict, return only `["metadata"]`. A valid skill returns `[]`. Ignore extra keys; leave the input untouched.
 @@starter
 import re
 

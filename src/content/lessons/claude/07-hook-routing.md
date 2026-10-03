@@ -11,22 +11,22 @@ minutes: 8
 @@body
 # A hook can make a precise decision
 
-An exit-code hook can block a call. A `PreToolUse` hook can also print structured JSON with a `deny` or `ask` decision and a reason:
+A `PreToolUse` hook can print structured JSON with a `deny` or `ask` decision and a reason:
 
 ```json
 {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "Review dependency changes."}}
 ```
 
-> **Mission:** write `route_hook(event, project_dir)`, which returns a JSON-serializable dict for this project's policy. The trusted `project_dir` is an absolute POSIX path; inputs contain no symlinks.
+> **Mission:** write `route_hook(event, project_dir)` → a JSON-serializable dict for this policy. `project_dir` is a trusted absolute POSIX path; inputs contain no symlinks. Rules run in this order:
 
-1. If `event` is not a dict or its `tool_name` is not a non-empty string, deny with a reason containing `malformed`.
-2. Tools other than `Write`, `Edit`, `MultiEdit` return `{}`: the hook has no decision.
-3. For those write tools, `tool_input` must be a dict and `file_path` must be a non-blank string without NUL characters. Invalid input is denied with a reason containing `malformed`.
-4. Resolve a relative path against `project_dir` and normalize `.` / `..`. Deny paths outside the project, with a reason containing `outside`.
-5. Deny any path component equal to `.git`, `.env`, or starting with `.env.`, except `.env.example`. Include `protected` in the reason.
-6. Ask for confirmation when the filename is `package.json`, `pyproject.toml` or `requirements.txt`, with `dependencies` in the reason. Otherwise return `{}`.
+1. `event` not a dict, or `tool_name` not a non-empty string → deny, reason containing `malformed`
+2. tools other than `Write`, `Edit`, `MultiEdit` → `{}` (no decision)
+3. `tool_input` must be a dict and `file_path` a non-blank string without NUL characters, else deny with `malformed`
+4. resolve a relative path against `project_dir` and normalize `.`/`..`; paths outside the project → deny with `outside`
+5. any component equal to `.git`, `.env`, or starting with `.env.` (except `.env.example`) → deny with `protected`
+6. filename `package.json`, `pyproject.toml` or `requirements.txt` → ask with `dependencies`; otherwise `{}`
 
-Rules run in this order. Every deny/ask result has exactly the wrapper shown above, the chosen decision, and a non-empty reason. Do not modify the event. `posixpath.normpath`, `join` and `commonpath` handle paths without requiring filesystem access. A string-prefix test alone would incorrectly treat `/repo-old` as inside `/repo`.
+Every deny/ask result uses exactly the wrapper above with a non-empty reason. Don't modify the event. `posixpath.normpath`, `join` and `commonpath` need no filesystem; a plain prefix test would treat `/repo-old` as inside `/repo`.
 @@starter
 import json
 import posixpath
@@ -54,7 +54,7 @@ def route_hook(event, project_dir):
     if not isinstance(path, str) or not path.strip() or "\0" in path:
         return reply("deny", "malformed file path")
     root = posixpath.normpath(project_dir)
-    # ponytail: lexical paths only; resolve symlinks before filesystem enforcement.
+    # note: lexical paths only; resolve symlinks before filesystem enforcement.
     path = posixpath.normpath(posixpath.join(root, path))
     if posixpath.commonpath([root, path]) != root:
         return reply("deny", "write is outside the project")

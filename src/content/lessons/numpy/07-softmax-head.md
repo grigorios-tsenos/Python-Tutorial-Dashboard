@@ -11,32 +11,27 @@ minutes: 7
 @@body
 # A classification head in two lines
 
-Your features are now complete and on one scale. A linear model turns them into one **score (logit)** per class with a single matrix product:
+A linear model turns features into one **logit** per class with one matrix product:
 
 ```
-X       (n, d)   n tickets, d features
-W       (d, k)   one weight column per class
-b       (k,)     one bias per class
-X @ W + b  ->  (n, k)   one row of k logits per ticket
+X @ W + b    (n, d) @ (d, k) + (k,)  ->  (n, k)   one row of k logits per ticket
 ```
 
-**Softmax** turns each row of logits into probabilities: `exp(z) / sum(exp(z))`, computed **per row**. An LLM does the same thing over a vocabulary of ~100k tokens for every token it writes.
-
-Per row means `axis=1`, and the easy-to-miss part is `keepdims=True`:
+**Softmax** turns each row of logits into probabilities: `exp(z) / sum(exp(z))`, **per row** (`axis=1`). The easy-to-miss part is `keepdims=True`:
 
 ```python
-exp.sum(axis=1)                 # shape (n,)    one total per row, but FLAT
-exp.sum(axis=1, keepdims=True)  # shape (n, 1)  the same totals, kept as a column
+exp.sum(axis=1)                 # (n,)    flat: lines up against k, not n
+exp.sum(axis=1, keepdims=True)  # (n, 1)  a column: each total stays beside its row
 ```
 
-Why it matters: dividing the `(n, k)` scores by the flat `(n,)` totals lines the shapes up from the right, `k` against `n` — an error, or (worse, when `k == n`) a silently wrong answer that divides across the wrong direction. The `(n, 1)` column keeps each total **next to the row it came from**, so broadcasting divides each row by its own total. When in doubt, print both shapes.
+Divide by the flat version and you get an error, or a silently wrong answer when `k == n`. The `(n, 1)` column makes broadcasting divide each row by its own total.
 
-The trap: `np.exp(1000)` overflows to `inf`, and `inf / inf` is `nan`. Softmax doesn't change if you add the same number to every logit in a row, so subtract each row's **maximum** first: the largest value becomes `exp(0) = 1` and nothing overflows.
+One trap: `np.exp(1000)` is `inf`, and `inf / inf` is `nan`. Softmax is unchanged when you add a constant to a row, so subtract each row's **maximum** first.
 
-> **Mission:** a support-ticket router. Implement:
+> **Mission:** a support-ticket router.
 >
-> 1. `predict_proba(X, W, b)` → an `(n, k)` array where each row is a probability distribution. It must stay finite for huge logits. Reject shapes that don't fit together with `ValueError`: `X` must be `(n, d)`, `W` must be `(d, k)` and `b` must be exactly `(k,)` (a length-1 bias that would silently broadcast is a bug, not a feature). An empty batch `(0, d)` returns `(0, k)`.
-> 2. `predict_labels(X, W, b, labels)` → the most likely label for each row, as a list. Ties go to the first label. A label list whose length isn't `k` raises `ValueError`.
+> 1. `predict_proba(X, W, b)` → an `(n, k)` array, each row a probability distribution, finite for huge logits. `X` must be `(n, d)`, `W` `(d, k)` and `b` exactly `(k,)`, else `ValueError`. An empty `(0, d)` batch returns `(0, k)`.
+> 2. `predict_labels(X, W, b, labels)` → the most likely label per row, as a list; ties go to the first label. A label list whose length isn't `k` raises `ValueError`.
 @@starter
 import numpy as np
 

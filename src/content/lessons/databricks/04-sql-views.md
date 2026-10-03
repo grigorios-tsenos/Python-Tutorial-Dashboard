@@ -11,23 +11,23 @@ minutes: 7
 @@body
 # Temp views, HAVING, and parameter markers
 
-On Databricks, dashboards and analysts speak SQL. Register a DataFrame as a **temporary view** and query it with `spark.sql`: same engine, same result type, a DataFrame back.
+Register a DataFrame as a **temporary view** and query it with `spark.sql`; a DataFrame comes back:
 
 ```python
-trips.createOrReplaceTempView("trips")           # visible to spark.sql in this session
+trips.createOrReplaceTempView("trips")
 spark.sql("SELECT zone, COUNT(*) AS n_trips FROM trips GROUP BY zone")
 ```
 
-This report has **two** bugs, one of each classic kind:
+This report has **two** classic bugs:
 
-1. **`WHERE` vs `HAVING`.** `WHERE` filters **rows before** grouping; it can't use an aggregate such as `COUNT(*)`. `HAVING` filters **groups after** aggregation.
-2. **String formatting a query.** An f-string pastes `city` straight into the SQL. A city like `St. John's` breaks the quote, and a value like `x' OR '1'='1` rewrites the query: SQL injection. Use **named parameter markers** and pass values separately:
+1. **`WHERE` vs `HAVING`.** `WHERE` filters rows **before** grouping and can't use `COUNT(*)`; `HAVING` filters groups **after**.
+2. **Formatting a query.** An f-string pastes `city` into the SQL: `St. John's` breaks the quote, and `x' OR '1'='1` rewrites the query. Use **named parameter markers**:
 
 ```python
 spark.sql("SELECT * FROM trips WHERE city = :city", args={"city": city})
 ```
 
-> **Mission:** fix `zone_report(spark, trips, city, min_trips)`. It returns completed trips per zone for one city as `zone`, `n_trips`, `avg_fare` (rounded to 2 decimals), keeping zones with **at least** `min_trips` completed trips, busiest first, ties by zone name. Cancelled trips never count. Any city name must work, including ones with quotes.
+> **Mission:** fix `zone_report(spark, trips, city, min_trips)`: completed trips per zone for one city as `zone`, `n_trips`, `avg_fare` (2 decimals), keeping zones with **at least** `min_trips` completed trips, busiest first, ties by zone. Cancelled trips never count. Any city name must work, quotes included.
 @@starter
 from pyspark.sql import SparkSession
 

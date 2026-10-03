@@ -11,45 +11,34 @@ minutes: 8
 @@body
 # Build a pairwise distance matrix
 
-Clustering, nearest neighbours and retrieval all compare sets of vectors. If `left` has shape `(n, d)` and `right` has shape `(m, d)`, the answer has shape `(n, m)`: entry `[i, j]` compares row `i` with row `j`.
+If `left` is `(n, d)` and `right` is `(m, d)`, the distance table is `(n, m)`: entry `[i, j]` compares left row `i` with right row `j`. Squared Euclidean distance (sum of squared differences) ranks neighbours without a square root.
 
-The **squared Euclidean distance** is the sum of squared coordinate differences. You can rank neighbours without taking a square root.
+### What `None` does
 
-> **Mission:** implement `pairwise_squared(left, right)` without Python loops. Return a floating-point matrix of all squared distances. Accept different row counts and empty matrices. Reject inputs that are not two-dimensional or have different feature counts with `ValueError`. Do not mutate either input.
-
-### What `None` actually does (nothing scary)
-
-Indexing with `None` inserts **one new axis of length 1**. No numbers are added, removed or changed; the same values get one more layer of brackets:
+Indexing with `None` inserts **one new axis of length 1**. Same numbers, one more layer of brackets:
 
 ```python
-v = np.array([3.0, 4.0])   # shape (2,)      [3. 4.]
-v[None, :]                  # shape (1, 2)    [[3. 4.]]   same two numbers, inside one row
+v = np.array([3.0, 4.0])    # (2,)      [3. 4.]
+v[None, :]                  # (1, 2)    [[3. 4.]]
 left[:, None, :]            # (n, d) -> (n, 1, d)
 ```
 
-Read `left[:, None, :]` out loud, one slot per axis: "**keep** every left point (`:`), **insert** an empty slot (`None`), **keep** every coordinate (`:`)". That empty slot is *room for the other collection*.
-
-### Why bother? Compare what you get with and without it
+Read `left[:, None, :]` as "**keep** every point, **insert** an empty slot, **keep** every coordinate". The empty slot is room for the other collection:
 
 ```python
-left  = np.array([[0., 0.], [3., 4.]])          # 2 points
-right = np.array([[0., 0.], [0., 4.], [3., 0.]]) # 3 points
-
-left - right                      # ERROR: (2, 2) vs (3, 2) don't line up
+left - right                           # ERROR: (2, 2) vs (3, 2)
 left[:, None, :] - right[None, :, :]   # (2, 1, 2) - (1, 3, 2) -> (2, 3, 2): ALL pairs
 ```
 
-That is the real implication: **without** the `None` axes, subtraction can only pair row 0 with row 0, row 1 with row 1 (and errors outright when the counts differ). **With** them, broadcasting stretches each length-1 slot, so every left point meets every right point. The warm-up above walks this exact alignment: `n` meets `1`, `1` meets `m`, `d` meets `d`.
-
-When any step confuses you, **print the shape after every line** and compare it with this chain:
+Without the `None` axes, row 0 can only meet row 0. With them, broadcasting stretches each length-1 slot so every left point meets every right point. When confused, print the shape after every line:
 
 ```
 (n, 1, d) - (1, m, d)  ->  (n, m, d)   one difference vector per pair
-   ... ** 2             ->  (n, m, d)   still per coordinate
+   ... ** 2             ->  (n, m, d)   squared, still per coordinate
    ... .sum(axis=-1)    ->  (n, m)      coordinates collapse: one distance per pair
 ```
 
-Only after the differences exist do you square them and sum away the `d` coordinates, leaving the `(n, m)` distance table.
+> **Mission:** implement `pairwise_squared(left, right)` without Python loops: a float matrix of all squared distances. Accept different row counts and empty matrices. Inputs that aren't 2-D or have different feature counts raise `ValueError`. Don't mutate either input.
 @@starter
 import numpy as np
 
@@ -70,7 +59,7 @@ def pairwise_squared(left, right):
     right = np.asarray(right, dtype=float)
     if left.ndim != 2 or right.ndim != 2 or left.shape[1] != right.shape[1]:
         raise ValueError("expected matrices with matching feature counts")
-    # ponytail: n*m*d temporary values; chunk rows when vector collections outgrow memory.
+    # note: n*m*d temporary values; chunk rows when vector collections outgrow memory.
     differences = left[:, None, :] - right[None, :, :]
     return np.sum(differences ** 2, axis=-1)
 

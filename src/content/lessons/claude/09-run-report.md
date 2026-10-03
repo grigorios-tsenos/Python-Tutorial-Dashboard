@@ -11,7 +11,7 @@ minutes: 12
 @@body
 # Boss: turn an agent's event log into a PR comment
 
-Once Claude Code runs unattended (in CI, in a scheduled job), you need an audit trail. Imagine each run writes a **JSONL** log, one JSON object per line:
+When Claude Code runs unattended, each run writes a **JSONL** log, one JSON object per line:
 
 ```
 {"type": "tool_use", "tool": "Bash"}
@@ -20,19 +20,19 @@ Once Claude Code runs unattended (in CI, in a scheduled job), you need an audit 
 {"type": "usage", "input_tokens": 1200, "output_tokens": 300}
 ```
 
-Logs are messy in real life: blank lines, truncated writes, junk. A good parser **skips what it can't read and counts it**, instead of crashing the whole report.
+Real logs contain blank lines, truncated writes and junk. A good parser **skips what it can't read and counts it**.
 
 > **Mission:** write `summarize(log_text)` returning a dict:
 >
 > | key | value |
 > |---|---|
 > | `tools` | `{tool_name: count}` of `tool_use` events |
-> | `errors` | number of `tool_result` events with `is_error` true |
-> | `blocked` | number of `hook_block` events |
+> | `errors` | `tool_result` events with `is_error` true |
+> | `blocked` | `hook_block` events |
 > | `tokens` | sum of `input_tokens + output_tokens` over `usage` events |
-> | `skipped` | lines that are not valid JSON objects, or known events with invalid fields (blank lines don't count) |
+> | `skipped` | lines that aren't valid JSON objects, or known events with invalid fields (blank lines don't count) |
 
-For known events, a tool name must be a non-empty string, `is_error` must be a boolean when present, and token counts must be non-negative integers (booleans do not count as integers). Missing token fields mean `0`; a missing `is_error` means `false`. Count an invalid event once as skipped and continue reading. Ignore unknown event types, and make each call independent of earlier reports.
+Valid means: a non-empty string tool name; a boolean `is_error` when present (missing means `false`); non-negative integer token counts (booleans don't count; missing means `0`). Count an invalid event once as skipped and keep reading. Ignore unknown event types; each call is independent.
 @@starter
 import json
 

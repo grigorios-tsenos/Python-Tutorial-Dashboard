@@ -11,23 +11,20 @@ minutes: 14
 @@body
 # Boss: Retrieval-Augmented Generation, end to end
 
-LLMs don't know your documents. **RAG** fixes that in two moves:
-
-1. **Retrieve**: find the passages most similar to the question
-2. **Generate**: paste them into the prompt as context, then ask the model
+LLMs don't know your documents. **RAG** fixes that in two moves: **retrieve** the passages most similar to the question, then **generate** with them pasted into the prompt.
 
 ```
 question ─┬─> retrieve ──> context ─┐
           └──────────────> question ┴─> prompt -> llm -> parser
 ```
 
-The `embed` function (a hashed bag-of-words) stands in for a real embedding model. The similarity maths is the one you learned in the NumPy boss. The "LLM" is a stand-in that simply echoes the prompt it receives, so you can *see* that the context arrived.
+`embed` (a hashed bag-of-words) stands in for a real embedding model; the similarity maths is the NumPy boss. The "LLM" echoes its prompt, so you can *see* the context arrive.
 
 > **Mission:**
 > 1. `retrieve(question, k=1)` → the `k` most cosine-similar documents (a list of strings)
-> 2. `rag_chain` → a runnable chain: question in, string out, with retrieved context in the prompt. Use a dict of runnables to fan the question out (`RunnablePassthrough` keeps the question as-is).
+> 2. `rag_chain` → a runnable: question in, string out, with retrieved context in the prompt. Fan the question out with a dict of runnables (`RunnablePassthrough` keeps it as-is).
 
-The retriever must work with a different document collection too. Return `[]` for a blank question, no documents, or `k <= 0`; oversized `k` returns all available documents. Tied scores keep document order. A blank question must put no invented context in the prompt.
+The retriever must work on other collections. Return `[]` for a blank question, no documents or `k <= 0`; oversized `k` returns everything; ties keep document order. A blank question puts no invented context in the prompt.
 @@starter
 import zlib
 import numpy as np

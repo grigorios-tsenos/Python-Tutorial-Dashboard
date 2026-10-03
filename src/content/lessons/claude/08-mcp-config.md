@@ -11,7 +11,7 @@ minutes: 8
 @@body
 # Environment variables in .mcp.json
 
-MCP servers give Claude Code new tools: your issue tracker, a database, internal docs. A project-scoped **`.mcp.json`** is committed to the repo so everyone on the team gets the same servers. Tokens and machine-specific paths must **not** be committed, so Claude Code expands environment variables when it reads the file:
+A project-scoped **`.mcp.json`** is committed so the whole team gets the same MCP servers. Tokens and machine paths must not be committed, so Claude Code expands environment variables when it reads the file:
 
 ```json
 {
@@ -20,10 +20,6 @@ MCP servers give Claude Code new tools: your issue tracker, a database, internal
       "type": "http",
       "url": "${TRACKER_URL:-https://tracker.example.com}/mcp",
       "headers": {"Authorization": "Bearer ${TRACKER_TOKEN}"}
-    },
-    "docs": {
-      "command": "npx",
-      "args": ["-y", "docs-mcp", "--root", "${DOCS_ROOT:-./docs}"]
     }
   }
 }
@@ -31,17 +27,17 @@ MCP servers give Claude Code new tools: your issue tracker, a database, internal
 
 | syntax | meaning |
 |---|---|
-| `${VAR}` | the value of `VAR`; if it isn't set, the config is invalid |
-| `${VAR:-default}` | `VAR` if it is set, otherwise `default` |
+| `${VAR}` | the value of `VAR`; unset means the config is invalid |
+| `${VAR:-default}` | `VAR` if set, otherwise `default` |
 
-This exercise also follows the shell rule that an **empty** value falls back to the default, so a blank line in someone's `.env` can't produce a broken URL.
+As in the shell, an **empty** value also falls back to the default.
 
-> **Mission:** implement `resolve_mcp_config(config, env)` and return a **new** config with placeholders expanded:
+> **Mission:** implement `resolve_mcp_config(config, env)` → a **new** config with placeholders expanded:
 >
-> - expand only these server fields: `command`, every item of `args`, every value of `env` and `headers`, and `url`. Other fields (`type`, descriptions, timeouts) stay exactly as written
-> - a placeholder is `${NAME}` or `${NAME:-default}`, where `NAME` matches `[A-Za-z_][A-Za-z0-9_]*` and the default contains no `}`. Anything else (`$HOME`, `${}`, `${1X}`) stays literal
-> - expanded values are **not** expanded again: a token containing `${...}` is just text
-> - when any `${VAR}` without a default is unset, raise `ValueError` whose message lists **every** missing name, sorted and without duplicates, so a teammate can fix their shell in one go
+> - expand only `command`, each item of `args`, each value of `env` and `headers`, and `url`; other fields stay as written
+> - a placeholder is `${NAME}` or `${NAME:-default}`, `NAME` matching `[A-Za-z_][A-Za-z0-9_]*`, the default containing no `}`. Anything else (`$HOME`, `${}`, `${1X}`) stays literal
+> - expanded values are **not** expanded again
+> - when any `${VAR}` without a default is unset, raise `ValueError` whose message lists **every** missing name, sorted, without duplicates
 > - don't modify `config` or `env`; a config without `mcpServers` is returned as a copy
 @@starter
 import copy

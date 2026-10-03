@@ -11,11 +11,9 @@ minutes: 12
 @@body
 # Boss: build user features from clickstream events
 
-Models don't read logs; they read **feature tables**: one row per entity, one column per signal. Turning events into features is the single most common data-science task in industry.
+Models don't read logs; they read **feature tables**: one row per entity, one column per signal. You get an event log: `user`, `action` (`view`, `click`, `purchase`) and `value` (revenue, only on purchases).
 
-You get an event log: `user`, `action` (`view`, `click` or `purchase`) and `value` (revenue, only set on purchases).
-
-> **Mission:** write `build_user_features(events)` returning a DataFrame with **exactly** these columns, one row per user, sorted by user:
+> **Mission:** write `build_user_features(events)` → a DataFrame with **exactly** these columns, one row per user, sorted by user:
 >
 > | column | meaning |
 > |---|---|
@@ -23,9 +21,9 @@ You get an event log: `user`, `action` (`view`, `click` or `purchase`) and `valu
 > | `n_events` | total events |
 > | `n_purchases` | number of `purchase` events |
 > | `revenue` | sum of `value` (0.0 if none) |
-> | `conversion` | purchases ÷ views, or `0.0` if the user has no views |
+> | `conversion` | purchases ÷ views, or `0.0` with no views |
 
-Don't mutate the input frame. The boss checks unfamiliar users, shuffled events, a purchaser with no views, and an empty event frame. Empty input must still return the five named columns.
+Don't mutate the input. The boss checks new users, shuffled events, a purchaser with no views, and an empty frame (which still returns the five columns).
 @@starter
 import numpy as np
 import pandas as pd

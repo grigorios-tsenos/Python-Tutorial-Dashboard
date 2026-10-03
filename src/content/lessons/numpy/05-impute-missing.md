@@ -9,32 +9,26 @@ xp: 45
 minutes: 6
 ---
 @@body
-# Boolean masks: select, count and replace without loops
+# Boolean masks: count, select and replace without loops
 
-Real feature matrices have holes: a sensor dropped a reading, a user skipped a form field, a join found no match. NumPy marks them as `NaN`, and `NaN` is contagious: **any** sum that touches it becomes `NaN`.
+Real feature matrices have holes, stored as `NaN`, and `NaN` is contagious: any sum that touches it becomes `NaN`.
 
 ```python
-import numpy as np
-
 X = np.array([[1.0, np.nan], [3.0, 4.0]])
-X.mean(axis=0)            # [2., nan]   <- one gap ruins the column
+X.mean(axis=0)            # [2., nan]   one gap ruins the column
 mask = np.isnan(X)        # [[False, True], [False, False]]  same shape as X
-(~mask).sum(axis=0)       # [2, 1]   observed values per column (True counts as 1)
-np.where(mask, 0.0, X)    # gaps replaced by 0, everything else kept
+(~mask).sum(axis=0)       # [2, 1]      observed values per column
+np.where(mask, 0.0, X)    # gaps -> 0, everything else kept
 ```
 
-A **mask** is a boolean array with the same shape as your data. You can count with it, select with it, and pass it to `np.where(mask, if_true, if_false)`, which broadcasts just like arithmetic does.
+A **mask** is a boolean array shaped like your data. Read `np.where(missing, means, X)` out loud: *where a cell is missing, take that column's mean; else keep X.* `means` is `(d,)`, one per column, and broadcasting repeats it down the rows, so each gap gets **its own column's** mean.
 
-Read the final fill, `np.where(missing, means, X)`, out loud: *"where a cell is missing, take that column's mean; everywhere else, keep X."* The shapes explain how one mean can fill a whole column: `missing` and `X` are `(n, d)`, `means` is `(d,)` — one value per column — and broadcasting repeats it down the rows so each gap receives **its own column's** mean, never a neighbour's.
-
-> **Mission:** implement `impute_columns(values)` for a two-dimensional matrix. Replace every `NaN` with the **mean of the observed values in the same column**, and also return how many cells were filled in each column (a data-quality report your pipeline can log).
+> **Mission:** implement `impute_columns(values)` for a 2-D matrix. Replace every `NaN` with the mean of the observed values in the same column.
 >
-> - return `(filled, filled_per_column)`: a float array with the input's shape, and an integer array with one count per column
-> - a column with **no** observed values has no mean: fill it with `0.0`, without dividing by zero (and without NumPy's "Mean of empty slice" warning)
-> - leave the input unchanged, keep observed values exactly, and keep an empty `(0, d)` matrix's shape
-> - a one-dimensional input raises `ValueError`
-
-Where this fits: the next step, standardization, assumes every cell holds a number. Real preprocessing pipelines impute first, then scale.
+> - return `(filled, filled_per_column)`: a float array with the input's shape, and an integer count per column
+> - a column with **no** observed values is filled with `0.0`, without dividing by zero or triggering the "Mean of empty slice" warning
+> - keep the input unchanged, keep observed values exactly, keep an empty `(0, d)` shape
+> - a 1-D input raises `ValueError`
 @@starter
 import numpy as np
 

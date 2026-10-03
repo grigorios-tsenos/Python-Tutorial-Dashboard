@@ -11,22 +11,19 @@ minutes: 4
 @@body
 # The big picture: describe the work, let a cluster run it
 
-A real event table can be billions of rows: too big for one machine's memory. Spark's answer: **you describe the result you want; a cluster of machines splits the work.** Databricks is where teams run Spark (plus the tables, jobs and ML tools around it).
+A real event table can be billions of rows, too big for one machine. With Spark **you describe the result you want; a cluster splits the work.** Databricks is where teams run Spark, plus the tables, jobs and ML tools around it.
 
-The good news for you: a Spark DataFrame *feels* like the pandas you just learned. Three starter moves:
+A Spark DataFrame *feels* like pandas. Three starter moves:
 
 ```python
-df.show()                    # LOOK: print the table (first 20 rows)
-df.count()                   # how many rows, across the whole cluster
+df.show()                    # LOOK: print the first 20 rows
+df.count()                   # how many rows, across the cluster
 df.select("city", "fare")    # PICK columns -> a NEW DataFrame
 ```
 
-Two habits to form on day one:
+Two day-one habits: **nothing prints by itself** (`select` only describes; call `.show()` to look), and **DataFrames never change** (every operation returns a new one).
 
-- **Nothing prints by itself.** `df.select(...)` just *describes* a smaller table; call `.show()` when you want to look at it.
-- **DataFrames never change.** Every operation returns a **new** DataFrame; the original is untouched. That's what lets Spark plan and distribute the work safely.
-
-> **Mission:** look at the trips table with `.show()`, store how many trips there are in `n`, and build `fares`: a new DataFrame with only the `city` and `fare` columns (then show it too).
+> **Mission:** look at the trips table with `.show()`, store the number of trips in `n`, and build `fares`, a DataFrame with only `city` and `fare` (show it too).
 @@starter
 from pyspark.sql import SparkSession
 

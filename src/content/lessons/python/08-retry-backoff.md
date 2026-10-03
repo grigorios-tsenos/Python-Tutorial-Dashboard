@@ -11,34 +11,23 @@ minutes: 8
 @@body
 # A decorator that knows when to try again
 
-LLM APIs fail in two very different ways:
-
-| failure | example | retry? |
-|---|---|---|
-| **transient** | rate limited (429), overloaded (529), timeout | yes, after waiting |
-| **permanent** | invalid request (400), bad API key (401) | no, it will fail the same way forever |
-
-Retrying instantly hammers a service that's already overloaded. **Exponential backoff** waits longer each time, `base`, `2 × base`, `4 × base`, …, up to a cap. When the server says exactly how long to wait (a `Retry-After` header), believe it.
-
-A **decorator factory** packages this so any function can opt in:
+Rate limits (429), overload (529) and timeouts are **transient**: wait, then retry. Bad requests (400) and bad keys (401) are **permanent**: retrying changes nothing. Retrying instantly hammers a struggling service, so use **exponential backoff**: `base`, `2 × base`, `4 × base`, … up to a cap, and believe a `Retry-After` when the server sends one.
 
 ```python
 @retry(attempts=4, base_delay=0.5)
 def ask(question): ...
 ```
 
-`retry(...)` returns `decorate`, `decorate(fn)` returns `wrapper`, and `wrapper(*args, **kwargs)` does the trying. `functools.wraps(fn)` keeps the original name and docstring for logs and debuggers. Injecting `sleep` lets tests check the waits without actually waiting.
+`retry(...)` returns `decorate`, `decorate(fn)` returns `wrapper`, and `wrapper` does the trying. `functools.wraps(fn)` keeps the name and docstring; injecting `sleep` lets tests check the waits without waiting.
 
 > **Mission:** implement `retry(attempts=4, base_delay=0.5, max_delay=8.0, retry_on=(RateLimitError, TimeoutError), sleep=time.sleep)`:
 >
-> - call the function, passing its arguments through; return its result as soon as it succeeds
-> - on an exception listed in `retry_on`, call `sleep(...)` and try again, up to `attempts` calls in total. Wait `min(max_delay, base_delay * 2 ** k)` after the `k`-th failure (counting from 0), **unless** the error has a `retry_after` that isn't `None`: then wait exactly that
-> - after the last attempt fails, re-raise **that same exception**; never sleep after the final failure
-> - any other exception propagates immediately, with no sleep and no retry
-> - `attempts < 1` or `base_delay < 0` raises `ValueError` when `retry(...)` is called
-> - keep the wrapped function's `__name__` and `__doc__`; every call starts its backoff from the beginning
-
-Where this fits: the boss runs 100 calls concurrently with retries. Here you get the retry policy right for one call first.
+> - pass arguments through; return the result as soon as a call succeeds
+> - on an exception in `retry_on`, `sleep(...)` and retry, up to `attempts` calls in total. After the `k`-th failure (from 0) wait `min(max_delay, base_delay * 2 ** k)`, **unless** the error has a non-`None` `retry_after`: then wait exactly that
+> - after the last attempt fails, re-raise **that exception**; never sleep after the final failure
+> - any other exception propagates at once, with no sleep
+> - `attempts < 1` or `base_delay < 0` raises `ValueError` from `retry(...)`
+> - keep `__name__` and `__doc__`; every call starts its backoff from the beginning
 @@starter
 import functools
 import time

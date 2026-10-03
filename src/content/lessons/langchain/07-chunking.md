@@ -11,29 +11,27 @@ minutes: 8
 @@body
 # Chunking: the step before every RAG index
 
-You can't embed a 40-page runbook as one vector: its meaning gets averaged into mush, and it wouldn't fit in a prompt anyway. RAG pipelines first **split** documents into chunks, embed each chunk, and later retrieve only the relevant ones.
+A 40-page runbook cannot be one vector: its meaning averages into mush. RAG **splits** documents into chunks, embeds each, and retrieves only the relevant ones. Two details decide retrieval quality:
 
-Two details make or break retrieval quality:
-
-- **Overlap.** If a key sentence straddles a boundary, neither chunk contains it whole. Consecutive chunks share a few words, so each boundary appears complete in at least one chunk.
-- **Metadata.** Each chunk keeps its source (and its position), so the final answer can cite where it came from.
+- **Overlap.** Consecutive chunks share a few words, so a sentence on a boundary is whole in at least one chunk.
+- **Metadata.** Each chunk keeps its source and position, so answers can cite.
 
 ```
 words:   w0 w1 w2 w3 w4 w5 w6 w7 w8 w9      chunk_size=4, overlap=1  ->  step 3
 chunk 0: w0 w1 w2 w3
 chunk 1:          w3 w4 w5 w6
-chunk 2:                   w6 w7 w8 w9      <- reaches the end: stop
+chunk 2:                   w6 w7 w8 w9      <- reached the end: stop
 ```
 
 > **Mission:** implement `split_documents(docs, chunk_size, overlap)` for a list of `Document`s, counting **words** (whitespace-separated):
 >
-> - each chunk holds up to `chunk_size` words joined by single spaces; consecutive chunks of a document start `chunk_size - overlap` words apart
-> - stop once a chunk reaches the document's last word: no trailing chunk that only repeats overlap
-> - every chunk is a new `Document` whose metadata is a **copy** of the source's metadata plus `chunk` (0-based, restarting for each document) and `start_word` (index of its first word)
-> - blank documents produce no chunks; don't modify the input documents or their metadata
+> - each chunk holds up to `chunk_size` words joined by single spaces; consecutive chunks start `chunk_size - overlap` words apart
+> - stop once a chunk reaches the last word: no trailing chunk of pure overlap
+> - every chunk is a new `Document` whose metadata is a **copy** of the source's plus `chunk` (0-based per document) and `start_word`
+> - blank documents produce no chunks; don't modify the inputs
 > - require `chunk_size >= 1` and `0 <= overlap < chunk_size`, else `ValueError`
 
-Where this fits: next you'll pack retrieved chunks into a context budget, and then the boss retrieves them. Real splitters count tokens rather than words; the windowing logic is the same.
+Real splitters count tokens rather than words; the windowing is the same.
 @@starter
 from langchain_core.documents import Document
 

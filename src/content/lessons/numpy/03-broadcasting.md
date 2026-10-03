@@ -11,11 +11,9 @@ minutes: 6
 @@body
 # Stretching arrays without copying them
 
-What happens when you add a column of 3 numbers to a row of 4? NumPy doesn't crash. It *broadcasts*: virtually stretches each array until the shapes agree, then does the maths.
+Add a column of 3 numbers to a row of 4 and NumPy doesn't crash. It **broadcasts**: it virtually stretches each array until the shapes agree.
 
-**The rule:** line the shapes up from the **right**. Two dimensions are compatible if they are **equal** or one of them is **1**. A missing dimension counts as 1.
-
-Make it a habit to *say the shapes out loud*: `(3, 1)` is "three rows, one column: one price per product, with room to reuse it across discounts". A `1` never means "one number in total"; it means "this axis has a single slot that can be stretched". When a result surprises you, `print(a.shape, b.shape)` first — nine times out of ten the bug is visible right there, before any values are.
+**The rule:** line the shapes up from the **right**. Two dimensions fit if they are **equal** or one of them is **1**; a missing dimension counts as 1.
 
 ```
 prices     (3, 1)
@@ -23,9 +21,11 @@ discounts     (4,)   ->  treated as (1, 4)
 result     (3, 4)
 ```
 
-Run the starter to open the **Broadcast Lab** on the right. It draws both inputs and the stretched result.
+Say shapes out loud: `(3, 1)` is "three rows, one column, with room to stretch across discounts". A `1` is a stretchable slot, not "one number". When a result surprises you, `print(a.shape, b.shape)` first.
 
-> **Mission:** build a full 3 × 4 price table where each row is a product and each column is a discount: `prices * (1 - discounts)`. Store it in `table`.
+Run the starter to open the **Broadcast Lab** on the right.
+
+> **Mission:** build a 3 × 4 price table, one row per product and one column per discount: `prices * (1 - discounts)`. Store it in `table`.
 @@starter
 import numpy as np
 import orbit

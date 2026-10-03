@@ -12,12 +12,22 @@ export interface Completion {
 
 export type MapLabels = 'all' | 'focus' | 'off'
 
+export const ACCENTS = ['mint', 'violet', 'amber', 'sky', 'rose'] as const
+export type Accent = (typeof ACCENTS)[number]
+
+/** dashboard panels the learner can hide; the KPI row is always shown */
+export const DASHBOARD_PANELS = ['weekly', 'chapters', 'radar', 'kinds', 'deck', 'recent', 'activity', 'achievements'] as const
+export type DashboardPanel = (typeof DASHBOARD_PANELS)[number]
+
 export interface Settings {
   vim: boolean
   theme: 'dark' | 'light'
   reduceMotion: boolean
   /** star-title visibility on the map: every star, only next + hovered, or hover tooltips only */
   mapLabels: MapLabels
+  /** interface accent colour */
+  accent: Accent
+  dashboardHidden: DashboardPanel[]
 }
 
 export interface Persisted {
@@ -43,7 +53,7 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all' },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', accent: 'mint', dashboardHidden: [] },
     quest: { date: '', done: 0, claimed: false },
     stats: { runs: 0, vimRuns: 0, reviews: 0, predictMisses: 0 },
     lastLesson: null,
@@ -91,6 +101,10 @@ export function sanitize(raw: unknown): Persisted {
     d.settings.theme = raw.settings.theme === 'light' ? 'light' : 'dark'
     d.settings.reduceMotion = raw.settings.reduceMotion === true
     d.settings.mapLabels = raw.settings.mapLabels === 'focus' || raw.settings.mapLabels === 'off' ? raw.settings.mapLabels : 'all'
+    d.settings.accent = (ACCENTS as readonly string[]).includes(raw.settings.accent as string) ? (raw.settings.accent as Accent) : 'mint'
+    if (Array.isArray(raw.settings.dashboardHidden)) {
+      d.settings.dashboardHidden = [...new Set(raw.settings.dashboardHidden.filter((p): p is DashboardPanel => (DASHBOARD_PANELS as readonly unknown[]).includes(p)))]
+    }
   }
   if (isObj(raw.quest) && typeof raw.quest.date === 'string') {
     d.quest = { date: raw.quest.date, done: Math.max(0, Math.floor(num(raw.quest.done))), claimed: raw.quest.claimed === true }

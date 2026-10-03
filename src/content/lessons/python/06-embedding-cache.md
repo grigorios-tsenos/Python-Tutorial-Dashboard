@@ -11,24 +11,20 @@ minutes: 7
 @@body
 # Cache expensive calls by their input
 
-Embedding APIs charge per token and take tens of milliseconds per request. Real corpora repeat themselves: duplicate tickets, boilerplate footers, the same FAQ asked a thousand times. Re-embedding identical text is pure waste, because the same model returns the same vector.
+Embedding APIs charge per token, and real corpora repeat themselves. The same model returns the same vector for the same text, so re-embedding it is pure waste. A cache needs three ideas:
 
-A cache in front of the API needs three ideas you already know:
+- a `dict` from text to vector
+- **dedupe, keep order**: `list(dict.fromkeys(texts))` keeps the first occurrence of each text
+- **batch the misses**: one request for every unseen text
 
-- a `dict` from text to vector (`text in cache` is a fast lookup)
-- **deduplicate while keeping order**: `list(dict.fromkeys(texts))` keeps the first occurrence of each text
-- **batch the misses**: one request with every unseen text, instead of one request per text
-
-> **Mission:** finish `EmbeddingCache`. `embed(texts)` returns one vector per input text, **in input order, duplicates included**. It must:
+> **Mission:** finish `EmbeddingCache`. `embed(texts)` returns one vector per input text, **in input order, duplicates included**:
 >
-> - send each text the cache hasn't seen to `embed_batch` **once**, together in **one** call, in first-seen order; make no call at all when everything is cached (or the input is empty)
-> - accept any iterable of texts, including a one-shot generator
-> - count `misses` (texts sent to the API) and `hits` (every other requested text, including repeats within the same request)
-> - raise `ValueError` if `embed_batch` returns a different number of vectors than texts sent, and cache nothing from that call; if `embed_batch` raises, let the error propagate with nothing cached
+> - send each unseen text to `embed_batch` **once**, together in **one** call, in first-seen order; no call when everything is cached or the input is empty
+> - accept any iterable, including a one-shot generator
+> - count `misses` (texts sent to the API) and `hits` (every other requested text, repeats included)
+> - raise `ValueError` if `embed_batch` returns the wrong number of vectors, caching nothing from that call; if it raises, propagate with nothing cached
 >
-> Each cache instance is independent.
-
-Where this fits: you batched a stream in the previous step. Caching decides **what** goes into those batches, and it's often the cheapest optimization in an AI pipeline.
+> Each instance is independent.
 @@starter
 class EmbeddingCache:
     def __init__(self, embed_batch):

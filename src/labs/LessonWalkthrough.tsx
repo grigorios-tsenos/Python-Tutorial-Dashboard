@@ -26,7 +26,7 @@ export function layoutWalkthrough(step: WalkthroughStep, width = 660) {
   return { areas, cells, height: Math.max(...areas.map(area => area.y + area.height)) }
 }
 
-// ponytail: teaching tiles use at most two lines; add wrapping if future examples need longer labels.
+// note: teaching tiles use at most two lines; add wrapping if future examples need longer labels.
 function CellText({ text, width }: { text: string; width: number }) {
   const chars = Math.max(5, Math.floor((width - 12) / 7.4))
   if (text.length <= chars) return <text x={width / 2} y={29} textAnchor="middle">{text}</text>
