@@ -1,0 +1,84 @@
+---
+id: py-pydantic
+track: python
+order: 4
+title: "Bug Hunt: The Gullible Schema"
+tagline: LLMs return garbage sometimes. Pydantic catches it at the door.
+kind: bug
+xp: 40
+minutes: 7
+packages: pydantic
+---
+@@body
+# Validate what the model hands you
+
+Ask an LLM for JSON and it will, eventually, give you `"score": 9` when the scale is 1 to 5, or `"sentiment": "meh"` when you wanted one of three words. **Pydantic** turns a class into a validator, so bad output fails *loudly, right at the boundary*, instead of corrupting your data three steps later.
+
+```python
+from typing import Literal
+from pydantic import BaseModel, Field
+
+class Ticket(BaseModel):
+    priority: Literal["low", "high"]        # only these two strings
+    hours: int = Field(ge=1, le=40)         # 1 <= hours <= 40
+```
+
+Pydantic is also *forgiving where it's safe*: `"4"` becomes `4`.
+
+The `Review` model below accepts anything. That's the bug.
+
+> **Mission:** make `Review` reject a `score` outside **1 to 5** and any `sentiment` other than `positive`, `neutral` or `negative`.
+@@starter
+from pydantic import BaseModel, Field, ValidationError
+
+class Review(BaseModel):
+    sentiment: str
+    score: int
+
+raw = {"sentiment": "meh", "score": "9"}
+try:
+    review = Review(**raw)
+    print("accepted", review)
+except ValidationError:
+    print("rejected")
+@@solution
+from typing import Literal
+from pydantic import BaseModel, Field, ValidationError
+
+class Review(BaseModel):
+    sentiment: Literal["positive", "neutral", "negative"]
+    score: int = Field(ge=1, le=5)
+
+raw = {"sentiment": "meh", "score": "9"}
+try:
+    review = Review(**raw)
+    print("accepted", review)
+except ValidationError:
+    print("rejected")
+@@check
+from pydantic import ValidationError
+def rejects(**kw):
+    try:
+        Review(**kw)
+    except ValidationError:
+        return True
+    return False
+test("valid review accepted", lambda: Review(sentiment="positive", score=5).score == 5)
+test("score above 5 rejected", lambda: rejects(sentiment="positive", score=6))
+test("score below 1 rejected", lambda: rejects(sentiment="positive", score=0))
+test("unknown sentiment rejected", lambda: rejects(sentiment="meh", score=3))
+test("numeric strings still coerced", lambda: Review(sentiment="neutral", score="4").score == 4)
+@@hint
+`Literal["positive", "neutral", "negative"]` (from `typing`) restricts a string to a fixed set.
+@@hint
+`score: int = Field(ge=1, le=5)`: `ge` is "greater or equal", `le` is "less or equal".
+@@q
+What does pydantic do with `score="4"` for a field typed `int`?
+@@a
+Coerces it to the integer 4 (lax mode). Invalid values like "abc" raise ValidationError.
+@@q
+Why validate LLM output with a schema?
+@@a
+Models can return wrong types or out-of-range values; a schema fails loudly at the boundary instead of poisoning downstream code.
+@@real
+Real LangChain does `llm.with_structured_output(Review)` and returns a validated `Review` instance. The validation is the same pydantic you wrote here.

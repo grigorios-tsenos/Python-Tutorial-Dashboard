@@ -5,6 +5,7 @@ import { lessonPath } from '../lib/router'
 import { useStore } from '../store/useStore'
 
 const STAGES = [
+  { label: 'Basics', detail: 'Meet the big idea in plain terms and run your first example.' },
   { label: 'Guided', detail: 'Follow an example and complete a focused task.' },
   { label: 'Practice', detail: 'Apply the idea yourself and check what happens.' },
   { label: 'Challenge', detail: 'Reason through behavior and combine what you have learned.' },

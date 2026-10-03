@@ -86,7 +86,7 @@ describe('sanitize (untrusted import)', () => {
       completed: { 'np-shapes': { at: 5, xp: 20, hints: 99, attempts: 0 }, 'nope': { at: 1, xp: 1, hints: 0, attempts: 1 } },
       code: { 'np-shapes': 'x=1', ghost: 'y', 'np-views': 42 },
       activity: { '2026-10-01': 3, 'bad-key': 2 },
-      settings: { vim: true, theme: 'neon', reduceMotion: 'yes' },
+      settings: { vim: true, theme: 'neon', reduceMotion: 'yes', mapLabels: 'sometimes' },
       '__proto__': { polluted: true },
     })
     expect(s.xp).toBe(0)
@@ -95,7 +95,8 @@ describe('sanitize (untrusted import)', () => {
     expect(s.completed['np-shapes'].attempts).toBe(1)
     expect(s.code).toEqual({ 'np-shapes': 'x=1' })
     expect(s.activity).toEqual({ '2026-10-01': 3 })
-    expect(s.settings).toEqual({ vim: true, theme: 'dark', reduceMotion: false })
+    expect(s.settings).toEqual({ vim: true, theme: 'dark', reduceMotion: false, mapLabels: 'all' })
+    expect(sanitize({ settings: { mapLabels: 'focus' } }).settings.mapLabels).toBe('focus')
     expect(({} as any).polluted).toBeUndefined()
   })
 })
