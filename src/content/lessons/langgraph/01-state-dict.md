@@ -9,9 +9,9 @@ xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: what LangGraph automates
+# What LangGraph automates
 
-Every agent, under the hood, is this:
+Every agent, under the hood:
 
 ```
 state = {"question": "...", ...}      # one dict holds everything known so far
@@ -19,12 +19,12 @@ state = merge(state, research(state)) # each STEP reads state, returns what it a
 state = merge(state, draft(state))    # the next step sees the previous step's work
 ```
 
-A **step** (LangGraph calls it a *node*) is a plain function. It takes the whole state, and returns **only the keys it wants to add or change**, a *partial update*. Merging that update into the state is what carries information from one step to the next.
+A **step** (a *node* in LangGraph) is a plain function: whole state in, **only the keys it adds or changes** out — a *partial update*. Merging that update carries information to the next step.
 
-Two rules make this safe, and they matter for the whole chapter:
+Two rules:
 
-- **Don't modify the old state.** Build a new dict (`{**state, **update}` copies both into a fresh one). Later, pausing and resuming agents only works because old states stay intact.
-- **Steps stay small.** A step that returns `{"draft": ...}` can be tested alone, reordered, or retried, which is exactly what the graphs ahead will do.
+- **Don't modify the old state.** Build a new dict (`{**state, **update}`). Pause/resume only works because old states stay intact.
+- **Steps stay small.** A step that returns `{"draft": ...}` can be tested alone, reordered, or retried.
 
 > **Mission:** implement `merge(state, update)` (a new dict; neither input modified), then run the two supplied steps in order so `final` contains the question, the facts and the draft.
 @@starter
@@ -79,4 +79,4 @@ Why must merging build a new dict instead of editing the old one?
 @@a
 Keeping old states intact is what makes pausing, resuming and inspecting an agent's history possible.
 @@real
-This is literally LangGraph's model: nodes return partial updates and the framework merges them into typed state. What the framework adds (from the very next lesson) is deciding *which* function runs next: edges, branches and loops.
+This is literally LangGraph's model: nodes return partial updates and the framework merges them into typed state. What it adds is deciding *which* function runs next: edges, branches and loops.

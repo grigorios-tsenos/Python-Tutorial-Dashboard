@@ -11,7 +11,7 @@ minutes: 8
 @@body
 # Environment variables in .mcp.json
 
-MCP servers give Claude Code new tools: your issue tracker, a database, internal docs. A project-scoped **`.mcp.json`** is committed to the repo so everyone on the team gets the same servers. Tokens and machine-specific paths must **not** be committed, so Claude Code expands environment variables when it reads the file:
+MCP servers give Claude Code new tools. A project-scoped **`.mcp.json`** is committed so the team shares servers; tokens and machine-specific paths must **not** be, so Claude Code expands environment variables when it reads the file:
 
 ```json
 {
@@ -34,7 +34,7 @@ MCP servers give Claude Code new tools: your issue tracker, a database, internal
 | `${VAR}` | the value of `VAR`; if it isn't set, the config is invalid |
 | `${VAR:-default}` | `VAR` if it is set, otherwise `default` |
 
-This exercise also follows the shell rule that an **empty** value falls back to the default, so a blank line in someone's `.env` can't produce a broken URL.
+Like the shell, an **empty** value falls back to the default, so a blank `.env` line can't produce a broken URL.
 
 > **Mission:** implement `resolve_mcp_config(config, env)` and return a **new** config with placeholders expanded:
 >
@@ -166,4 +166,4 @@ What does `${VAR:-default}` do?
 @@a
 Uses VAR's value if it is set and non-empty, otherwise the default.
 @@real
-`claude mcp add --scope project ...` writes `.mcp.json` for you, Claude Code asks each person to approve project-scoped servers before first use, and `/mcp` shows connection status. See [environment variable expansion in .mcp.json](https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcp-json).
+`claude mcp add --scope project ...` writes `.mcp.json` for you, each person approves project-scoped servers before first use, and `/mcp` shows connection status. See [environment variable expansion in .mcp.json](https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcp-json).

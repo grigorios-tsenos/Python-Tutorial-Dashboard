@@ -11,7 +11,7 @@ minutes: 7
 @@body
 # A classification head in two lines
 
-Your features are now complete and on one scale. A linear model turns them into one **score (logit)** per class with a single matrix product:
+A linear model turns features into one **score (logit)** per class with a single matrix product:
 
 ```
 X       (n, d)   n tickets, d features
@@ -20,18 +20,16 @@ b       (k,)     one bias per class
 X @ W + b  ->  (n, k)   one row of k logits per ticket
 ```
 
-**Softmax** turns each row of logits into probabilities: `exp(z) / sum(exp(z))`, computed **per row**. An LLM does the same thing over a vocabulary of ~100k tokens for every token it writes.
-
-Per row means `axis=1`, and the easy-to-miss part is `keepdims=True`:
+**Softmax** turns each row of logits into probabilities: `exp(z) / sum(exp(z))`, computed **per row** (`axis=1`). An LLM does the same over ~100k vocabulary tokens for every token it writes. The easy-to-miss part is `keepdims=True`:
 
 ```python
 exp.sum(axis=1)                 # shape (n,)    one total per row, but FLAT
 exp.sum(axis=1, keepdims=True)  # shape (n, 1)  the same totals, kept as a column
 ```
 
-Why it matters: dividing the `(n, k)` scores by the flat `(n,)` totals lines the shapes up from the right, `k` against `n` — an error, or (worse, when `k == n`) a silently wrong answer that divides across the wrong direction. The `(n, 1)` column keeps each total **next to the row it came from**, so broadcasting divides each row by its own total. When in doubt, print both shapes.
+Dividing `(n, k)` scores by flat `(n,)` totals aligns `k` against `n`: an error, or — when `k == n` — a silently wrong division across the wrong axis. The `(n, 1)` column keeps each total next to its row, so broadcasting divides each row by its own total.
 
-The trap: `np.exp(1000)` overflows to `inf`, and `inf / inf` is `nan`. Softmax doesn't change if you add the same number to every logit in a row, so subtract each row's **maximum** first: the largest value becomes `exp(0) = 1` and nothing overflows.
+The trap: `np.exp(1000)` overflows to `inf`, and `inf / inf` is `nan`. Adding a constant per row doesn't change softmax, so subtract each row's **maximum** first: the largest value becomes `exp(0) = 1` and nothing overflows.
 
 > **Mission:** a support-ticket router. Implement:
 >

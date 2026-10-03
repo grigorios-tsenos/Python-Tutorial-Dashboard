@@ -11,7 +11,7 @@ minutes: 7
 @@body
 # Routing, and how to break it
 
-A **conditional edge** calls a *router function* after a node, and the string it returns picks the next node. That's how an agent decides: "good enough? finish. Otherwise, try again."
+A **conditional edge** calls a *router function* after a node; the string it returns picks the next node. That is how an agent decides to finish or retry.
 
 ```python
 def route(state):
@@ -20,7 +20,7 @@ def route(state):
 graph.add_conditional_edges("review", route, {"write": "write", END: END})
 ```
 
-This graph writes a draft, a reviewer checks it, and the loop repeats until approved (the reviewer is picky: it approves from the **third** draft). But the router is broken, and LangGraph protects you with a **recursion limit** (25 steps) instead of spinning forever.
+This graph writes a draft and loops until a reviewer approves (from the **third** draft on). The router is broken; LangGraph's **recursion limit** (25 steps) stops it instead of spinning forever.
 
 > **Mission:** run it, read the error, fix `route` so the graph stops once the draft is approved. Final `attempts` must be `3`.
 @@starter

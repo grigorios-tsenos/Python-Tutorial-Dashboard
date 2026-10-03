@@ -11,13 +11,13 @@ minutes: 10
 @@body
 # Boss: build the heart of a vector database
 
-Every RAG system, recommender and semantic search engine does one thing at its core: *find the rows of a matrix most similar to a query vector*. Similarity here is **cosine similarity**: the angle between two vectors, ignoring their length.
+Every RAG system, recommender and semantic search engine does the same core thing: *find the rows of a matrix most similar to a query vector*, using **cosine similarity** — the angle between vectors, ignoring length.
 
 ```
 cos(a, b) = (a · b) / (‖a‖ ‖b‖)
 ```
 
-Why not just the dot product? Because a long, off-topic vector can out-score a short, perfectly aligned one. The starter below has that bug built in.
+A raw dot product won't do: a long, off-topic vector can out-score a short, perfectly aligned one. The starter has that bug built in.
 
 > **Mission:** finish `top_k(query, matrix, k)`. It must return the **row indices** of the `k` rows most cosine-similar to `query`, best first. Do it for all rows at once, with no Python loops.
 

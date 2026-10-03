@@ -11,7 +11,7 @@ minutes: 9
 @@body
 # Validate, feed back the error, retry, give up gracefully
 
-A model extracting an order from a customer email sometimes returns `"quantity": "two"`. Validation catches it, but then what? The production pattern is a loop:
+A model extracting an order sometimes returns `"quantity": "two"`. Validation catches it; the production pattern is a loop:
 
 ```
 START ─> generate ─> validate ─┬─ valid ──────────────> END
@@ -20,10 +20,10 @@ START ─> generate ─> validate ─┬─ valid ──────────
                                └─ budget spent ──> fallback ─> END
 ```
 
-Two things make this loop safe:
+Two things make it safe:
 
-- **Feedback.** The next attempt sees *why* the last one failed. Retrying the same prompt mostly repeats the same mistake.
-- **A budget in state.** Count attempts and route to a `fallback` node (hand the case to a human) instead of looping until LangGraph's recursion limit throws `GraphRecursionError`, as in the Bug Hunt earlier in this chapter.
+- **Feedback.** The next attempt sees *why* the last one failed; retrying the same prompt mostly repeats the mistake.
+- **A budget in state.** Count attempts and route to a `fallback` node (hand off to a human) instead of hitting `GraphRecursionError`.
 
 > **Mission:** implement `build_extractor(model, max_attempts=3)` and return a compiled graph with nodes **`generate`**, **`validate`** and **`fallback`**:
 >
@@ -214,4 +214,4 @@ Why keep an attempt counter in state instead of relying on the recursion limit?
 @@a
 The counter lets the graph end gracefully in a fallback path; the recursion limit only raises an error mid-run.
 @@real
-This is the "reflection" pattern used for structured extraction and code generation. In production the fallback node often calls `interrupt()` to pause for a human reviewer (as in the human-in-the-loop lesson), and you set `config={"recursion_limit": ...}` high enough for your largest budget.
+This is the "reflection" pattern used for structured extraction and code generation. In production the fallback node often calls `interrupt()` for a human reviewer, with `config={"recursion_limit": ...}` set above your largest budget.

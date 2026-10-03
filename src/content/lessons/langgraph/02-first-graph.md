@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # Agents are state machines
 
-A chain is a straight line. Real agents *loop, branch and wait*, so you need a graph. **LangGraph** has three ingredients:
+A chain is a straight line; real agents loop, branch and wait. **LangGraph**'s three ingredients:
 
 - **State**: a typed dict every node can read
 - **Nodes**: plain functions that return a *partial update* to the state
@@ -26,7 +26,7 @@ app = graph.compile()
 app.invoke({...})
 ```
 
-Run the starter first: LangGraph refuses to compile a graph with no way in. Then wire it up and watch the **Graph Lab** animate your run, step by step.
+Run the starter first: LangGraph refuses to compile a graph with no way in. Then wire it up; the **Graph Lab** animates the run.
 
 > **Mission:** connect `START → write_draft → polish → END`.
 @@starter

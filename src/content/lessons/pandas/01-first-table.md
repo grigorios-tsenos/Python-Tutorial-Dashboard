@@ -3,27 +3,27 @@ id: pd-first-table
 track: pandas
 order: 1
 title: Rows Are Things, Columns Are Facts
-tagline: Every dataset you'll ever clean starts as a table you can ask questions.
+tagline: Every dataset starts as a table you can question.
 kind: run
 xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: tables are how data arrives
+# Tables are how data arrives
 
-Logs, user records, model benchmark results, labeled training examples: in practice they all show up as **tables**. One row per *thing* (a request, a user, an experiment), one column per *fact about it* (when, how fast, how good).
+Logs, user records, benchmarks, training examples: they all arrive as **tables**. One row per *thing*, one column per *fact about it*.
 
-pandas gives that table a name, `DataFrame`, and three moves you'll use in every single lesson of this chapter:
+pandas calls the table a `DataFrame` and gives you three moves used in every lesson of this chapter:
 
 ```python
 import pandas as pd
 
-df.head(2)        # LOOK: the first rows, to see what you're holding
-df["latency_ms"]  # PICK a column -> a Series (one column with labels)
-df["latency_ms"].mean()   # SUMMARIZE a column -> one number
+df.head(2)        # LOOK: the first rows
+df["latency_ms"]  # PICK a column -> a Series
+df["latency_ms"].mean()   # SUMMARIZE -> one number
 ```
 
-That's it. Cleaning, joining and feature-building are these three moves with more steps. When a later lesson confuses you, come back to: *look, pick a column, summarize*.
+Cleaning, joining and feature-building are these three moves with more steps.
 
 > **Mission:** you're on call and the table below holds last night's API requests. Look at the first two rows with `.head(2)`, store the `latency_ms` column in `latencies`, and store its average in `average` (then print it).
 @@starter

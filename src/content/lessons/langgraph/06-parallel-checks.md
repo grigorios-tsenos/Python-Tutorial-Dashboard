@@ -11,12 +11,12 @@ minutes: 7
 @@body
 # Fan out, fan in
 
-Before a support bot sends a drafted reply, it runs guardrail checks: does the draft leak an email address? Is it too long? Is the tone off? The checks don't depend on each other, so they shouldn't wait in line.
+Guardrail checks on a drafted reply — PII, length, tone — don't depend on each other, so they shouldn't wait in line.
 
-**Fan out:** add an edge from `START` to each check. Nodes that become ready together run in the same **step** (a "superstep").
-**Fan in:** add an edge from each check to `decide`. It runs once, after all three have finished.
+**Fan out:** an edge from `START` to each check. Nodes that become ready together run in the same **step** (a "superstep").
+**Fan in:** an edge from each check to `decide`, which runs once, after all three finish.
 
-The catch: all three checks write `findings` in the same step. Plain state keys hold **one** value per step, so LangGraph raises `InvalidUpdateError` rather than guess which write should win. Declare a **reducer** to say how parallel writes combine:
+The catch: all three checks write `findings` in the same step. A plain state key holds **one** value per step, so LangGraph raises `InvalidUpdateError` rather than guess which write wins. A **reducer** declares how parallel writes combine:
 
 ```python
 import operator
@@ -32,7 +32,7 @@ class Review(TypedDict):
 > 2. fan out from `START` to the supplied checks as nodes **`pii`**, **`length`** and **`tone`**; fan in from all three to **`decide`**, then `END`
 > 3. `decide` sets `verdict` to `"send"` when there are no findings, otherwise `"revise"`, and `summary` to the findings **sorted** and joined with `"; "` (`""` when there are none). Parallel writes can arrive in any order, so sort before you join.
 >
-> Run the starter first to see the error LangGraph raises without the reducer.
+> Run the starter first to see the error raised without the reducer.
 @@starter
 import re
 from typing import TypedDict
@@ -146,4 +146,4 @@ When does a fan-in node run if three parallel nodes all have an edge to it?
 @@a
 Once, in the next step, after all three have finished.
 @@real
-Real LangGraph raises `InvalidUpdateError` for concurrent writes to a key without a reducer, exactly as you saw. For a variable number of branches (one per retrieved document, say) use the `Send` API for map-reduce. Production guardrails often run a cheap classifier model in each branch.
+For a variable number of branches (one per retrieved document, say) use the `Send` API for map-reduce. Production guardrails often run a cheap classifier model in each branch.

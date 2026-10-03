@@ -11,7 +11,7 @@ minutes: 5
 @@body
 # LangChain in one symbol: `|`
 
-Almost everything in LangChain is a **Runnable**: an object with `.invoke(input)`. Runnables snap together with the pipe operator, like Unix pipes, to form a *chain*. This is **LCEL**, the LangChain Expression Language.
+Everything in LangChain is a **Runnable**: an object with `.invoke(input)`. `|` composes Runnables into a *chain* — **LCEL**.
 
 ```
 prompt  ->  model  ->  output parser
@@ -24,7 +24,7 @@ prompt  ->  model  ->  output parser
 | a chat model | turns messages into an `AIMessage` |
 | `StrOutputParser` | pulls the text out of the `AIMessage` |
 
-Orbit ships a **fake model** that returns scripted replies, so everything runs offline with no API keys, and the chain code is identical to real code.
+The fake model's replies are scripted; the chain code is identical to real code.
 
 > **Mission:** connect the three pieces into `chain` with `|`, so `chain.invoke(...)` returns a plain string.
 @@starter

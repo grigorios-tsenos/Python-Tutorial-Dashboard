@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # Spark thinks in transformations
 
-Spark DataFrames *look* like pandas, but they're **immutable** and the API is column-expression based: you describe what you want with `F.col(...)`, and Spark figures out how to run it on many machines.
+Spark DataFrames are **immutable**: describe what you want with `F.col(...)` expressions, and Spark runs it across machines.
 
 ```python
 import pyspark.sql.functions as F
@@ -22,7 +22,7 @@ df.select("city", "fare")                           # pick columns
 df.show()                                           # print a table
 ```
 
-Every call returns a **new** DataFrame, so you chain them.
+Every call returns a **new** DataFrame; chain them.
 
 > **Mission:** keep trips with `fare > 10`, then add `fare_per_person = fare / passengers`. Store the result in `result`.
 @@starter
@@ -75,4 +75,4 @@ What does `F.col("x")` represent?
 @@a
 A column expression: a description of a computation, evaluated by Spark later.
 @@real
-On Databricks, `spark` already exists in every notebook, and `display(df)` renders an interactive table. This lesson's Orbit mini-Spark is backed by pandas, with Spark-style `show()` and error messages.
+On Databricks, `spark` already exists in every notebook, and `display(df)` renders an interactive table. Orbit's mini-Spark is backed by pandas, with Spark-style `show()` and error messages.

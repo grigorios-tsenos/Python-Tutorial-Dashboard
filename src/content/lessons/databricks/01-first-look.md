@@ -9,11 +9,9 @@ xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: describe the work, let a cluster run it
+# Describe the work, let a cluster run it
 
-A real event table can be billions of rows: too big for one machine's memory. Spark's answer: **you describe the result you want; a cluster of machines splits the work.** Databricks is where teams run Spark (plus the tables, jobs and ML tools around it).
-
-The good news for you: a Spark DataFrame *feels* like the pandas you just learned. Three starter moves:
+A real event table can be billions of rows — too big for one machine. With Spark, **you describe the result; a cluster splits the work.** Databricks is where teams run Spark. A Spark DataFrame feels like pandas. Three starter moves:
 
 ```python
 df.show()                    # LOOK: print the table (first 20 rows)
@@ -21,10 +19,10 @@ df.count()                   # how many rows, across the whole cluster
 df.select("city", "fare")    # PICK columns -> a NEW DataFrame
 ```
 
-Two habits to form on day one:
+Two rules:
 
-- **Nothing prints by itself.** `df.select(...)` just *describes* a smaller table; call `.show()` when you want to look at it.
-- **DataFrames never change.** Every operation returns a **new** DataFrame; the original is untouched. That's what lets Spark plan and distribute the work safely.
+- **Nothing prints by itself.** `df.select(...)` only *describes* a smaller table; call `.show()` to look at it.
+- **DataFrames never change.** Every operation returns a **new** DataFrame.
 
 > **Mission:** look at the trips table with `.show()`, store how many trips there are in `n`, and build `fares`: a new DataFrame with only the `city` and `fare` columns (then show it too).
 @@starter
@@ -80,4 +78,4 @@ Why does Spark exist when pandas already handles tables?
 @@a
 pandas works on one machine's memory; Spark describes the same operations so a cluster can run them on data far bigger than one machine.
 @@real
-On Databricks, `spark` already exists in every notebook and `display(df)` renders an interactive table. This chapter's mini-Spark runs on pandas underneath, but the API you type (`show`, `count`, `select`, and soon `filter` and `groupBy`) is the real one.
+On Databricks, `spark` already exists in every notebook and `display(df)` renders an interactive table. This chapter's mini-Spark runs on pandas underneath, but the API is the real one.

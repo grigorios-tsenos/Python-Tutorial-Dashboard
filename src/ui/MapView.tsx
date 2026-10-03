@@ -277,7 +277,7 @@ export function MapView() {
           <>
             <div className="eyebrow">Welcome, pilot</div>
             <h1>Learn AI engineering by doing</h1>
-            <p className="dim">Every star is a hands-on lesson with real Python running in your browser. No setup. Light the first one.</p>
+            <p className="dim">Real Python in your browser, no setup. Light the first star.</p>
           </>
         ) : next ? (
           <>
@@ -292,7 +292,7 @@ export function MapView() {
             <p className="dim">Revisit any lesson, or keep your memory sharp in Review.</p>
           </>
         )}
-        {next && <a className="btn primary" href={lessonPath(next.id)}>{first ? 'Light your first star' : `Continue: ${next.title}`} →</a>}
+        {next && <a className="btn primary" href={lessonPath(next.id)}>{first ? 'Light your first star' : 'Continue'} →</a>}
         {first && <p className="hero-feats">72 hands-on lessons · 9 steps per chapter · XP, streaks & bosses</p>}
         <div className="hero-tracks" role="list" aria-label="Jump to a chapter">
           {progress.map(({ track: t, done, total }) => (

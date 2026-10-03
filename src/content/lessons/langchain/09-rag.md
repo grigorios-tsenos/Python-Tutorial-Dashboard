@@ -3,25 +3,25 @@ id: lc-rag
 track: langchain
 order: 9
 title: "Boss: Mini RAG"
-tagline: Retrieve, then generate. Build the pattern that powers most enterprise AI.
+tagline: Retrieve, then generate.
 kind: boss
 xp: 110
 minutes: 14
 ---
 @@body
-# Boss: Retrieval-Augmented Generation, end to end
+# Boss: RAG, end to end
 
-LLMs don't know your documents. **RAG** fixes that in two moves:
+LLMs don't know your documents. **RAG**:
 
 1. **Retrieve**: find the passages most similar to the question
-2. **Generate**: paste them into the prompt as context, then ask the model
+2. **Generate**: put them in the prompt as context, then ask the model
 
 ```
 question ─┬─> retrieve ──> context ─┐
           └──────────────> question ┴─> prompt -> llm -> parser
 ```
 
-The `embed` function (a hashed bag-of-words) stands in for a real embedding model. The similarity maths is the one you learned in the NumPy boss. The "LLM" is a stand-in that simply echoes the prompt it receives, so you can *see* that the context arrived.
+`embed` (a hashed bag-of-words) stands in for a real embedding model. The "LLM" echoes the prompt it receives, so you can see the context arrive.
 
 > **Mission:**
 > 1. `retrieve(question, k=1)` → the `k` most cosine-similar documents (a list of strings)

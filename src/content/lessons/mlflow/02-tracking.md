@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # "Which settings gave us that great result again?"
 
-If you've ever lost a good result because you tweaked a setting and forgot the old one, **MLflow Tracking** is the cure. Wrap each attempt in a *run* and record:
+**MLflow Tracking** answers that. Wrap each attempt in a *run* and record:
 
 | call | records | example |
 |---|---|---|
@@ -25,7 +25,7 @@ with mlflow.start_run(run_name="attempt-1"):
     mlflow.log_metric("accuracy", 0.92)
 ```
 
-The **MLflow Lab** on the right is a live run table, the same view you'd get in the MLflow UI or Databricks.
+The **MLflow Lab** on the right is a live run table, same as the MLflow UI.
 
 > **Mission:** inside the loop, log `temperature` as a **param** and a `quality` **metric** that gets worse as temperature rises (try `0.95 - 0.3 * temperature`).
 @@starter
@@ -67,4 +67,4 @@ What groups related runs together?
 @@a
 An experiment: `mlflow.set_experiment("name")`.
 @@real
-Real MLflow is `pip install mlflow`, then `mlflow ui` for the browser dashboard. On Databricks, tracking is built in and every notebook run is auto-logged to an experiment. Real MLflow stores params as strings, just like this shim.
+On Databricks, tracking is built in and every notebook run is auto-logged to an experiment. Real MLflow stores params as strings, just like this shim.

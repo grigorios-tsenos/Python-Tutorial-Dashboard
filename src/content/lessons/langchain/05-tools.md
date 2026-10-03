@@ -9,11 +9,11 @@ xp: 45
 minutes: 8
 ---
 @@body
-# Tools: how models do things
+# Tools: how models act
 
-An LLM can only emit text. **Tool calling** is the trick that lets it act: you describe functions to the model, it replies with a *request* ("call `word_count` with `text='...'`"), **your code** runs the function, and you hand the result back.
+An LLM only emits text. **Tool calling**: you describe functions to the model, it replies with a *request* to call one, **your code** runs the function and returns the result.
 
-The `@tool` decorator packages a typed, documented function:
+`@tool` packages a typed, documented function:
 
 ```python
 from langchain_core.tools import tool
@@ -29,9 +29,9 @@ shout.args          # parameter schema the model sees
 shout.invoke({"text": "hi"})   # 'HI'
 ```
 
-A model's request arrives as `ai_message.tool_calls`, a list of `{"name": ..., "args": {...}, "id": ...}`.
+Requests arrive as `ai_message.tool_calls`: a list of `{"name": ..., "args": {...}, "id": ...}`.
 
-> **Mission:** implement `word_count` so it counts words separated by whitespace (empty text has **0** words), then write `run_tool_calls(ai_message, tools)` that executes *every* requested call by **name**, in order, and returns each result as a **string**. The supplied `shout` tool lets you test mixed batches. Tool-list order must not matter, repeated calls must all run, and a message with no calls must return `[]`.
+> **Mission:** implement `word_count` so it counts words separated by whitespace (empty text has **0** words), then write `run_tool_calls(ai_message, tools)` that executes *every* requested call by **name**, in order, and returns each result as a **string**. Tool-list order must not matter, repeated calls must all run, and a message with no calls must return `[]`. The supplied `shout` tool lets you test mixed batches.
 @@starter
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage

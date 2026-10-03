@@ -9,9 +9,9 @@ xp: 25
 minutes: 4
 ---
 @@body
-# Every number has a home address
+# Every array has a shape
 
-Embeddings, images, batches of tokens: in AI work everything is an **n-dimensional array**, and the first thing you ask of any array is *"what shape are you?"*
+Embeddings, images, token batches: everything is an **n-dimensional array**. First question for any array: *what shape are you?*
 
 ```python
 import numpy as np
@@ -22,7 +22,7 @@ a.reshape(2, 3)         # 2 rows x 3 columns, same data
 a.reshape(2, 3).sum(axis=0)   # collapse the rows -> one total per column
 ```
 
-`axis` is the idea to burn into memory: **`axis=0` runs down the rows, `axis=1` runs across the columns**, and the axis you name is the one that *disappears*.
+The key idea: **`axis=0` runs down the rows, `axis=1` across the columns**, and the axis you name *disappears*.
 
 > **Mission:** turn the 12 numbers into a 3 × 4 grid called `grid`, then read the column sums.
 @@starter

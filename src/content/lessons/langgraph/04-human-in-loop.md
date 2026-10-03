@@ -11,7 +11,7 @@ minutes: 8
 @@body
 # Human-in-the-loop
 
-Would you let an agent delete files unsupervised? Neither would a sensible engineer. LangGraph's **checkpointer** saves the state after every step, keyed by a `thread_id`. That unlocks two superpowers:
+Don't let an agent delete files unsupervised. LangGraph's **checkpointer** saves state after every step, keyed by `thread_id`, which unlocks:
 
 - **Pause**: `compile(interrupt_before=["act"])` stops *before* the `act` node runs
 - **Resume**: `app.invoke(None, config)` continues the same thread from where it stopped (`None` means "no new input")
@@ -106,4 +106,4 @@ What identifies a conversation or run in a checkpointer?
 @@a
 The `thread_id` in `config["configurable"]`.
 @@real
-Real LangGraph checkpointers include `MemorySaver` (dev), SQLite and Postgres savers (production). Newer releases also offer an `interrupt()` function inside nodes for richer approval flows.
+Real checkpointers: `MemorySaver` for dev, SQLite and Postgres savers for production. Newer releases also offer `interrupt()` inside nodes for richer approval flows.

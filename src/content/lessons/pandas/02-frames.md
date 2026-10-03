@@ -11,7 +11,7 @@ minutes: 5
 @@body
 # Rows, columns, and boolean masks
 
-A **DataFrame** is a table: named columns, each a typed array. A **Series** is one column. The superpower you'll use every day is the *boolean mask*:
+A **DataFrame** is a table of named, typed columns. A **Series** is one column. The daily workhorse is the *boolean mask*:
 
 ```python
 import pandas as pd
@@ -23,7 +23,7 @@ df["temp"] > 8             # a True/False mask, one entry per row
 df[df["temp"] > 8]         # keep only the rows where the mask is True
 ```
 
-No loops. You describe *which rows you want*, pandas does the rest.
+No loops: describe *which rows you want*, pandas does the rest.
 
 > **Mission:** from the model benchmark table, keep only the models with accuracy **above 0.85** and store them in `strong`.
 @@starter

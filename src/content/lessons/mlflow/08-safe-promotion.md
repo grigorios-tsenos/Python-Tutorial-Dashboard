@@ -11,9 +11,7 @@ minutes: 8
 @@body
 # Registry versions need a promotion rule
 
-Registering a new model should not automatically replace the one serving users. Compare measured quality first, then move the `champion` alias only when the candidate wins.
-
-A model version exposes its `run_id`. Read that run's score with `mlflow.get_run(version.run_id).data.metrics["quality"]`. The supplied helper registers offline models with a quality metric, so you can test the rule.
+Move the `champion` alias only when the candidate measurably beats the serving model. A model version exposes its `run_id`; read its score with `mlflow.get_run(version.run_id).data.metrics["quality"]`. The helper registers offline models with quality metrics.
 
 > **Mission:** implement `promote_if_better(name, candidate_version)`. Look up the named model's candidate version and existing `champion` alias with `MlflowClient`. Promote the candidate only if its quality is **strictly greater** than the champion's; return `True` when promoted, otherwise `False`. Ties keep the existing champion. Use stored scores, not version order, and leave other models' aliases untouched. Let an invalid model/version error propagate.
 

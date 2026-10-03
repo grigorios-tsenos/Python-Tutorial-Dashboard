@@ -19,9 +19,7 @@ Most analytics boils down to three verbs:
 | **join** | `totals.merge(users, on="user_id")` |
 | **sort** | `report.sort_values("amount", ascending=False)` |
 
-The lines are scrambled. Drag them (or use the arrows) into an order that builds `report`: each user's total spend with their plan, **biggest spender first**.
-
-Hit **Run & Check**. Any valid order counts; the checker runs your arrangement.
+The lines are scrambled. Arrange them to build `report`: each user's total spend with their plan, **biggest spender first**. Hit **Run & Check**; any valid order counts.
 @@lines
 import pandas as pd
 orders = pd.DataFrame({"user_id": [1, 1, 2, 3, 3, 3], "amount": [20, 30, 15, 5, 10, 25]})

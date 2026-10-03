@@ -11,7 +11,7 @@ minutes: 12
 @@body
 # Boss: the async batch runner
 
-LLM calls spend nearly all their time *waiting on the network*. `asyncio` lets you wait on many at once. Done naively it also gets you rate-limited, so production code needs a **speed limit** and **retries**.
+LLM calls spend nearly all their time waiting on the network. `asyncio` waits on many at once — but naive fan-out gets you rate-limited, so add a **speed limit** and **retries**.
 
 ```python
 import asyncio
@@ -28,9 +28,7 @@ results = await asyncio.gather(*coros)   # run concurrently, keep input order
 > - return results in the **same order** as `prompts`
 > - return `[]` for no prompts; reject `limit < 1` or `retries < 1` with `ValueError`
 
-The boss changes completion order and checks the exact retry count. Retry `TimeoutError` only; other exceptions must propagate immediately.
-
-Orbit supports top-level `await`, so you can test it right in the cell.
+The boss changes completion order and checks the exact retry count. Retry `TimeoutError` only; other exceptions must propagate immediately. Orbit supports top-level `await`, so test it right in the cell.
 @@starter
 import asyncio
 

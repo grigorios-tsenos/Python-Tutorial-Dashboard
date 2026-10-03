@@ -11,11 +11,11 @@ minutes: 6
 @@body
 # Keep the score history and its summary
 
-A metric can have multiple values, one per **step**. `mlflow.log_metric("quality", value, step=i)` records the learning curve; a run's summary metric exposes its latest value. `mlflow.log_dict(data, "summary.json")` stores a small structured artifact beside the run.
+`mlflow.log_metric("quality", value, step=i)` logs one value per **step** — the learning curve; the summary metric is the latest value. `mlflow.log_dict(data, "summary.json")` stores a small artifact.
 
 > **Mission:** implement `record_trial(name, params, scores)`. Start one run named `name` in experiment `trial-history`, log every supplied parameter, and log each quality score at its zero-based step. Save exactly `{"steps": len(scores), "best": max(scores), "last": scores[-1]}` as `summary.json`. Return the run ID after the run finishes. Reject an empty score list with `ValueError` before starting a run. Keep the input params and scores unchanged.
 
-New calls must create independent runs, including trials where the best score arrives before the final step.
+Each call creates an independent run, even when the best score arrives before the final step.
 @@starter
 import mlflow
 
@@ -71,4 +71,4 @@ Does a run's latest metric always equal its best metric?
 @@a
 No. Logging preserves the full history, while the summary metric is the last recorded value.
 @@real
-Real MLflow keeps metric histories and artifacts in its tracking store. Orbit checks the stored history and artifact directly so this exercise works offline.
+Real MLflow keeps metric histories and artifacts in its tracking store; Orbit checks them directly so this works offline.

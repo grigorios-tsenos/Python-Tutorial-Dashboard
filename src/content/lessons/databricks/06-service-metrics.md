@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # A useful metric needs the right denominator
 
-Three requests from the same user are **three requests** but only **one user**. A request with a missing latency still happened, so it belongs in request counts even though it cannot contribute to an average.
+Three requests from one user are **three requests** but **one user**. A missing latency still counts as a request, just not toward the average.
 
 | expression | meaning |
 |---|---|
@@ -22,7 +22,7 @@ Three requests from the same user are **three requests** but only **one user**. 
 
 > **Mission:** write `service_metrics(events)` returning one row per `region`, sorted by region, with these columns in order: `region`, `requests`, `measured`, `users`, `avg_latency_ms`. Round the average to one decimal place. If a region has no measured latencies, its average stays NULL. Keep the input unchanged.
 
-The checks use different regions, repeated users, missing users, groups with no measurements and an empty DataFrame. Use column expressions and aggregation rather than collecting the data into Python.
+The checks cover repeated users, missing users, regions with no measurements and an empty DataFrame. Use column expressions and aggregation, not Python collection.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
@@ -98,4 +98,4 @@ Does countDistinct include NULL as a separate user?
 @@a
 No. It counts distinct non-null values, so anonymous requests increase requests but not users.
 @@real
-Spark executes these grouped aggregates across partitions. Orbit uses the same column-expression API over an in-memory implementation. Keeping the denominator explicit makes dashboards understandable when instrumentation is incomplete. See the [Spark count reference](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.count.html).
+Spark executes these grouped aggregates across partitions; Orbit uses the same column-expression API in memory. See the [Spark count reference](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.count.html).

@@ -11,7 +11,7 @@ minutes: 8
 @@body
 # A hyperparameter sweep in 10 lines
 
-Trying every combination of settings is the simplest way to tune a model. The hard part is *comparing* nine runs afterwards. `mlflow.search_runs` returns a pandas DataFrame you can sort and filter:
+Grid search is easy; comparing nine runs is the work. `mlflow.search_runs` returns a sortable pandas DataFrame:
 
 ```python
 df = mlflow.search_runs(order_by=["metrics.accuracy DESC"])
@@ -20,7 +20,7 @@ best["params.lr"]            # note: params come back as STRINGS ('0.1')
 best["metrics.accuracy"]
 ```
 
-The `evaluate(lr, depth)` function fakes training: accuracy peaks at `lr=0.1`, `depth=4`.
+`evaluate(lr, depth)` fakes training: accuracy peaks at `lr=0.1`, `depth=4`.
 
 > **Mission:** finish `sweep(lrs, depths)`: one run per combination, logging `lr` and `depth` as params and `accuracy` as a metric. Return the best run's params as a dict of **strings**, e.g. `{"lr": "0.1", "depth": "4"}`.
 @@starter

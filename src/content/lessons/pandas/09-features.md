@@ -11,9 +11,7 @@ minutes: 12
 @@body
 # Boss: build user features from clickstream events
 
-Models don't read logs; they read **feature tables**: one row per entity, one column per signal. Turning events into features is the single most common data-science task in industry.
-
-You get an event log: `user`, `action` (`view`, `click` or `purchase`) and `value` (revenue, only set on purchases).
+Models read **feature tables**: one row per entity, one column per signal. Your input is an event log: `user`, `action` (`view`, `click` or `purchase`) and `value` (revenue, only set on purchases).
 
 > **Mission:** write `build_user_features(events)` returning a DataFrame with **exactly** these columns, one row per user, sorted by user:
 >

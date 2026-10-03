@@ -11,12 +11,10 @@ minutes: 8
 @@body
 # Chunking: the step before every RAG index
 
-You can't embed a 40-page runbook as one vector: its meaning gets averaged into mush, and it wouldn't fit in a prompt anyway. RAG pipelines first **split** documents into chunks, embed each chunk, and later retrieve only the relevant ones.
+A 40-page runbook can't be one vector, so RAG pipelines **split** documents into chunks, embed each, and retrieve only the relevant ones. Two details decide retrieval quality:
 
-Two details make or break retrieval quality:
-
-- **Overlap.** If a key sentence straddles a boundary, neither chunk contains it whole. Consecutive chunks share a few words, so each boundary appears complete in at least one chunk.
-- **Metadata.** Each chunk keeps its source (and its position), so the final answer can cite where it came from.
+- **Overlap.** Consecutive chunks share a few words, so a sentence that straddles a boundary appears whole in at least one chunk.
+- **Metadata.** Each chunk keeps its source and position, so answers can cite it.
 
 ```
 words:   w0 w1 w2 w3 w4 w5 w6 w7 w8 w9      chunk_size=4, overlap=1  ->  step 3
@@ -33,7 +31,6 @@ chunk 2:                   w6 w7 w8 w9      <- reaches the end: stop
 > - blank documents produce no chunks; don't modify the input documents or their metadata
 > - require `chunk_size >= 1` and `0 <= overlap < chunk_size`, else `ValueError`
 
-Where this fits: next you'll pack retrieved chunks into a context budget, and then the boss retrieves them. Real splitters count tokens rather than words; the windowing logic is the same.
 @@starter
 from langchain_core.documents import Document
 
@@ -120,4 +117,4 @@ Why keep source metadata on every chunk?
 @@a
 Retrieval returns chunks, not documents. The metadata lets answers cite and link back to the original source.
 @@real
-LangChain's `RecursiveCharacterTextSplitter.from_tiktoken_encoder(chunk_size=500, chunk_overlap=50)` splits on paragraphs, then sentences, then words, counting tokens, and `add_start_index=True` records each chunk's position. Typical settings are a few hundred tokens with 10–20% overlap; measure retrieval quality before tuning.
+LangChain's `RecursiveCharacterTextSplitter.from_tiktoken_encoder(chunk_size=500, chunk_overlap=50)` splits on paragraphs, then sentences, then words, counting tokens; `add_start_index=True` records each chunk's position. Typical settings: a few hundred tokens with 10–20% overlap.

@@ -3,15 +3,15 @@ id: lc-model-call
 track: langchain
 order: 1
 title: A Model Call Is Just a Function
-tagline: Message in, message out. Everything else in this chapter is plumbing around that.
+tagline: Message in, message out. Everything else is plumbing.
 kind: run
 xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: one call, demystified
+# One call, demystified
 
-Before chains, tools and RAG, know what a single model call looks like, because every fancy thing later is *arranging these calls*:
+Chains, tools and RAG are all arrangements of this single call:
 
 ```python
 reply = llm.invoke("Say hello")     # text (or messages) in...
@@ -19,12 +19,12 @@ reply                               # AIMessage(content='Hello!')  ...one messag
 reply.content                       # 'Hello!'  <- the plain text lives inside
 ```
 
-Two things trip people up on day one:
+Two gotchas:
 
-- **The reply is not a string.** It's an `AIMessage` object: the text is in `.content`, and later lessons read other fields from it (like `.tool_calls`, when the model wants to use a tool).
-- **The model here is fake.** `FakeListChatModel` returns scripted responses, so everything runs offline and deterministically. The calling code is *identical* to real code; only the model constructor changes.
+- **The reply is not a string.** It's an `AIMessage`: the text is in `.content`, and later lessons read other fields (like `.tool_calls`).
+- **The model here is fake.** `FakeListChatModel` returns scripted responses: offline, deterministic. Only the constructor differs from real code.
 
-> **Mission:** ask the model a question with `.invoke(...)`, store the whole reply in `reply`, and pull the plain text out into `text`. Then print `type(reply).__name__` and `text` so you can *see* the message-vs-text difference.
+> **Mission:** ask the model a question with `.invoke(...)`, store the whole reply in `reply`, and pull the plain text out into `text`. Print `type(reply).__name__` and `text`.
 @@starter
 from langchain_core.language_models import FakeListChatModel
 

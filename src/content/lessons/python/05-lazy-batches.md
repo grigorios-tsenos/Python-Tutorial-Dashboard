@@ -11,13 +11,13 @@ minutes: 6
 @@body
 # Small batches from a source you cannot rewind
 
-An embedding API accepts several texts per request. Your dataset might be a generator reading a huge file: converting it to a list first defeats streaming and can exhaust memory.
+An embedding API takes several texts per request, but your dataset may be a generator over a huge file: converting it to a list defeats streaming and can exhaust memory.
 
-Python's `itertools` module already contains `batched(iterable, n)`. It returns an iterator of tuples, reading at most `n` items for each batch. Use the standard library rather than rebuilding its buffering logic.
+`itertools.batched(iterable, n)` returns an iterator of tuples, reading at most `n` items per batch. Use it rather than rebuilding its buffering.
 
 > **Mission:** fix `batches(items, size=3)` so it returns a lazy iterator of tuples, in original order. Keep a partial final batch. It must work with one-shot generators and infinite sources: creating the iterator reads no items, and requesting its first batch reads only that batch. `size <= 0` raises `ValueError`.
 
-Empty input produces no batches. The checker watches how many source items were read, not just the eventual output.
+Empty input produces no batches. The checker watches how many source items were read, not just the output.
 @@starter
 from itertools import batched
 
@@ -78,4 +78,4 @@ What happens to a final batch with fewer than size items?
 @@a
 It is still returned, as a shorter tuple, so no remaining records are dropped.
 @@real
-Batching is useful for embedding requests, database writes and streaming transforms. It bounds how much source data each step reads; a separate concurrency limit controls how many batches are being processed at once.
+Batching bounds how much source data each step reads — useful for embedding requests, database writes and streaming transforms. Concurrency is a separate limit.

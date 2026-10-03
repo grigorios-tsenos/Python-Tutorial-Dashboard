@@ -11,7 +11,7 @@ minutes: 9
 @@body
 # Hooks: deterministic control over an agent
 
-Telling Claude "never run `rm -rf`" in a prompt *usually* works. A **hook** makes it **always** work. Hooks are your own scripts that Claude Code runs at fixed points, such as **before a tool runs** (`PreToolUse`).
+A prompt saying "never run `rm -rf`" *usually* works. A **hook** always works: your own script, run by Claude Code at fixed points such as `PreToolUse` (before a tool runs).
 
 Register one in `.claude/settings.json`:
 
@@ -29,9 +29,9 @@ Register one in `.claude/settings.json`:
 Claude Code pipes a JSON **event** to your script's stdin, e.g. `{"tool_name": "Bash", "tool_input": {"command": "ls"}}`. Your script answers with its **exit code**:
 
 - **`0`**: carry on
-- **`2`**: **block** the tool call, and whatever you print to **stderr** is shown to Claude so it can correct course
+- **`2`**: **block** the tool call; stderr is shown to Claude so it can correct course
 
-The script itself is three lines of glue; the real logic is a pure function, which is easy to test.
+The script is three lines of glue; the real logic is a pure, testable function.
 
 > **Mission:** write `pre_tool_use(event)` → `(exit_code, message)`:
 > - `Bash` command containing `rm -rf` → `(2, message mentioning "rm -rf")`
@@ -94,4 +94,4 @@ Why use a hook instead of a prompt instruction?
 @@a
 Hooks run deterministically every time; prompt instructions are followed only most of the time.
 @@real
-Hooks exist for other events too (`PostToolUse` for auto-formatting after edits, `UserPromptSubmit`, `Stop`, and more). Configure them in `.claude/settings.json` or with the `/hooks` command.
+Other hook events exist too: `PostToolUse` (auto-formatting after edits), `UserPromptSubmit`, `Stop`, and more. Configure them in `.claude/settings.json` or with `/hooks`.

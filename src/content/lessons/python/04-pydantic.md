@@ -12,7 +12,7 @@ packages: pydantic
 @@body
 # Validate what the model hands you
 
-Ask an LLM for JSON and it will, eventually, give you `"score": 9` when the scale is 1 to 5, or `"sentiment": "meh"` when you wanted one of three words. **Pydantic** turns a class into a validator, so bad output fails *loudly, right at the boundary*, instead of corrupting your data three steps later.
+Ask an LLM for JSON and eventually you get `"score": 9` on a 1-to-5 scale, or `"sentiment": "meh"`. **Pydantic** turns a class into a validator: bad output fails loudly at the boundary instead of corrupting data downstream.
 
 ```python
 from typing import Literal
@@ -23,9 +23,9 @@ class Ticket(BaseModel):
     hours: int = Field(ge=1, le=40)         # 1 <= hours <= 40
 ```
 
-Pydantic is also *forgiving where it's safe*: `"4"` becomes `4`.
+Pydantic coerces where safe: `"4"` becomes `4`.
 
-The `Review` model below accepts anything. That's the bug.
+`Review` below accepts anything. That's the bug.
 
 > **Mission:** make `Review` reject a `score` outside **1 to 5** and any `sentiment` other than `positive`, `neutral` or `negative`.
 @@starter
@@ -81,4 +81,4 @@ Why validate LLM output with a schema?
 @@a
 Models can return wrong types or out-of-range values; a schema fails loudly at the boundary instead of poisoning downstream code.
 @@real
-Real LangChain does `llm.with_structured_output(Review)` and returns a validated `Review` instance. The validation is the same pydantic you wrote here.
+LangChain's `llm.with_structured_output(Review)` returns a validated `Review` instance — the same pydantic you wrote here.

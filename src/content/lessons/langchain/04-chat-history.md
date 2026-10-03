@@ -9,9 +9,9 @@ xp: 45
 minutes: 7
 ---
 @@body
-# The model remembers nothing; the prompt remembers for it
+# The prompt is the memory
 
-Every call to a chat model starts from zero. A chatbot "remembers" because your code sends the earlier messages again, every time. `MessagesPlaceholder` splices a list of messages into a template:
+Chat models are stateless: a chatbot "remembers" only because your code resends earlier messages. `MessagesPlaceholder` splices a message list into a template:
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -23,9 +23,9 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 ```
 
-Histories grow with every turn, and so do cost, latency and the risk of overflowing the context window. Keep a **window** of the most recent turns. A turn starts with a human message and includes the replies that follow it, so never cut a turn in half. The window should also **start on a human message**: many chat APIs reject a conversation whose first non-system message comes from the assistant.
+Histories grow, so keep a **window** of recent turns. A turn starts with a human message and includes the replies after it — never cut one in half. The window must **start on a human message**: many chat APIs reject a history that opens with an assistant message.
 
-`RunnablePassthrough.assign(history=fn)` rewrites one key of the input dict before it reaches the prompt.
+`RunnablePassthrough.assign(history=fn)` rewrites one input key before the prompt sees it.
 
 > **Mission:**
 >
@@ -155,4 +155,4 @@ Why trim by whole turns rather than a fixed number of messages?
 @@a
 Cutting a turn in half can leave an answer without its question or a history that starts with an assistant message.
 @@real
-LangChain's `trim_messages(messages, strategy="last", token_counter=llm, max_tokens=..., start_on="human")` does this by **tokens** rather than turns. Long-running assistants often summarize older turns instead of dropping them, and LangGraph checkpointers (later in the LangGraph chapter) store the history for you.
+LangChain's `trim_messages(messages, strategy="last", token_counter=llm, max_tokens=..., start_on="human")` does this by **tokens** rather than turns. Long-running assistants often summarize older turns instead of dropping them.

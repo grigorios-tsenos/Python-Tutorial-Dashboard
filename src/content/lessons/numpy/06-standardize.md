@@ -11,9 +11,9 @@ minutes: 6
 @@body
 # Standardize each feature column
 
-A training matrix has one row per example and one column per feature. Age might range from 18 to 90 while income reaches thousands: equal numerical distances do not mean equal changes.
+A training matrix is one row per example, one column per feature. Age spans 18–90 while income reaches thousands: raw distances are not comparable.
 
-**Standardization** subtracts each column's mean and divides by its population standard deviation (`ddof=0`). Varying columns then have mean `0` and standard deviation `1`. A constant column has no variation: return zeros for it rather than dividing by zero.
+**Standardization** subtracts each column's mean and divides by its population standard deviation (`ddof=0`), giving varying columns mean `0` and standard deviation `1`. A constant column has no variation: return zeros rather than dividing by zero.
 
 > **Mission:** implement `standardize(values)` for a finite, two-dimensional numeric matrix. Return a floating-point array with the same shape, standardizing columns independently. Keep the input unchanged. An empty matrix keeps its shape; a one-dimensional input raises `ValueError`.
 

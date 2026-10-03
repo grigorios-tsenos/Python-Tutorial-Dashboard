@@ -11,12 +11,12 @@ minutes: 6
 @@body
 # This code crashes. Make it tell the truth.
 
-Real data is dirty. Here a latency column arrived as **text**, with a `None` and the word `"oops"` mixed in. Computing a mean on text is meaningless, so pandas refuses.
+A latency column arrived as **text**, with a `None` and the word `"oops"` mixed in. pandas refuses to average text.
 
-The fix is a two-step habit you will repeat for the rest of your career:
+The fix, in two steps:
 
-1. **Convert** to the type you actually mean: `pd.to_numeric(col, errors="coerce")`
-2. **Let bad values become `NaN`**: `coerce` turns unparseable text into "missing", and `mean()` skips missing values.
+1. **Convert** to the type you mean: `pd.to_numeric(col, errors="coerce")`
+2. **Let bad values become `NaN`**: `coerce` turns unparseable text into missing, and `mean()` skips missing values.
 
 > **Mission:** make `means` the mean latency per endpoint. Expected: `/chat` → `107.5`, `/embed` → `60.0`.
 @@starter

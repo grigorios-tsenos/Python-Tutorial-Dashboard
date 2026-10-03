@@ -3,7 +3,7 @@ id: pd-daily-pivot
 track: pandas
 order: 6
 title: Pivot a Log into a Daily Dashboard
-tagline: Long data is easy to store, wide data is easy to read, and quiet days still count.
+tagline: Long data stores well, wide data reads well, and quiet days still count.
 kind: build
 xp: 55
 minutes: 7
@@ -18,7 +18,7 @@ logs.pivot_table(index="day", columns="endpoint", values="errors",
                  aggfunc="sum", fill_value=0)
 ```
 
-`fill_value=0` covers a day/endpoint pair with no rows. It **cannot** add a day that has no rows at all: a quiet Tuesday simply disappears, and a chart draws a straight line from Monday to Wednesday. Build the calendar you expect and `reindex` onto it:
+`fill_value=0` covers a day/endpoint pair with no rows. It **cannot** add a day with no rows at all: a quiet Tuesday simply disappears from the index. Build the calendar you expect and `reindex` onto it:
 
 ```python
 days = pd.date_range("2026-03-01", "2026-03-07", freq="D", tz="UTC", name="day")
@@ -32,7 +32,6 @@ table.reindex(days, fill_value=0)
 > - integer counts, `0` where nothing failed; requests outside the window are ignored
 > - `end` before `start` raises `ValueError`; keep the input unchanged
 
-Where this fits: you've aggregated and joined. Reshaping for people is the last mile of every report, and the calendar you build here is the same discipline the next lesson needs for time windows.
 @@starter
 import pandas as pd
 

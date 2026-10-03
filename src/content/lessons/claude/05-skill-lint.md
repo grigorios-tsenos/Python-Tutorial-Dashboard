@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # Turn project conventions into useful errors
 
-The previous puzzle parsed a skill's frontmatter. Now validate the resulting metadata **without executing the skill**. Your team's review skills follow a deliberately small project policy; it is stricter than Claude Code's full frontmatter format.
+The previous puzzle parsed a skill's frontmatter. Now validate the metadata **without executing the skill**, against a small project policy stricter than Claude Code's full frontmatter format.
 
 > **Mission:** write `validate_skill(meta, body)` returning a list of invalid field names in this fixed order: `name`, `description`, `allowed-tools`, `body`.
 
@@ -20,7 +20,7 @@ The previous puzzle parsed a skill's frontmatter. Now validate the resulting met
 - `allowed-tools`: optional; when present, a comma-separated string of one or more tool names from `Read`, `Grep`, `Glob`. Spaces around each name are fine; empty or unknown names are invalid.
 - `body`: a non-empty string after stripping whitespace.
 
-If `meta` is not a dict, return only `["metadata"]`. A valid skill returns `[]`. Ignore extra metadata keys and leave the input untouched. This is the team's lint policy, not a complete YAML parser or a proof that a skill is safe.
+If `meta` is not a dict, return only `["metadata"]`. A valid skill returns `[]`. Ignore extra metadata keys and leave the input untouched. This is a lint policy, not a YAML parser or a safety proof.
 @@starter
 import re
 
@@ -81,4 +81,4 @@ Does validating allowed-tools prove a skill is safe?
 @@a
 No. Structural checks validate the team's metadata conventions; the instructions and supporting code still need review.
 @@real
-Claude Code supports more frontmatter fields and tool formats than this project linter. Its `allowed-tools` field pre-approves listed tools during invocation; other tools still follow the normal permission settings. See the [official skills reference](https://code.claude.com/docs/en/skills#frontmatter-reference).
+Claude Code supports more frontmatter fields and tool formats; its `allowed-tools` pre-approves listed tools during invocation while others follow normal permissions. See the [official skills reference](https://code.claude.com/docs/en/skills#frontmatter-reference).
