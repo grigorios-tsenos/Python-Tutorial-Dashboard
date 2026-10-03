@@ -24,6 +24,7 @@ interface Actions {
   missPredict: (id: string) => void
   gradeCard: (id: string, grade: Grade) => void
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void
+  setIntroPref: (id: string, v: 'open' | 'collapsed') => void
   setLastLesson: (id: string) => void
   exportJson: () => string
   importJson: (text: string) => { ok: true } | { ok: false; error: string }
@@ -131,6 +132,7 @@ export const useStore = create<Store>()(
         }),
 
       setSetting: (k, v) => set((s) => ({ settings: { ...s.settings, [k]: v } })),
+      setIntroPref: (id, v) => set((s) => ({ intro: { ...s.intro, [id]: v } })),
       setLastLesson: (id) => set({ lastLesson: id }),
 
       exportJson: () =>

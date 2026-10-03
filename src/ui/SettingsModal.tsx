@@ -62,6 +62,14 @@ export function SettingsModal() {
           <div><strong>Reduce motion</strong><div className="dim">Calms the map, twinkling stars and celebrations.</div></div>
           <button className={`switch ${settings.reduceMotion ? 'on' : ''}`} role="switch" aria-checked={settings.reduceMotion} onClick={() => setSetting('reduceMotion', !settings.reduceMotion)}><i /></button>
         </div>
+        <div className="setting setting-col">
+          <div><strong>Lesson intros</strong><div className="dim">How each lesson's guided intro (warm-up + demo) opens. You can still show or hide it on any lesson, and that choice is remembered per lesson.</div></div>
+          <div className="seg" role="radiogroup" aria-label="Lesson intro style">
+            {([['full', 'Full guided'], ['quick', 'Start at the demo'], ['code', 'Straight to code']] as const).map(([v, label]) => (
+              <button key={v} className={`seg-btn ${settings.introStyle === v ? 'on' : ''}`} role="radio" aria-checked={settings.introStyle === v} onClick={() => setSetting('introStyle', v)}>{label}</button>
+            ))}
+          </div>
+        </div>
 
         <h3>Your data</h3>
         <p className="dim">Progress lives in this browser (IndexedDB). Export it to back up or move devices.</p>
