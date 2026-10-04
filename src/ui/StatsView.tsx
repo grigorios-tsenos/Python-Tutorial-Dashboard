@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LESSONS } from '../content'
+import { LESSONS, LESSON_BY_ID } from '../content'
 import { TRACK_BY_ID } from '../content/tracks'
 import { KIND_LABEL } from '../content/types'
 import { ACHIEVEMENTS } from '../lib/achievements'
@@ -19,6 +19,7 @@ const PANEL_TITLE: Record<DashboardPanel, string> = {
   kinds: 'Lesson types',
   deck: 'Review deck',
   recent: 'Recent completions',
+  journal: 'Journal',
   activity: 'Activity',
   achievements: 'Achievements',
 }
@@ -159,6 +160,7 @@ export function StatsView() {
   const kinds = useMemo(() => kindBreakdown(s.completed), [s.completed])
   const deck = useMemo(() => deckHealth(s.cards, now), [s.cards, now])
   const recent = useMemo(() => recentCompletions(s.completed), [s.completed])
+  const journal = useMemo(() => Object.entries(s.notes).filter(([id]) => LESSON_BY_ID[id]).sort(([a], [b]) => (s.completed[b]?.at ?? 0) - (s.completed[a]?.at ?? 0)).slice(0, 8), [s.notes, s.completed])
   const minutes = minutesInvested(s.completed)
   const total = LESSONS.length
   const done = Object.keys(s.completed).length
@@ -218,7 +220,7 @@ export function StatsView() {
             <text x="50" y="58" textAnchor="middle" className="ring-text">{lp.level}</text>
           </svg>
         </Kpi>
-        <Kpi label="Stars lit" value={`${done} / ${total}`} sub={`${Math.round((done / total) * 100)}% of the sky`} />
+        <Kpi label="Stars lit" value={`${done} / ${total}`} sub={`${Object.values(s.completed).filter((c) => c.hints === 0).length} mastered without hints`} />
         <Kpi label="XP this week" value={compact(thisWeek.xp)} delta={{ text: `${diff >= 0 ? '+' : ''}${diff} vs last week`, dir: diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat' }} sub={`${thisWeek.lessons} lesson${thisWeek.lessons === 1 ? '' : 's'} finished`} />
         <Kpi label="Day streak" value={String(streak)} sub={`best ${bestStreak(days)} day${bestStreak(days) === 1 ? '' : 's'}`} />
         <Kpi label="First-try rate" value={pct(acc.firstTry)} sub={acc.hintFree === null ? 'no lessons finished yet' : `${pct(acc.hintFree)} without hints`} />
@@ -235,7 +237,7 @@ export function StatsView() {
 
         {show('chapters') && (
           <section className="card span-2" aria-label={PANEL_TITLE.chapters}>
-            <h2>{PANEL_TITLE.chapters} <span className="dim">9 steps each, Basics → Boss</span></h2>
+            <h2>{PANEL_TITLE.chapters} <span className="dim">9 steps each, Basics → Boss · striped = solved with hints</span></h2>
             <div className="ladder">
               {ladder.map(({ track: t, steps, next, done: d }) => (
                 <div key={t.id} className="ladder-row" style={{ ['--tc' as string]: t.color }}>
@@ -243,7 +245,7 @@ export function StatsView() {
                   <ol className="ladder-cells" aria-label={`${t.name}: ${d} of ${steps.length} steps done`}>
                     {steps.map(({ lesson, done: ok }) => (
                       <li key={lesson.id}>
-                        <a href={lessonPath(lesson.id)} className={`ladder-cell ${ok ? 'done' : next?.id === lesson.id ? 'next' : ''}`} title={`${STAGES[lesson.order - 1].label}: ${lesson.title}${ok ? ' ✓' : ''}`} aria-label={`${STAGES[lesson.order - 1].label}: ${lesson.title}${ok ? ', completed' : ''}`} />
+                        <a href={lessonPath(lesson.id)} className={`ladder-cell ${ok ? (s.completed[lesson.id].hints > 0 ? 'done assisted' : 'done') : next?.id === lesson.id ? 'next' : ''}`} title={`${STAGES[lesson.order - 1].label}: ${lesson.title}${ok ? (s.completed[lesson.id].hints > 0 ? ' ✓ with hints' : ' ✓') : ''}`} aria-label={`${STAGES[lesson.order - 1].label}: ${lesson.title}${ok ? ', completed' : ''}`} />
                       </li>
                     ))}
                   </ol>
@@ -332,6 +334,25 @@ export function StatsView() {
                   ))}
                 </tbody>
               </table>
+            )}
+          </section>
+        )}
+
+        {show('journal') && (
+          <section className="card" aria-label={PANEL_TITLE.journal}>
+            <h2>{PANEL_TITLE.journal} <span className="dim">your own words</span></h2>
+            {journal.length === 0 ? (
+              <p className="dim empty-note">After each lesson, write one sentence on why it worked. It shows up here.</p>
+            ) : (
+              <ul className="journal">
+                {journal.map(([id, n]) => (
+                  <li key={id}>
+                    <a href={lessonPath(id)}><strong>{LESSON_BY_ID[id].title}</strong></a>
+                    {n.takeaway && <span>{n.takeaway}</span>}
+                    {n.stuck && <span className="dim">Stuck on: {n.stuck}</span>}
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
         )}

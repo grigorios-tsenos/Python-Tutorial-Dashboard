@@ -16,6 +16,7 @@ export interface Celebration {
   questBonus: number
   cardsAdded: number
   hints: number
+  redo?: boolean
 }
 
 interface UiState {

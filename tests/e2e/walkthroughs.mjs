@@ -127,6 +127,10 @@ try {
   assert.equal(await lab.locator('.wt-cell').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
 
+  console.log('Struggle-first gate off for the reveal checks')
+  await page.locator('.icon-btn[aria-label="Settings"]').click()
+  await page.getByRole('radio', { name: 'Off', exact: true }).click()
+  await page.keyboard.press('Escape')
   for (const id of ['np-shapes', 'pd-pipeline', 'np-pairwise']) {
     console.log(`Checking saved solution reveal: ${id}`)
     await open(id)

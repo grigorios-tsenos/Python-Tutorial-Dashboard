@@ -16,11 +16,15 @@ export type MapLabels = 'all' | 'focus' | 'off'
 export type IntroStyle = 'full' | 'quick' | 'code'
 export const DEMO_SPEEDS = [5000, 3000, 1500] as const
 
+/** how hard the app makes it to reach for help: see lib/learning.ts */
+export const RIGORS = ['off', 'standard', 'strict'] as const
+export type Rigor = (typeof RIGORS)[number]
+
 export const ACCENTS = ['mint', 'violet', 'amber', 'sky', 'rose'] as const
 export type Accent = (typeof ACCENTS)[number]
 
 /** dashboard panels the learner can hide; the KPI row is always shown */
-export const DASHBOARD_PANELS = ['weekly', 'chapters', 'radar', 'kinds', 'deck', 'recent', 'activity', 'achievements'] as const
+export const DASHBOARD_PANELS = ['weekly', 'chapters', 'radar', 'kinds', 'deck', 'recent', 'journal', 'activity', 'achievements'] as const
 export type DashboardPanel = (typeof DASHBOARD_PANELS)[number]
 
 export interface Settings {
@@ -33,6 +37,14 @@ export interface Settings {
   demoSpeed: number
   accent: Accent
   dashboardHidden: DashboardPanel[]
+  rigor: Rigor
+}
+
+export interface Note {
+  /** what the learner wrote before the solution was shown */
+  stuck?: string
+  /** one-sentence takeaway written after passing */
+  takeaway?: string
 }
 
 export interface Persisted {
@@ -46,6 +58,9 @@ export interface Persisted {
   settings: Settings
   /** per-lesson intro visibility chosen by the learner; absent means "use the default rules" */
   intro: Record<string, 'open' | 'collapsed'>
+  /** graded runs per lesson: the effort that unlocks hints */
+  tries: Record<string, number>
+  notes: Record<string, Note>
   quest: { date: string; done: number; claimed: boolean }
   stats: { runs: number; vimRuns: number; reviews: number; predictMisses: number }
   lastLesson: string | null
@@ -60,8 +75,10 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: [] },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: [], rigor: 'standard' },
     intro: {},
+    tries: {},
+    notes: {},
     quest: { date: '', done: 0, claimed: false },
     stats: { runs: 0, vimRuns: 0, reviews: 0, predictMisses: 0 },
     lastLesson: null,
@@ -114,10 +131,24 @@ export function sanitize(raw: unknown): Persisted {
     d.settings.introStyle = oneOf(['full', 'quick', 'code'] as const, s.introStyle, 'full')
     d.settings.demoSpeed = oneOf(DEMO_SPEEDS, s.demoSpeed, 3000)
     d.settings.accent = oneOf(ACCENTS, s.accent, 'mint')
+    d.settings.rigor = oneOf(RIGORS, s.rigor, 'standard')
     if (Array.isArray(s.dashboardHidden)) d.settings.dashboardHidden = [...new Set(s.dashboardHidden.filter((p): p is DashboardPanel => DASHBOARD_PANELS.includes(p)))]
   }
   if (isObj(raw.intro)) {
     for (const [id, v] of Object.entries(raw.intro)) if (LESSON_BY_ID[id] && (v === 'open' || v === 'collapsed')) d.intro[id] = v
+  }
+  if (isObj(raw.tries)) {
+    for (const [id, v] of Object.entries(raw.tries)) if (LESSON_BY_ID[id]) d.tries[id] = Math.max(0, Math.floor(num(v)))
+  }
+  if (isObj(raw.notes)) {
+    const text = (v: unknown) => (typeof v === 'string' && v.length <= 2000 ? v : undefined)
+    for (const [id, v] of Object.entries(raw.notes)) {
+      if (!LESSON_BY_ID[id] || !isObj(v)) continue
+      const n: Note = {}
+      if (text(v.stuck)) n.stuck = text(v.stuck)
+      if (text(v.takeaway)) n.takeaway = text(v.takeaway)
+      if (n.stuck || n.takeaway) d.notes[id] = n
+    }
   }
   if (isObj(raw.quest) && typeof raw.quest.date === 'string') {
     d.quest = { date: raw.quest.date, done: Math.max(0, Math.floor(num(raw.quest.done))), claimed: raw.quest.claimed === true }

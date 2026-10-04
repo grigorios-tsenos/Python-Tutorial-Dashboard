@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, type Achievement } from '../lib/achievements'
 import { dayKey } from '../lib/dates'
 import { QUEST_BONUS, QUEST_TARGET, levelFromXp, newCard, schedule, xpAward, type Grade } from '../lib/gamification'
 import { idbStorage } from './idb'
-import { STORE_VERSION, defaults, sanitize, type Persisted, type Settings } from './model'
+import { STORE_VERSION, defaults, sanitize, type Note, type Persisted, type Settings } from './model'
 
 export interface CompletionSummary {
   xp: number
@@ -14,17 +14,23 @@ export interface CompletionSummary {
   questBonus: number
   cardsAdded: number
   hints: number
+  /** an already-finished lesson passed again with less help */
+  redo: boolean
 }
 
 interface Actions {
   setCode: (id: string, code: string) => void
-  recordRun: (vim: boolean) => void
+  /** every run counts for stats; a graded run on `id` also counts toward that lesson's hint gate */
+  recordRun: (id: string | undefined, vim: boolean) => void
   revealHint: (id: string) => number
   completeLesson: (id: string, attempts: number) => CompletionSummary | null
   missPredict: (id: string) => void
   gradeCard: (id: string, grade: Grade) => void
   setSetting: <K extends keyof Settings>(k: K, v: Settings[K]) => void
   setIntroPref: (id: string, v: 'open' | 'collapsed') => void
+  setNote: (id: string, patch: Note) => void
+  /** clear hints and saved code so a finished lesson can be passed again from memory */
+  redoLesson: (id: string) => void
   setLastLesson: (id: string) => void
   exportJson: () => string
   importJson: (text: string) => { ok: true } | { ok: false; error: string }
@@ -49,12 +55,13 @@ export const useStore = create<Store>()(
 
       setCode: (id, code) => set((s) => ({ code: { ...s.code, [id]: code } })),
 
-      recordRun: (vim) =>
+      recordRun: (id, vim) =>
         set((s) => {
           const today = dayKey()
           return {
             stats: { ...s.stats, runs: s.stats.runs + 1, vimRuns: s.stats.vimRuns + (vim ? 1 : 0) },
             activity: { ...s.activity, [today]: (s.activity[today] ?? 0) + 1 },
+            tries: id ? { ...s.tries, [id]: (s.tries[id] ?? 0) + 1 } : s.tries,
           }
         }),
 
@@ -67,30 +74,35 @@ export const useStore = create<Store>()(
       completeLesson: (id, attempts) => {
         const s = get()
         const lesson = LESSON_BY_ID[id]
-        if (!lesson || s.completed[id]) return null
+        if (!lesson) return null
+        const prev = s.completed[id]
+        const hints = s.hints[id] ?? 0
+        if (prev && hints >= prev.hints) return null // nothing new learned since last time
         const now = Date.now()
         const today = dayKey(new Date(now))
-        const hints = s.hints[id] ?? 0
         const gained = xpAward(lesson.xp, hints)
+        const delta = prev ? gained - prev.xp : gained // a redo refunds the hint penalty
 
         let quest = s.quest.date === today ? { ...s.quest } : { date: today, done: 0, claimed: false }
-        quest.done += 1
         let questBonus = 0
-        if (!quest.claimed && quest.done >= QUEST_TARGET) {
-          quest = { ...quest, claimed: true }
-          questBonus = QUEST_BONUS
-        }
-
-        const xp = s.xp + gained + questBonus
         const cards = { ...s.cards }
         let cardsAdded = 0
-        lesson.cards.forEach((c, i) => {
-          const card = newCard(id, i, c.q, c.a, now)
-          if (!cards[card.id]) {
-            cards[card.id] = card
-            cardsAdded++
+        if (!prev) {
+          quest.done += 1
+          if (!quest.claimed && quest.done >= QUEST_TARGET) {
+            quest = { ...quest, claimed: true }
+            questBonus = QUEST_BONUS
           }
-        })
+          lesson.cards.forEach((c, i) => {
+            const card = newCard(id, i, c.q, c.a, now)
+            if (!cards[card.id]) {
+              cards[card.id] = card
+              cardsAdded++
+            }
+          })
+        }
+
+        const xp = s.xp + delta + questBonus
         const completed = { ...s.completed, [id]: { at: now, xp: gained, hints, attempts } }
         const activity = { ...s.activity, [today]: (s.activity[today] ?? 0) + 1 }
 
@@ -102,7 +114,7 @@ export const useStore = create<Store>()(
         const before = levelFromXp(s.xp)
         const after = levelFromXp(xp)
         set({ completed, xp, cards, activity, badges, quest, lastLesson: id })
-        return { xp: gained, levelUp: after > before ? after : null, badges: newBadges, questBonus, cardsAdded, hints }
+        return { xp: delta, levelUp: after > before ? after : null, badges: newBadges, questBonus, cardsAdded, hints, redo: !!prev }
       },
 
       missPredict: (id) => {
@@ -133,6 +145,12 @@ export const useStore = create<Store>()(
 
       setSetting: (k, v) => set((s) => ({ settings: { ...s.settings, [k]: v } })),
       setIntroPref: (id, v) => set((s) => ({ intro: { ...s.intro, [id]: v } })),
+      setNote: (id, patch) => set((s) => ({ notes: { ...s.notes, [id]: { ...s.notes[id], ...patch } } })),
+      redoLesson: (id) =>
+        set((s) => {
+          const { [id]: _code, ...code } = s.code
+          return { code, hints: { ...s.hints, [id]: 0 }, tries: { ...s.tries, [id]: 0 } }
+        }),
       setLastLesson: (id) => set({ lastLesson: id }),
 
       exportJson: () =>

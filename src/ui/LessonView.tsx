@@ -6,6 +6,7 @@ import { KIND_LABEL, type Lesson } from '../content/types'
 import { allPassed } from '../engine/outputText'
 import { runner, useRunnerStatus } from '../engine/runner'
 import type { RunResult } from '../engine/types'
+import { debugMove } from '../lib/learning'
 import { go, lessonPath } from '../lib/router'
 import { seededShuffle } from '../lib/shuffle'
 import { useStore } from '../store/useStore'
@@ -38,7 +39,10 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   const hintsUsed = useStore((s) => s.hints[id] ?? 0)
   const savedCode = useStore((s) => s.code[id])
   const vimOn = useStore((s) => s.settings.vim)
-  const { setCode, recordRun, revealHint, completeLesson, missPredict, setSetting, setLastLesson } = useStore.getState()
+  const rigor = useStore((s) => s.settings.rigor)
+  const tries = useStore((s) => s.tries[id] ?? 0)
+  const note = useStore((s) => s.notes[id])
+  const { setCode, recordRun, revealHint, completeLesson, missPredict, setSetting, setLastLesson, setNote, redoLesson } = useStore.getState()
   const runtime = useRunnerStatus()
 
   const isParsons = lesson.kind === 'parsons'
@@ -60,6 +64,14 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   useEffect(() => {
     setLastLesson(id)
     runner.boot()
+  }, [id])
+
+  // time on task feeds the hint gate; a coarse tick is enough
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const t0 = Date.now()
+    const t = setInterval(() => setSeconds(Math.floor((Date.now() - t0) / 1000)), 15_000)
+    return () => clearInterval(t)
   }, [id])
 
   const persist = useCallback(
@@ -101,7 +113,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     async (source: string, opts: { check: boolean; complete: boolean; tries?: number }) => {
       const mine = ++token.current
       setRunning(true)
-      recordRun(useStore.getState().settings.vim)
+      recordRun(opts.check ? id : undefined, useStore.getState().settings.vim)
       const res = await runner.run({ code: source, check: opts.check && lesson.check ? lesson.check : undefined, packages: lesson.packages })
       if (mine !== token.current) return
       setRunning(false)
@@ -143,6 +155,17 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     }
   }
 
+  /** start over from the starter with no hints: pass again and the hint penalty is refunded */
+  const redo = () => {
+    redoLesson(id)
+    attempts.current = 0
+    setResult(null)
+    setPicked([])
+    setSolved(false)
+    if (isParsons) setOrder(seededShuffle(lesson.lines, lesson.id))
+    else setCodeState(lesson.starter)
+  }
+
   const reset = () => {
     if (!resetArmed) {
       setResetArmed(true)
@@ -180,7 +203,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           <div className="lesson-meta">
             <span className={`kind kind-${lesson.kind}`}>{KIND_LABEL[lesson.kind]}</span>
             <span className="dim">Step {lesson.order}/9 · {lesson.xp} XP · ~{lesson.minutes} min</span>
-            {done && <span className="done-chip">✓ Completed</span>}
+            {done && <span className="done-chip">{done.hints === 0 ? '✓ Mastered' : `✓ Completed · ${done.hints} hint${done.hints === 1 ? '' : 's'}`}</span>}
           </div>
           <h1>{lesson.title}</h1>
           <p className="tagline">{lesson.tagline}</p>
@@ -191,7 +214,13 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
         <Hints
           lesson={lesson}
           used={hintsUsed}
-          completed={!!done}
+          completed={!!done && done.hints === 0}
+          done={!!done}
+          rigor={rigor}
+          runs={isPredict ? picked.length : tries}
+          seconds={seconds}
+          stuckNote={note?.stuck ?? ''}
+          onNote={(stuck) => setNote(id, { stuck })}
           onReveal={() => revealHint(id)}
           onUseSolution={(text) => {
             if (isParsons) {
@@ -206,6 +235,19 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
         />
         {(done || (isPredict && solved)) && (
           <>
+            <section className="lockin">
+              <h3>Lock it in</h3>
+              <label className="takeaway">
+                One sentence, in your own words: why does this work?
+                <textarea rows={2} value={note?.takeaway ?? ''} onChange={(e) => setNote(id, { takeaway: e.target.value })} placeholder="Because …" />
+              </label>
+              {done && (
+                <div className="row">
+                  <button className="btn small" onClick={redo}>Redo from memory</button>
+                  <span className="dim small">{done.hints > 0 ? `Solved with ${done.hints} hint${done.hints === 1 ? '' : 's'}. Pass it again without hints and the XP penalty is refunded.` : 'Mastered without hints. Redo any time to keep it sharp.'}</span>
+                </div>
+              )}
+            </section>
             {isPredict && lesson.explain && (
               <section className="explain">
                 <h3>Why</h3>
@@ -320,7 +362,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
 
         <OutputPanel key={attempts.current} result={result} running={running} graded={graded} completed={!!done} visualFirst={lesson.kind === 'lab'} />
         {verdict === false && !running && result && (
-          <p className="nudge">Not yet — each failing check above says what it expected.</p>
+          <p className="nudge"><strong>Not yet.</strong> {debugMove(attempts.current)}</p>
         )}
       </section>
     </div>
