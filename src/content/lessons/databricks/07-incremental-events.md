@@ -11,22 +11,20 @@ minutes: 8
 @@body
 # Insert only the events you have not seen
 
-A job may receive the same batch twice; appending it twice inflates downstream metrics. An **anti join** keeps left rows with no matching key on the right:
+A scheduled job may receive the same batch twice; appending it twice inflates every metric. An **anti join** keeps left rows with no matching key on the right:
 
 ```python
 new_events = batch.join(current.select("event_id"), "event_id", "left_anti")
-combined = current.unionByName(new_events)
+combined = current.unionByName(new_events)     # aligns columns by name
 ```
 
-`unionByName` aligns columns by name regardless of batch column order.
+> **Mission:** write `append_events(current, batch)` → the combined DataFrame:
+> - discard batch rows whose `event_id` is NULL, empty or whitespace
+> - remove repeated `event_id`s within the batch
+> - keep only batch IDs absent from `current`
+> - append them to `current`, preserving its column order
 
-> **Mission:** write `append_events(current, batch)` returning the combined DataFrame:
-> - discard batch rows whose `event_id` is NULL, empty or only whitespace;
-> - remove repeated `event_id`s within the batch;
-> - keep only batch IDs absent from `current`;
-> - append these rows to `current`, preserving its column order.
-
-This is **insert-only**: a repeated ID must not overwrite its stored payload. Current IDs are valid and unique; duplicate IDs within a batch carry identical payloads; both frames have the same named columns. Keep both inputs unchanged; handle empty batches and an empty current frame. Row order is not part of the result contract.
+This is **insert-only**: a repeated ID never overwrites its stored payload. Both frames share column names; duplicates within a batch carry identical payloads. Keep both inputs unchanged; handle an empty batch and an empty `current`. Row order is not part of the contract.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

@@ -36,7 +36,7 @@ export function Topbar({ route }: { route: Route }) {
       <nav aria-label="Primary">
         {link('#/', 'Map', route.name === 'map' || route.name === 'lesson')}
         {link('#/review', 'Review', route.name === 'review', dueCount)}
-        {link('#/stats', 'Stats', route.name === 'stats')}
+        {link('#/stats', 'Dashboard', route.name === 'stats')}
       </nav>
       <div className="top-right">
         {streak > 0 && <span className="chip streak" title={`${streak}-day streak`}>🔥 {streak}</span>}

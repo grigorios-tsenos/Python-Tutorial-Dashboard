@@ -16,6 +16,13 @@ export type MapLabels = 'all' | 'focus' | 'off'
 export type IntroStyle = 'full' | 'quick' | 'code'
 export const DEMO_SPEEDS = [5000, 3000, 1500] as const
 
+export const ACCENTS = ['mint', 'violet', 'amber', 'sky', 'rose'] as const
+export type Accent = (typeof ACCENTS)[number]
+
+/** dashboard panels the learner can hide; the KPI row is always shown */
+export const DASHBOARD_PANELS = ['weekly', 'chapters', 'radar', 'kinds', 'deck', 'recent', 'activity', 'achievements'] as const
+export type DashboardPanel = (typeof DASHBOARD_PANELS)[number]
+
 export interface Settings {
   vim: boolean
   theme: 'dark' | 'light'
@@ -24,6 +31,8 @@ export interface Settings {
   mapLabels: MapLabels
   introStyle: IntroStyle
   demoSpeed: number
+  accent: Accent
+  dashboardHidden: DashboardPanel[]
 }
 
 export interface Persisted {
@@ -51,7 +60,7 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000 },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: [] },
     intro: {},
     quest: { date: '', done: 0, claimed: false },
     stats: { runs: 0, vimRuns: 0, reviews: 0, predictMisses: 0 },
@@ -61,6 +70,7 @@ export function defaults(): Persisted {
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d)
+const oneOf = <T extends string | number>(options: readonly T[], v: unknown, fallback: T): T => (options.includes(v as T) ? (v as T) : fallback)
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/
 
 /** Validate untrusted data (IndexedDB contents or an imported file) into a safe Persisted object. */
@@ -96,12 +106,15 @@ export function sanitize(raw: unknown): Persisted {
   }
   if (isObj(raw.badges)) for (const [id, v] of Object.entries(raw.badges)) d.badges[id] = num(v)
   if (isObj(raw.settings)) {
-    d.settings.vim = raw.settings.vim === true
-    d.settings.theme = raw.settings.theme === 'light' ? 'light' : 'dark'
-    d.settings.reduceMotion = raw.settings.reduceMotion === true
-    d.settings.mapLabels = raw.settings.mapLabels === 'focus' || raw.settings.mapLabels === 'off' ? raw.settings.mapLabels : 'all'
-    d.settings.introStyle = raw.settings.introStyle === 'quick' || raw.settings.introStyle === 'code' ? raw.settings.introStyle : 'full'
-    d.settings.demoSpeed = (DEMO_SPEEDS as readonly number[]).includes(num(raw.settings.demoSpeed, 3000)) ? num(raw.settings.demoSpeed, 3000) : 3000
+    const s = raw.settings
+    d.settings.vim = s.vim === true
+    d.settings.theme = s.theme === 'light' ? 'light' : 'dark'
+    d.settings.reduceMotion = s.reduceMotion === true
+    d.settings.mapLabels = oneOf(['all', 'focus', 'off'] as const, s.mapLabels, 'all')
+    d.settings.introStyle = oneOf(['full', 'quick', 'code'] as const, s.introStyle, 'full')
+    d.settings.demoSpeed = oneOf(DEMO_SPEEDS, s.demoSpeed, 3000)
+    d.settings.accent = oneOf(ACCENTS, s.accent, 'mint')
+    if (Array.isArray(s.dashboardHidden)) d.settings.dashboardHidden = [...new Set(s.dashboardHidden.filter((p): p is DashboardPanel => DASHBOARD_PANELS.includes(p)))]
   }
   if (isObj(raw.intro)) {
     for (const [id, v] of Object.entries(raw.intro)) if (LESSON_BY_ID[id] && (v === 'open' || v === 'collapsed')) d.intro[id] = v

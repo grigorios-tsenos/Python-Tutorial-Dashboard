@@ -9,37 +9,26 @@ xp: 65
 minutes: 9
 ---
 @@body
-# Data quality expectations
+# Quarantine bad rows, keep the good ones flowing
 
-Pipelines have rules: *an order has a user*, *the amount is a number*. What happens to rows that break them?
-
-| policy | effect |
-|---|---|
-| fail the job | one bad row blocks every good one |
-| drop silently | the dashboard looks fine while an upstream bug eats 30% of orders |
-| **quarantine** | good rows flow on; bad rows go to a side table **with the reason** |
+Every pipeline has rules: *an order has a user*, *the amount is a number*. Failing the job blocks good rows; dropping bad rows silently hides bugs. **Quarantine** does neither: good rows flow on, bad rows land in a side table **with the reason**.
 
 `F.when` chains evaluate in order, so the **first** broken rule names the reason:
 
 ```python
 reason = (F.when(rule_1_broken, "rule_1")
-           .when(rule_2_broken, "rule_2"))        # NULL when no rule is broken
+           .when(rule_2_broken, "rule_2"))   # NULL when nothing is broken
 ```
 
-Two NULL traps:
+Two NULL traps: `isin(...)` on a NULL country is NULL, not false, so test `isNull()` explicitly; and under ANSI mode `cast("double")` raises on `"n/a"`, so use `try_cast`.
 
-- `F.col("country").isin(...)` on a NULL country is **NULL**, not false, and `when` skips NULL conditions — test `isNull()` explicitly.
-- With ANSI mode on, `cast("double")` **raises** on text like `"n/a"`. `try_cast("double")` returns NULL instead, which is what a quality check needs.
-
-> **Mission:** implement `apply_expectations(df, countries)` returning `(valid, quarantine)`. Input columns are `order_id`, `user`, `amount`, `country`, all strings. Check these rules in order:
+> **Mission:** implement `apply_expectations(df, countries)` → `(valid, quarantine)`. Columns `order_id`, `user`, `amount`, `country` are strings. Rules, in order:
 >
 > 1. `missing_user`: `user` is NULL, empty or whitespace
-> 2. `bad_amount`: `amount` is NULL or not a number (negative numbers are valid refunds)
+> 2. `bad_amount`: `amount` is NULL or not a number (negatives are valid refunds)
 > 3. `unknown_country`: `country` is NULL or not in `countries`
 >
-> `valid` holds the rows that pass every rule, with the original columns and `amount` as a **double**. `quarantine` holds every other row **unchanged** (raw `amount` text, so you can see what arrived) plus a `reason` column naming the first broken rule. Every input row lands in exactly one output. Keep the input unchanged; an empty input gives two empty outputs with those schemas.
-
-The boss builds a full bronze → silver → gold pipeline; this is the silver layer's safety net.
+> `valid`: rows passing every rule, original columns, `amount` cast to **double**. `quarantine`: every other row **unchanged** plus a `reason` column naming the first broken rule. Each input row lands in exactly one output. Keep the input unchanged; an empty input gives two empty outputs with those schemas.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

@@ -1,23 +1,25 @@
+import { python } from '@codemirror/lang-python'
+import { highlightCode, tagHighlighter, tags as t } from '@lezer/highlight'
 import { marked } from 'marked'
 import { useMemo } from 'react'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-const PY =
-  /(#[^\n]*)|('''[\s\S]*?'''|"""[\s\S]*?"""|[rbf]{0,2}"(?:\\.|[^"\\\n])*"|[rbf]{0,2}'(?:\\.|[^'\\\n])*')|\b(\d+(?:\.\d+)?(?:e[+-]?\d+)?j?)\b|\b(def|class|return|if|elif|else|for|while|in|not|and|or|is|None|True|False|import|from|as|try|except|finally|raise|with|lambda|yield|async|await|pass|break|continue|global|assert|del)\b|\b([A-Za-z_]\w*)(?=\()/g
+// the editor's parser, mapped to the .tok-* classes in styles.css
+const parser = python().language.parser
+const classes = tagHighlighter([
+  { tag: [t.keyword, t.controlKeyword, t.operatorKeyword, t.definitionKeyword, t.moduleKeyword, t.self, t.atom], class: 'tok-k' },
+  { tag: [t.string, t.special(t.string)], class: 'tok-s' },
+  { tag: [t.number, t.bool, t.null], class: 'tok-n' },
+  { tag: [t.comment, t.lineComment], class: 'tok-c' },
+  { tag: [t.function(t.variableName), t.function(t.propertyName)], class: 'tok-f' },
+  { tag: [t.className, t.typeName], class: 'tok-t' },
+])
 
-/** Tiny Python tokenizer for guide code blocks; themed with the editor's --syn-* colors. */
 function highlightPython(code: string): string {
   let out = ''
-  let last = 0
-  for (const m of code.matchAll(PY)) {
-    out += esc(code.slice(last, m.index))
-    const [whole, comment, str, num, kw, call] = m
-    const cls = comment ? 'tok-c' : str ? 'tok-s' : num ? 'tok-n' : kw ? 'tok-k' : call && /^[A-Z]/.test(call) ? 'tok-t' : 'tok-f'
-    out += `<span class="${cls}">${esc(whole)}</span>`
-    last = m.index + whole.length
-  }
-  return out + esc(code.slice(last))
+  highlightCode(code, parser.parse(code), classes, (text, cls) => { out += cls ? `<span class="${cls}">${esc(text)}</span>` : esc(text) }, () => { out += '\n' })
+  return out
 }
 
 marked.setOptions({ gfm: true, breaks: false })

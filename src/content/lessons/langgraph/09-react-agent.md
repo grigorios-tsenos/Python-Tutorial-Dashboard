@@ -19,15 +19,13 @@ START ─> agent ─(yes)─> tools ─> agent ... │
             └─(no)──> END                  │
 ```
 
-1. **agent** calls the model with the conversation so far
-2. If the reply requests tools, **tools** runs them and appends the results, then back to the agent
-3. If not, that's the final answer: **END**
+**agent** calls the model with the conversation so far. If the reply asks for tools, **tools** runs them, appends the results and returns to the agent; otherwise the answer is final. `MessagesState` has a `messages` list that *appends* instead of overwriting.
 
-`MessagesState` provides a `messages` list that *appends* instead of overwriting. The fake model is scripted: first it asks for `multiply(17, 3)`, then it answers in plain text.
+The fake model is scripted: first it asks for `multiply(17, 3)`, then it answers in text.
 
 > **Mission:** implement `agent`, `tools` and `should_continue`, build the graph with nodes named exactly **`agent`** and **`tools`**, compile it into `app`, and keep the `out = app.invoke(...)` line at the bottom.
 
-Handle multiple tool calls in one reply, different registered tools, and repeated tool rounds. Preserve each call's `id` in its `ToolMessage` and keep message order. A reply with no tool calls must finish immediately; tool results must reach the next model call.
+Handle multiple tool calls in one reply, other registered tools and repeated rounds. Preserve each call's `id` in its `ToolMessage` and keep message order; a reply with no tool calls finishes immediately.
 @@starter
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage, ToolMessage

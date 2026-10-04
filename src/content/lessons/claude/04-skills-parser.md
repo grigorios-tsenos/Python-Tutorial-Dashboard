@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # Skills and subagents are just files
 
-Both are plain Markdown with **frontmatter**: a `key: value` header between `---` lines.
+Two Claude Code extension points are Markdown with **frontmatter**, a `key: value` header between `---` lines:
 
 ```markdown
 ---
@@ -19,17 +19,15 @@ name: code-reviewer
 description: Reviews diffs for bugs. Use after any code change.
 tools: Read, Grep
 ---
-You are a careful reviewer. Focus on correctness first...
+You are a careful reviewer...
 ```
 
 | file | what it is |
 |---|---|
-| `.claude/skills/<name>/SKILL.md` | a **skill**: instructions Claude loads when the `description` matches the task |
-| `.claude/agents/<name>.md` | a **subagent**: a specialist with its own prompt (the body) and tool access |
+| `.claude/skills/<name>/SKILL.md` | a **skill**: loaded when its `description` matches the task |
+| `.claude/agents/<name>.md` | a **subagent**: its own prompt (the body) and tool access |
 
-The `description` is the critical line: it's how Claude decides *when* to use the file.
-
-Assemble `parse_frontmatter(text)`, which returns `(meta_dict, body)`. Values can contain colons (`description: Use when: reviewing`), so split only at the **first** one.
+Arrange `parse_frontmatter(text)`, which returns `(meta_dict, body)`. Values can contain colons (`description: Use when: reviewing`), so split at the **first** one only.
 @@lines
 def parse_frontmatter(text):
     head, _, body = text.removeprefix("---\n").partition("\n---\n")

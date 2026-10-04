@@ -11,24 +11,20 @@ minutes: 8
 @@body
 # A metric means nothing without its data
 
-Two accuracy scores are comparable only when they were measured on the **same** examples, and eval sets change constantly: labels corrected, hard cases added, duplicates removed. The fix: record a **fingerprint (digest)** of the eval data on every run, and only rank runs that share it.
+Run A scored 0.82, run B 0.85. B is better only if both were scored on the **same** examples, and eval sets change constantly. Record a **digest** of the eval data on every run and only rank runs that share it:
 
 ```python
-import hashlib, json
-
 canonical = json.dumps(row, sort_keys=True, separators=(",", ":"))   # same dict -> same text
 hashlib.sha256(text.encode()).hexdigest()[:12]                       # short, stable fingerprint
 ```
 
-Two rules: **any change to the data changes the digest**, and **things that don't change the score don't**. Key order and row order don't affect accuracy, so they shouldn't affect the digest. Duplicate rows count twice in a score, so they must change it.
+A good digest changes on **any** data change and ignores what cannot change the score: key order and row order. Duplicate rows count twice in a score, so they must change it.
 
-> **Mission:** implement three functions. Rows look like `{"input": ..., "label": ...}`.
+> **Mission:** rows look like `{"input": ..., "label": ...}`.
 >
 > 1. `dataset_digest(rows)` → the first 12 hex characters of the SHA-256 of the canonical rows, **sorted**, joined with newlines. Don't mutate `rows`.
-> 2. `log_eval(run_name, predict, rows)` → in experiment `"eval"`, start a run named `run_name`, set tag `dataset_digest`, log param `n_examples` and metric `accuracy` (the fraction of rows where `predict(row["input"]) == row["label"]`), and return the run ID. An empty dataset raises `ValueError` before any run starts.
-> 3. `leaderboard(digest)` → `[(run_name, accuracy), ...]` for finished `"eval"` runs tagged with that digest, best first, ties by run name. Use `search_runs` with a tag filter; an unknown digest gives `[]`.
-
-The next lesson's promotion rule is only fair on the same eval set.
+> 2. `log_eval(run_name, predict, rows)` → in experiment `"eval"`, start a run named `run_name`, set tag `dataset_digest`, log param `n_examples` and metric `accuracy` (fraction where `predict(row["input"]) == row["label"]`); return the run ID. An empty dataset raises `ValueError` before any run starts.
+> 3. `leaderboard(digest)` → `[(run_name, accuracy), ...]` for finished `"eval"` runs tagged with that digest, best first, ties by name. Use `search_runs` with a tag filter; an unknown digest gives `[]`.
 @@starter
 import hashlib
 import json

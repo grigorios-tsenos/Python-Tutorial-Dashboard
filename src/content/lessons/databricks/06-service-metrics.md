@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # A useful metric needs the right denominator
 
-Three requests from one user are **three requests** but **one user**. A missing latency still counts as a request, just not toward the average.
+Three requests from one user are **three requests** but **one user**. A request with a missing latency still happened: it counts as a request but can't join an average.
 
 | expression | meaning |
 |---|---|
@@ -20,9 +20,9 @@ Three requests from one user are **three requests** but **one user**. A missing 
 | `F.countDistinct("user_id")` | distinct, non-null users |
 | `F.avg("latency_ms")` | average of non-null latencies |
 
-> **Mission:** write `service_metrics(events)` returning one row per `region`, sorted by region, with these columns in order: `region`, `requests`, `measured`, `users`, `avg_latency_ms`. Round the average to one decimal place. If a region has no measured latencies, its average stays NULL. Keep the input unchanged.
+> **Mission:** write `service_metrics(events)` → one row per `region`, sorted by region, columns in order: `region`, `requests`, `measured`, `users`, `avg_latency_ms` (rounded to one decimal; NULL when nothing was measured). Keep the input unchanged.
 
-The checks cover repeated users, missing users, regions with no measurements and an empty DataFrame. Use column expressions and aggregation, not Python collection.
+Use column expressions and aggregation, not Python-side collection. The checks include repeated users, missing users, unmeasured groups and an empty DataFrame.
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

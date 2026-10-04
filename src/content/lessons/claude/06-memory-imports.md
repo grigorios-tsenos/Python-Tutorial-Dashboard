@@ -11,31 +11,28 @@ minutes: 8
 @@body
 # What Claude reads at startup
 
-`CLAUDE.md` is Claude Code's **project memory**, loaded into context every session. A memory file can **import** another with `@path`:
+`CLAUDE.md` is Claude Code's **project memory**, loaded at the start of every session. A memory file can **import** another with `@path`:
 
 ```markdown
 # Orbit
 Use pnpm, never npm.
 @docs/testing.md
-@docs/style.md
 ```
 
-Claude Code documents the first three rules; the fourth is this exercise's policy:
+The rules (the first three are documented; the fourth is this exercise's policy):
 
-- relative paths resolve from the **importing file's** directory, so `docs/testing.md` can import `@fixtures.md` (meaning `docs/fixtures.md`) or `@../STYLE.md`
-- imports nest up to **5 hops** deep, bounding the context cost
-- text inside code blocks is never an import, so `@dataclass` in a Python sample stays a sample
-- a file already in the current import chain is not expanded again, so mutual imports don't paste each other repeatedly
+- relative paths resolve from the **importing file's** directory
+- imports nest at most **5 hops** deep
+- text inside fenced code blocks is never an import
+- a file already in the current chain is not expanded again
 
-> **Mission:** implement `expand_memory(files, entry="CLAUDE.md", max_depth=5)`. `files` maps POSIX paths to text (a fake project). Return `(text, loaded)`:
+> **Mission:** implement `expand_memory(files, entry="CLAUDE.md", max_depth=5)`. `files` maps POSIX paths to text. Return `(text, loaded)`:
 >
-> - an **import** is a line whose stripped content is a single token starting with `@` and longer than one character, outside a fenced code block (a line starting with three backticks toggles the fence)
-> - replace an import line with the expanded lines of the target file, resolved with `posixpath.normpath(posixpath.join(dirname(importer), target))`
-> - keep the import line **unchanged** when the target doesn't exist, is already in the current chain, or would be deeper than `max_depth` (the entry file is depth 0)
-> - `text` is the resulting lines joined with `"\n"`; `loaded` lists every file that was expanded, once each, in first-expanded order
+> - an import is a line whose stripped content is a single token starting with `@` and longer than one character, outside a fenced block (a line starting with three backticks toggles the fence)
+> - replace it with the expanded lines of the target, resolved with `posixpath.normpath(posixpath.join(dirname(importer), target))`
+> - keep the line **unchanged** when the target is missing, already in the chain, or deeper than `max_depth` (the entry is depth 0)
+> - `text` joins the lines with `"\n"`; `loaded` lists each expanded file once, in first-expanded order
 > - a missing `entry` raises `FileNotFoundError`; don't modify `files`
-
-This exercise uses a simplified line-based syntax; real memory files can also mention `@paths` inline in a sentence.
 @@starter
 import posixpath
 

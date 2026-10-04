@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ACCENTS, type MapLabels } from '../store/model'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/ui'
 
@@ -57,6 +58,22 @@ export function SettingsModal() {
         <div className="setting">
           <div><strong>Light theme</strong><div className="dim">Orbit is built for the dark, but daylight happens.</div></div>
           <button className={`switch ${settings.theme === 'light' ? 'on' : ''}`} role="switch" aria-checked={settings.theme === 'light'} onClick={() => setSetting('theme', settings.theme === 'light' ? 'dark' : 'light')}><i /></button>
+        </div>
+        <div className="setting">
+          <div><strong>Accent colour</strong><div className="dim">Buttons, progress and highlights across the app.</div></div>
+          <div className="accent-swatches" role="radiogroup" aria-label="Accent colour">
+            {ACCENTS.map((a) => (
+              <button key={a} className={`accent-swatch ${settings.accent === a ? 'on' : ''}`} data-accent={a} role="radio" aria-checked={settings.accent === a} aria-label={a} title={a} onClick={() => setSetting('accent', a)} />
+            ))}
+          </div>
+        </div>
+        <div className="setting">
+          <div><strong>Star titles on the map</strong><div className="dim">Show every title, only the next star, or hover to reveal.</div></div>
+          <div className="seg" role="radiogroup" aria-label="Star titles">
+            {(['all', 'focus', 'off'] as MapLabels[]).map((m) => (
+              <button key={m} className={`seg-btn ${settings.mapLabels === m ? 'on' : ''}`} role="radio" aria-checked={settings.mapLabels === m} onClick={() => setSetting('mapLabels', m)}>{m === 'all' ? 'All' : m === 'focus' ? 'Next' : 'Hover'}</button>
+            ))}
+          </div>
         </div>
         <div className="setting">
           <div><strong>Reduce motion</strong><div className="dim">Calms the map, twinkling stars and celebrations.</div></div>

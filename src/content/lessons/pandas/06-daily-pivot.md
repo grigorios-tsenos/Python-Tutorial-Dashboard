@@ -11,27 +11,25 @@ minutes: 7
 @@body
 # Long to wide, without losing the quiet days
 
-Logs are **long**: one row per request. Dashboards and alerting want **wide** tables: one row per day, one column per endpoint. `pivot_table` reshapes and aggregates in one call:
+Logs are **long** (one row per request); dashboards want **wide** (one row per day, one column per endpoint). `pivot_table` reshapes and aggregates in one call:
 
 ```python
-logs.pivot_table(index="day", columns="endpoint", values="errors",
-                 aggfunc="sum", fill_value=0)
+logs.pivot_table(index="day", columns="endpoint", values="errors", aggfunc="sum", fill_value=0)
 ```
 
-`fill_value=0` covers a day/endpoint pair with no rows. It **cannot** add a day with no rows at all: a quiet Tuesday simply disappears from the index. Build the calendar you expect and `reindex` onto it:
+`fill_value=0` covers a day/endpoint pair with no rows, but it cannot invent a day with no rows at all: a quiet Tuesday disappears and the chart draws a line straight from Monday to Wednesday. Build the calendar you expect and `reindex` onto it:
 
 ```python
-days = pd.date_range("2026-03-01", "2026-03-07", freq="D", tz="UTC", name="day")
+days = pd.date_range(start, end, freq="D", tz="UTC", name="day")
 table.reindex(days, fill_value=0)
 ```
 
-> **Mission:** implement `daily_errors(logs, start, end)`. `logs` has `at` (ISO timestamps with offsets), `endpoint` and integer `status` columns. Return a wide table of **server errors** (`status >= 500`) per **UTC day** and endpoint:
+> **Mission:** implement `daily_errors(logs, start, end)`. `logs` has `at` (ISO timestamps with offsets), `endpoint` and integer `status`. Return server errors (`status >= 500`) per **UTC day** and endpoint:
 >
-> - the index is every calendar day from `start` to `end` inclusive, as UTC midnights named `day`, even days with no traffic
-> - one column per endpoint that received **any** request in that window, sorted; healthy endpoints get a column of zeros
+> - index: every day from `start` to `end` inclusive, as UTC midnights named `day`, even with no traffic
+> - one column per endpoint with **any** request in the window, sorted; healthy endpoints get zeros
 > - integer counts, `0` where nothing failed; requests outside the window are ignored
 > - `end` before `start` raises `ValueError`; keep the input unchanged
-
 @@starter
 import pandas as pd
 

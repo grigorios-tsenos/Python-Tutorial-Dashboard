@@ -21,12 +21,14 @@ export default function App() {
   const hydrated = useStore((s) => s.hydrated)
   const theme = useStore((s) => s.settings.theme)
   const reduce = useStore((s) => s.settings.reduceMotion)
+  const accent = useStore((s) => s.settings.accent)
   const warn = useUi((s) => s.storageWarning)
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     document.documentElement.dataset.motion = reduce ? 'reduced' : 'full'
-  }, [theme, reduce])
+    document.documentElement.dataset.accent = accent
+  }, [theme, reduce, accent])
 
   useEffect(() => {
     runner.boot() // pre-warm Python while the learner reads the map

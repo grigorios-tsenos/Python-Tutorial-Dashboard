@@ -1,40 +1,34 @@
 # Orbit — learn AI engineering by doing
 
-An interactive, local-first tutorial dashboard for engineers moving into AI engineering and data science.
-Every lesson runs **real Python in your browser** (Pyodide). No backend, no API keys, no setup. Progress is saved on your device.
+A local-first tutorial dashboard: 72 hands-on lessons in 8 chapters, running **real Python in your browser** (Pyodide). No backend, no API keys, no setup. Progress stays on your device.
 
 ```
 npm install
 npm run dev        # http://localhost:5173
 ```
 
-| script | what it does |
+| script | does |
 |---|---|
-| `npm run dev` | dev server |
-| `npm run build` | typecheck + production build into `dist/` (static, host anywhere) |
-| `npm test` | engine, shims, **every lesson executed under real Pyodide**, store/gamification logic |
-| `npm run e2e` | build, then drive the app in a real browser (needs Chrome/Edge; set `BROWSER_PATH`) |
+| `npm run build` | typecheck + static build into `dist/` (host anywhere) |
+| `npm test` | engine, shims, **every lesson under real Pyodide**, store logic |
+| `npm run e2e` | build, then drive the app in a real browser (set `BROWSER_PATH`) |
 
-First load downloads the Python runtime (~15 MB from the jsDelivr CDN); the browser caches it afterwards.
+First load fetches the Python runtime (~15 MB from jsDelivr); the browser caches it.
 
 ## What's inside
 
-**Map** of 8 constellations / 72 stars (pan, zoom, ⌘K, star-title visibility toggle, chapter picker with progress in the hero): NumPy · Pandas · Python for AI · LangChain · LangGraph · MLflow · Databricks · Claude Code. Each opens with a code-free-friendly Basics step, then eight exercises that build like a real project (e.g. impute → standardize → classify → search in NumPy, or chunk → pack → retrieve in LangChain), ending with a boss.
-
-**Lesson kinds:** Run & Tweak · Visual Lab · Predict the output · Bug Hunt · Parsons puzzle · Build (auto-graded) · Boss.
-**Visual walkthroughs:** all 72 lessons explain their purpose with animated teaching examples, Play/Back/Next controls and a check-your-reasoning prompt. Walkthrough code appears only after explicitly revealing the solution.
-**Visual labs:** NumPy broadcasting, LangGraph step-through trace, MLflow run table + model registry.
-
-**Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, 13 achievements, stats page (skill radar, activity heatmap), command palette, light/dark theme, reduced-motion.
-**Difficulty:** Basics → Guided → Practice → Challenge → Applied → Advanced → Production → Expert → Boss in each section. Later exercises use unfamiliar inputs and edge cases; the difficulty path shows your current step and completed exercises.
-**Editor:** CodeMirror 6 with **Vim mode** (`:w` runs, `:q` returns to the map, cheat sheet), ⌘/Ctrl+Enter to run.
-**Your data:** IndexedDB, versioned and validated; export/import JSON in Settings.
+- **Map:** 8 constellations × 9 stars: NumPy · Pandas · Python for AI · LangChain · LangGraph · MLflow · Databricks · Claude Code. Each chapter climbs Basics → Guided → Practice → Challenge → Applied → Advanced → Production → Expert → Boss and builds like one project (impute → standardize → classify → search; chunk → pack → retrieve).
+- **Lesson kinds:** Run & Tweak · Visual Lab · Predict · Bug Hunt · Parsons puzzle · Build (auto-graded) · Boss.
+- **Guided intro per lesson:** a code-free warm-up with a prediction check, then an animated demo. Collapsible and remembered per lesson; the default (full / start at the demo / straight to code) lives in Settings.
+- **Visual labs:** NumPy broadcasting grid, LangGraph step trace, MLflow run table + model registry.
+- **Dashboard:** level, XP per week, first-try rate, chapter ladders, skill radar, lesson types, review-deck health, recent completions, activity heatmap, achievements. Hide any panel.
+- **Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, 13 achievements, ⌘K command palette.
+- **Editor:** CodeMirror 6 with Vim mode (`:w` runs, `:q` returns to the map), ⌘/Ctrl+Enter to run.
+- **Settings:** light/dark, five accent colours, reduced motion, star-title visibility, export/import JSON (IndexedDB, versioned and validated).
 
 ## How the AI libraries work offline
 
-NumPy and pandas are the real thing. LangChain, LangGraph, MLflow, PySpark/Delta run on small in-repo
-re-implementations with the same call shapes (`src/engine/py/shims/`), a deterministic fake LLM, and no network.
-Each lesson has an "In the real world" note. Shims are intentionally minimal: they cover what the lessons teach.
+NumPy and pandas are the real thing. LangChain, LangGraph, MLflow and PySpark/Delta are small in-repo re-implementations with the same call shapes (`src/engine/py/shims/`), a deterministic fake LLM and no network. They cover what the lessons teach; each lesson ends with an "In the real world" note.
 
 ## Adding a lesson
 
@@ -44,7 +38,7 @@ Drop a file in `src/content/lessons/<track>/NN-name.md`:
 ---
 id: np-example            # kebab-case, unique
 track: numpy              # see src/content/tracks.ts
-order: 5
+order: 5                  # 1..9 within the track; 9 is the boss
 title: ...
 tagline: ...
 kind: build               # run | lab | predict | bug | parsons | build | boss
@@ -61,25 +55,20 @@ packages: pydantic        # optional extra Pyodide packages
 @@real        note about the real library
 ```
 
-`predict` lessons use `@@choice` (each choice is a literal output) plus `answer: <index>` in the frontmatter and `@@explain`;
-`parsons` lessons use `@@lines` (one valid order) plus a `@@check`.
+- `predict`: one `@@choice` per option (a literal output), `answer: <index>` in the frontmatter, and `@@explain`.
+- `parsons`: `@@lines` (one valid order) plus a `@@check`.
+- Every lesson also needs a warm-up in `src/content/warmups.ts` (code-free steps, prediction check last) and a demo in `src/content/walkthroughs.ts` (purpose, steps with stable cell ids, reflection question). Demo code appears only after the solution is revealed.
 
-Every lesson also opens with a code-free prerequisite warm-up in `src/content/warmups.ts`: introduce one concept per step, link earlier ideas, and include a prediction check before the full example. Playback pauses at unanswered checks; learners can still navigate freely. Singleton-axis warm-ups show nested containers without changing stored values.
-
-Add a tailored teaching example in `src/content/walkthroughs.ts` with a purpose, steps, stable cell IDs and a reflection question. Predict lessons should use different values from the exercise. Walkthrough code is gated by the existing solution-reveal state.
-
-`npm run build && node tests/e2e/walkthroughs.mjs` checks playback, mobile layouts and the solution gate in a fresh browser profile.
-
-`npm test` then executes your lesson: the solution must pass the check, the starter must **not**, and predict answers must match real output.
+`npm test` then executes the lesson: the solution must pass, the starter must **not**, and predict answers must match real output. `npm run build && node tests/e2e/walkthroughs.mjs` checks intro playback and mobile layout in a real browser.
 
 ## Layout
 
 ```
-src/engine    Pyodide worker, runner (timeout + restart), shared installer, Python harness + shims
-src/content   lesson parser, tracks, lessons/*.md
-src/lib       pure logic: gamification, spaced repetition, achievements, router
+src/engine    Pyodide worker, runner (timeout + restart), Python harness + shims
+src/content   lesson parser, tracks, lessons/*.md, warm-ups, walkthroughs
+src/lib       pure logic: gamification, spaced repetition, achievements, dashboard metrics, router
 src/store     zustand + IndexedDB, validation of untrusted data
-src/ui        map, lesson, review, stats, settings, palette
-src/labs      visual labs
+src/ui        map, lesson, review, dashboard, settings, palette
+src/labs      visual labs and the guided intro player
 .10x/         specs, ADRs, decision log and reviews from the build
 ```
