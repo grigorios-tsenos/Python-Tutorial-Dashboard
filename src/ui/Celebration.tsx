@@ -56,10 +56,11 @@ export function Celebration() {
           ))}
           <div className="burst-star">{lesson.kind === 'boss' ? '✹' : '✦'}</div>
         </div>
-        <h2>{lesson.kind === 'boss' ? 'Boss defeated!' : 'Star lit!'}</h2>
+        <h2>{c.redo ? (c.hints === 0 ? 'Redone from memory!' : 'Redone with less help') : lesson.kind === 'boss' ? 'Boss defeated!' : 'Star lit!'}</h2>
         <p className="celebrate-title">{lesson.title}</p>
-        <div className="celebrate-xp">+{c.xp} XP</div>
-        {c.hints > 0 && <p className="dim">Hints used: {c.hints} (−{Math.min(c.hints, 3) * 15}% XP). Try a lesson with none for the full reward.</p>}
+        <div className="celebrate-xp">+{c.xp} XP{c.redo ? <span className="celebrate-sub"> recovered</span> : null}</div>
+        {c.hints > 0 && <p className="dim">Hints used: {c.hints} (−{Math.min(c.hints, 3) * 15}% XP). It comes back tomorrow to redo from memory; pass it clean and the XP is refunded.</p>}
+        {c.redo && c.hints === 0 && <p className="dim">That is the rep that counts: recalled, not recognised.</p>}
         {c.questBonus > 0 && <div className="celebrate-line">🎯 Daily quest complete: +{c.questBonus} XP</div>}
         {c.levelUp && <div className="celebrate-line level">⬆ Level {c.levelUp} reached</div>}
         {c.badges.map((b) => (

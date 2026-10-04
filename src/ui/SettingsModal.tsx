@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ACCENTS, type MapLabels } from '../store/model'
+import { ACCENTS, RIGORS, type MapLabels } from '../store/model'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/ui'
 
@@ -84,6 +84,15 @@ export function SettingsModal() {
           <div className="seg" role="radiogroup" aria-label="Lesson intro style">
             {([['full', 'Full guided'], ['quick', 'Start at the demo'], ['code', 'Straight to code']] as const).map(([v, label]) => (
               <button key={v} className={`seg-btn ${settings.introStyle === v ? 'on' : ''}`} role="radio" aria-checked={settings.introStyle === v} onClick={() => setSetting('introStyle', v)}>{label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="setting setting-col">
+          <div><strong>Struggle first</strong><div className="dim">Hints unlock after real attempts: runs on the lesson, or minutes spent, whichever comes first. The solution also asks what you tried. Standard: 2 / 4 / 6 runs or 3 / 6 / 10 min. Strict: 3 / 6 / 10 runs or 5 / 10 / 20 min.</div></div>
+          <div className="seg" role="radiogroup" aria-label="Struggle first">
+            {RIGORS.map((r) => (
+              <button key={r} className={`seg-btn ${settings.rigor === r ? 'on' : ''}`} role="radio" aria-checked={settings.rigor === r} onClick={() => setSetting('rigor', r)}>{r[0].toUpperCase() + r.slice(1)}</button>
             ))}
           </div>
         </div>

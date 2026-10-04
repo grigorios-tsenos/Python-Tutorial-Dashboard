@@ -3,12 +3,13 @@ import { LESSONS, lessonsOf } from '../content'
 import { MAP_SIZE, TRACKS, TRACK_BY_ID } from '../content/tracks'
 import { KIND_LABEL, type Lesson, type Track } from '../content/types'
 import { dayKey } from '../lib/dates'
-import { QUEST_BONUS, QUEST_TARGET, currentStreak, levelProgress } from '../lib/gamification'
+import { currentStreak, levelProgress } from '../lib/gamification'
 import { recommended, trackProgress } from '../lib/progress'
 import { go, lessonPath } from '../lib/router'
 import { tipOfTheDay } from '../lib/tips'
 import { useStore } from '../store/useStore'
 import { Difficulty } from './Difficulty'
+import { TodayLoop } from './TodayLoop'
 
 const { w: W, h: H } = MAP_SIZE
 
@@ -63,7 +64,6 @@ export function MapView() {
   const completed = useStore((s) => s.completed)
   const lastLesson = useStore((s) => s.lastLesson)
   const xp = useStore((s) => s.xp)
-  const quest = useStore((s) => s.quest)
   const activity = useStore((s) => s.activity)
   const reduceMotion = useStore((s) => s.settings.reduceMotion)
   const mapLabels = useStore((s) => s.settings.mapLabels)
@@ -75,7 +75,6 @@ export function MapView() {
   const next = recommended(completed, lastLesson)
   const progress = useMemo(() => trackProgress(completed), [completed])
   const totalDone = Object.keys(completed).length
-  const questDone = quest.date === today ? quest.done : 0
 
   const wrap = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -331,13 +330,8 @@ export function MapView() {
           </div>
         </div>
         <div className="quest">
-          <div className="quest-head">
-            <span>🎯 Daily quest</span>
-            <span className="dim">+{QUEST_BONUS} XP</span>
-          </div>
-          <div className="quest-text">Complete {QUEST_TARGET} lessons today</div>
-          <div className="meter quest-meter"><i style={{ width: `${Math.min(1, questDone / QUEST_TARGET) * 100}%` }} /></div>
-          <div className="stat-sub">{quest.date === today && quest.claimed ? 'Claimed ✓' : `${Math.min(questDone, QUEST_TARGET)}/${QUEST_TARGET}`}</div>
+          <div className="quest-head"><span>Today's loop</span><span className="dim">recall · redo · learn</span></div>
+          <TodayLoop />
         </div>
       </div>
 
