@@ -11,25 +11,23 @@ minutes: 4
 @@body
 # An agent you can see is an agent you can govern
 
-Claude Code reads files, edits code and runs shell commands on a real machine. Permission rules, hooks and audit logs all work on the same thing: a **tool event**, a small dict describing one action the agent wants to take:
+Claude Code reads files, edits code and runs shell commands on a real machine. This chapter is about **staying in control** with permission rules, hooks and audit logs, and all of them work on one tiny thing: a **tool event**, a dict describing one action:
 
 ```python
 {"tool_name": "Bash",  "tool_input": {"command": "ls -la"}}
 {"tool_name": "Edit",  "tool_input": {"file_path": "src/app.py"}}
 ```
 
-`tool_name` says *which capability*; `tool_input` carries the details. Permissions decide on events, hooks inspect them, and the boss summarizes a log of them.
+`tool_name` says *which capability*; `tool_input` carries the details. One habit: read fields with **`.get(key, default)`**. Real event streams have surprises, and `.get` gives a default instead of a crash.
 
-Use **`.get(key, default)`** instead of `event["key"]`: real event streams contain surprises, and `.get` returns a default instead of crashing.
-
-> **Mission:** implement `describe(event)` → a one-line human summary:
+> **Mission:** implement `describe(event)` → a one-line summary:
 >
 > - a `Bash` event → `"Bash: <command>"`
 > - an `Edit` or `Write` event → `"<tool_name>: <file_path>"`
 > - any other tool → `"<tool_name>"`
-> - missing `command`/`file_path` details → `"?"` in their place (don't crash)
+> - missing `command`/`file_path` → `"?"` in their place (don't crash)
 >
-> Then print one line per event in `LOG`, your first agent audit trail.
+> Then print one line per event in `LOG`: your first audit trail.
 @@starter
 def describe(event):
     """One readable line per tool event."""

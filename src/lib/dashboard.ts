@@ -131,12 +131,9 @@ export function recentCompletions(completed: Record<string, Completion>, n = 6):
     .slice(0, n)
 }
 
+const compactFormat = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 /** 1284 -> "1.3K", 950 -> "950", 1_250_000 -> "1.3M" */
-export function compact(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`
-  return String(Math.round(n))
-}
+export const compact = (n: number): string => compactFormat.format(n)
 
 /** 135 -> "2h 15m", 45 -> "45m", 0 -> "0m" */
 export function formatMinutes(min: number): string {

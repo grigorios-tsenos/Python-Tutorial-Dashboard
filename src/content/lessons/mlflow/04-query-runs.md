@@ -11,7 +11,7 @@ minutes: 7
 @@body
 # Ask the tracking server, don't scroll the table
 
-An experiment soon holds hundreds of runs, some crashed. The latency budget is **150 ms**, so you want the best model *within budget*, not overall. `mlflow.search_runs` filters server-side with a small SQL-like language:
+Product needs answers within **150 ms**, so you want the best model **that meets the budget**, not the best overall. `mlflow.search_runs` filters on the server and returns a DataFrame:
 
 ```python
 mlflow.search_runs(
@@ -21,15 +21,15 @@ mlflow.search_runs(
 )
 ```
 
-| prefix | example | value |
+| prefix | example | note |
 |---|---|---|
-| `metrics.` | `metrics.accuracy > 0.8` | a number, **unquoted** |
-| `params.` | `params.model = 'small'` | a string, **quoted** (params are stored as text) |
-| `attributes.` | `attributes.status = 'FINISHED'` | run status, name, times |
+| `metrics.` | `metrics.accuracy > 0.8` | numbers, **unquoted** |
+| `params.` | `params.model = 'small'` | strings, **quoted** |
+| `attributes.` | `attributes.status = 'FINISHED'` | status, name, times |
 
-> **Mission:** implement `best_within_budget(experiment, max_latency_ms)`. Return a dict `{"run_id", "model", "accuracy", "latency_ms"}` for the most accurate **finished** run in **that experiment** whose `latency_ms` metric is **at most** the budget. Break accuracy ties with the lower latency. Return `None` when nothing qualifies. Don't log any runs.
+> **Mission:** implement `best_within_budget(experiment, max_latency_ms)` → `{"run_id", "model", "accuracy", "latency_ms"}` for the most accurate **finished** run in that experiment with `latency_ms` **at most** the budget; ties go to the lower latency. Return `None` when nothing qualifies. Don't log runs.
 
-`log_candidate` fills the history, including one crashed run that looks best on paper.
+The supplied `log_candidate` fills the history, including a crashed run that looks best on paper.
 @@starter
 import mlflow
 

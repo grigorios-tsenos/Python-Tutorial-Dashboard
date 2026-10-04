@@ -71,7 +71,7 @@ export function SettingsModal() {
           <div><strong>Star titles on the map</strong><div className="dim">Show every title, only the next star, or hover to reveal.</div></div>
           <div className="seg" role="radiogroup" aria-label="Star titles">
             {(['all', 'focus', 'off'] as MapLabels[]).map((m) => (
-              <button key={m} className={`pill ${settings.mapLabels === m ? 'on' : ''}`} role="radio" aria-checked={settings.mapLabels === m} onClick={() => setSetting('mapLabels', m)}>{m === 'all' ? 'All' : m === 'focus' ? 'Next' : 'Hover'}</button>
+              <button key={m} className={`seg-btn ${settings.mapLabels === m ? 'on' : ''}`} role="radio" aria-checked={settings.mapLabels === m} onClick={() => setSetting('mapLabels', m)}>{m === 'all' ? 'All' : m === 'focus' ? 'Next' : 'Hover'}</button>
             ))}
           </div>
         </div>

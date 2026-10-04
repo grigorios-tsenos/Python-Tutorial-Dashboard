@@ -9,27 +9,23 @@ xp: 25
 minutes: 4
 ---
 @@body
-# Experiments need a lab notebook
+# The big picture: experiments need a lab notebook
 
-MLflow records each attempt as a **run**, with two kinds of values:
+By attempt twelve, nobody remembers what attempt three used. MLflow is the lab notebook: each attempt is a **run** that records two kinds of values:
 
 | | what it is | example |
 |---|---|---|
 | **param** | an input *you chose* | `model = "tiny"` |
 | **metric** | a result *you measured* | `accuracy = 0.72` |
 
-The pattern is three lines:
-
 ```python
-with mlflow.start_run(run_name="attempt-1"):
+with mlflow.start_run(run_name="attempt-1"):   # open the notebook page
     mlflow.log_param("model", "tiny")          # what I chose
     mlflow.log_metric("accuracy", 0.72)        # what I measured
-# leaving the `with` block closes the run
+# leaving the block closes the run, even if the code crashes
 ```
 
-The `with` block scopes the run: everything logged inside belongs to that attempt, and the run closes even on a crash.
-
-> **Mission:** record a run named `baseline` that logs the param `model = "tiny"` and the metric `accuracy = 0.72`. The last line then finds it again.
+> **Mission:** record a run named `baseline` that logs param `model = "tiny"` and metric `accuracy = 0.72`. The last line then finds it again.
 @@starter
 import mlflow
 

@@ -11,22 +11,16 @@ minutes: 8
 @@body
 # Delta Lake: a table with a memory
 
-A **Delta table** is Parquet plus a transaction log: every write creates a numbered **version**, and old versions stay readable.
-
-- **ACID transactions**: readers never see half-finished writes
-- **Time travel**: query any past version
-- **Audit**: `DESCRIBE HISTORY` shows who changed what, when
-
-Tables live in **Unity Catalog** under `catalog.schema.table` (here `main.demo.docs`).
+A **Delta table** is Parquet files plus a transaction log. Every write creates a new numbered **version**, and old versions stay readable: ACID writes, **time travel** and an audit log. On Databricks tables live in Unity Catalog as `catalog.schema.table` (here `main.demo.docs`).
 
 ```python
-spark.sql("SELECT * FROM main.demo.docs VERSION AS OF 0")        # SQL time travel
+spark.sql("SELECT * FROM main.demo.docs VERSION AS OF 0")        # time travel
 spark.sql("DESCRIBE HISTORY main.demo.docs").show()              # the audit log
 ```
 
-Someone overwrote every status with `"DELETED"`. Version **0** is drafts; version **1** is approved documents — recovering version 0 would lose the approvals.
+Someone just overwrote every document's status with `"DELETED"`. Version **0** holds drafts; version **1** holds the approved documents, the ones worth recovering.
 
-> **Mission:** write `recover_table(name, version)` to read any named table at the requested version, then read version **1** of `main.demo.docs` into `recovered`. It must also work for version **0** and other tables. Reading must leave the current tables untouched; changing them would require a `RESTORE`.
+> **Mission:** write `recover_table(name, version)` to read any table at a version, then read version **1** of `main.demo.docs` into `recovered`. It must also work for version **0** and other tables, and must leave the current tables untouched (changing them would need `RESTORE`).
 @@starter
 from pyspark.sql import SparkSession
 

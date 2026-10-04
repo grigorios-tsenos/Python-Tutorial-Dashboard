@@ -11,27 +11,15 @@ minutes: 9
 @@body
 # Hooks: deterministic control over an agent
 
-A prompt saying "never run `rm -rf`" *usually* works. A **hook** always works: your own script, run by Claude Code at fixed points such as `PreToolUse` (before a tool runs).
-
-Register one in `.claude/settings.json`:
+Telling Claude "never run `rm -rf`" *usually* works. A **hook** makes it **always** work: your own script, run by Claude Code before a tool runs (`PreToolUse`). Register it in `.claude/settings.json`:
 
 ```json
-{
-  "hooks": {
-    "PreToolUse": [
-      { "matcher": "Bash|Edit|Write",
-        "hooks": [{ "type": "command", "command": "python3 .claude/hooks/guard.py" }] }
-    ]
-  }
-}
+{ "hooks": { "PreToolUse": [
+  { "matcher": "Bash|Edit|Write",
+    "hooks": [{ "type": "command", "command": "python3 .claude/hooks/guard.py" }] } ] } }
 ```
 
-Claude Code pipes a JSON **event** to your script's stdin, e.g. `{"tool_name": "Bash", "tool_input": {"command": "ls"}}`. Your script answers with its **exit code**:
-
-- **`0`**: carry on
-- **`2`**: **block** the tool call; stderr is shown to Claude so it can correct course
-
-The script is three lines of glue; the real logic is a pure, testable function.
+Claude Code pipes the JSON event to stdin; your script answers with its **exit code**: `0` carries on, `2` **blocks** the call and shows stderr to Claude. The script is three lines of glue; the logic is a pure function you can test.
 
 > **Mission:** write `pre_tool_use(event)` → `(exit_code, message)`:
 > - `Bash` command containing `rm -rf` → `(2, message mentioning "rm -rf")`

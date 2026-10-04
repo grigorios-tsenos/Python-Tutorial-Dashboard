@@ -11,13 +11,11 @@ minutes: 8
 @@body
 # Aggregate only what was known at prediction time
 
-Time-bounded features describe recent behaviour, and the upper bound prevents **future data leakage**: events after prediction time cannot influence a prediction.
+A lifetime total and a last-week total answer different questions. Time-bounded features describe recent behaviour, and the upper bound prevents **future data leakage**.
 
-Parse event times with `pd.to_datetime(..., errors="coerce", utc=True)`: bad timestamps become `NaT` and belong to no window, and UTC makes equivalent offsets compare correctly.
+Parse times with `pd.to_datetime(..., errors="coerce", utc=True)`: bad timestamps become `NaT` and belong to no window, and UTC makes different offsets comparable.
 
-> **Mission:** implement `recent_features(events, as_of, days=7)`. Inputs have `user`, `at` and `amount` columns. Keep events where `as_of - days < at <= as_of`, then return `user`, `n_events` and `revenue` per user, sorted by user. Include only users with an event in the window. Invalid amounts count as `0`; invalid times are excluded. Keep the input unchanged. Empty results retain the output columns, and `days < 1` raises `ValueError`.
-
-The lower boundary is **exclusive** and the upper boundary **inclusive**. The checks exercise both boundaries and a different window length.
+> **Mission:** implement `recent_features(events, as_of, days=7)`. Inputs have `user`, `at` and `amount`. Keep events where `as_of - days < at <= as_of` (lower bound exclusive, upper inclusive), then return `user`, `n_events` and `revenue` per user, sorted by user, only for users with an event in the window. Invalid amounts count as `0`; invalid times are excluded. Keep the input unchanged; empty results keep the output columns; `days < 1` raises `ValueError`.
 @@starter
 import pandas as pd
 

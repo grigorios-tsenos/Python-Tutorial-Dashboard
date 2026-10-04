@@ -11,26 +11,24 @@ minutes: 9
 @@body
 # Validate, feed back the error, retry, give up gracefully
 
-A model extracting an order sometimes returns `"quantity": "two"`. Validation catches it; the production pattern is a loop:
+A model extracting an order sometimes returns `"quantity": "two"`. Validation catches it; then you loop, with two safety features:
 
 ```
 START ─> generate ─> validate ─┬─ valid ──────────────> END
-            ^                  ├─ invalid, budget left ─┘ (back to generate, with the error)
+            ^                  ├─ invalid, budget left ─┘ (back, with the error)
             └──────────────────┤
                                └─ budget spent ──> fallback ─> END
 ```
 
-Two things make it safe:
+- **Feedback.** The next attempt sees *why* the last one failed.
+- **A budget in state.** Count attempts and route to `fallback` instead of hitting `GraphRecursionError`.
 
-- **Feedback.** The next attempt sees *why* the last one failed; retrying the same prompt mostly repeats the mistake.
-- **A budget in state.** Count attempts and route to a `fallback` node (hand off to a human) instead of hitting `GraphRecursionError`.
-
-> **Mission:** implement `build_extractor(model, max_attempts=3)` and return a compiled graph with nodes **`generate`**, **`validate`** and **`fallback`**:
+> **Mission:** implement `build_extractor(model, max_attempts=3)` → a compiled graph with nodes **`generate`**, **`validate`** and **`fallback`**:
 >
-> - `generate` calls `model(message, feedback)`, where `feedback` is the previous validation error (`None` on the first attempt). It stores the reply in `raw` and increments `attempts`, which starts at 0 when missing.
-> - `validate` runs the supplied `parse_order(raw)`. On success, set `order` to its result, `status` to `"ok"` and `error` to `None`. On `ValueError`, set `error` to the exception's message.
-> - after `validate`: finish when `status` is `"ok"`; otherwise go back to `generate` while `attempts < max_attempts`, else to `fallback`
-> - `fallback` sets `order` to `None` and `status` to `"needs_human"`, then the graph ends
+> - `generate` calls `model(message, feedback)` (`feedback` is the previous error, `None` at first), stores the reply in `raw` and increments `attempts` (0 when missing)
+> - `validate` runs the supplied `parse_order(raw)`: on success set `order`, `status="ok"`, `error=None`; on `ValueError` set `error` to its message
+> - after `validate`: end when `status` is `"ok"`; else back to `generate` while `attempts < max_attempts`, else `fallback`
+> - `fallback` sets `order=None`, `status="needs_human"`, then ends
 > - `max_attempts < 1` raises `ValueError`; every `invoke` starts a fresh count
 @@starter
 import json
