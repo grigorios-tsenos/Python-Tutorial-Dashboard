@@ -6,6 +6,7 @@ import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutt
 import { tags as t } from '@lezer/highlight'
 import { Vim, vim } from '@replit/codemirror-vim'
 import { useEffect, useRef } from 'react'
+import { pythonIndentation } from './pythonIndentation'
 
 export interface VimActions {
   run: () => void
@@ -105,7 +106,7 @@ export function CodeEditor({ docKey, value, onChange, onRun, readOnly, vimMode }
           python(),
           syntaxHighlighting(highlight),
           theme,
-          EditorState.tabSize.of(4),
+          pythonIndentation,
           Prec.highest(
             keymap.of([
               {
