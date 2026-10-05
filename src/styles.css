@@ -234,8 +234,9 @@ main.route-lesson, main.route-map { overflow: hidden; }
 .map-legend, .map-controls { animation-delay: 0.12s; }
 
 /* ───────────────────────── lesson ───────────────────────── */
-.lesson { height: 100%; display: grid; grid-template-columns: minmax(340px, 0.82fr) minmax(420px, 1.18fr); }
-.lesson-pane { min-width: 0; overflow: auto; padding: 28px 30px 60px 34px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.lesson { height: 100%; display: grid; grid-template-columns: var(--guide, 40%) 8px minmax(0, 1fr); }
+.lesson.guide-closed { grid-template-columns: 38px minmax(0, 1fr); }
+.lesson-pane { min-width: 0; overflow: auto; padding: 24px 26px 60px 28px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, transparent); }
 .lesson-pane { animation: surface-in 0.4s var(--ease-out); }
 .crumbs { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 14px; }
 .crumbs a:hover { color: var(--accent); }
@@ -294,12 +295,14 @@ main.route-lesson, main.route-map { overflow: hidden; }
 .runtime-error i { background: var(--bad); }
 @keyframes blink { 50% { opacity: 0.3; } }
 .btn.run { padding: 7px 14px; }
-.editor-wrap { flex: 1 1 42%; min-height: 150px; overflow: hidden; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg-2) 70%, transparent); }
+.panes { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.editor-wrap { flex: 0 0 var(--editor, 58%); min-height: 120px; overflow: hidden; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg-2) 70%, transparent); }
 .editor-wrap.predict { flex: 0 1 auto; max-height: 40%; min-height: 120px; }
 .editor { height: 100%; }
 .editor .cm-editor { height: 100%; }
-.vim-hint { flex: none; font-size: 0.76rem; color: var(--text-dim); padding: 5px 14px; border-bottom: 1px solid var(--line); }
-.parsons-wrap { flex: 1 1 42%; overflow: auto; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.keys-hint { flex: none; font-size: 0.74rem; color: var(--text-dim); padding: 4px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.keys-hint kbd { margin: 0 1px; }
+.parsons-wrap { flex: 0 0 var(--editor, 58%); min-height: 120px; overflow: auto; padding: 16px 18px; border-bottom: 1px solid var(--line); }
 .parsons { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; counter-reset: l; }
 .parsons li { display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 10px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); cursor: grab; transition: transform 0.12s, border-color 0.12s, background 0.12s; }
 .parsons li:hover { border-color: var(--line-strong); }
@@ -328,7 +331,7 @@ main.route-lesson, main.route-map { overflow: hidden; }
 .nudge { flex: none; margin: 0; padding: 8px 16px; font-size: 0.82rem; color: var(--text-dim); border-top: 1px solid var(--line); }
 
 /* output */
-.output { flex: 1 1 44%; min-height: 130px; overflow: auto; padding: 14px 16px 24px; font-size: 0.88rem; transition: opacity 0.2s; }
+.output { flex: 1 1 0; min-height: 90px; overflow: auto; padding: 14px 16px 24px; font-size: 0.88rem; transition: opacity 0.2s; }
 .output.stale { opacity: 0.7; }
 .out-empty { display: flex; align-items: center; gap: 10px; color: var(--text-dim); height: 100%; justify-content: center; text-align: center; padding: 10px; }
 .out-running { color: var(--warn); font-size: 0.8rem; margin-bottom: 8px; }
@@ -541,9 +544,13 @@ td.ml-metric { min-width: 96px; }
 @media (max-width: 860px) {
   body { overflow: auto; }
   main, main.route-lesson, main.route-map { height: auto; min-height: calc(100dvh - var(--topbar)); overflow: visible; }
-  .lesson { height: auto; grid-template-columns: 1fr; }
+  .lesson, .lesson.guide-closed { height: auto; grid-template-columns: 1fr; }
   .lesson-pane { border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
   .workbench { min-height: 640px; }
+  .split { display: none; }
+  .guide-rail { border-right: 0; border-bottom: 1px solid var(--line); padding: 8px 14px; justify-content: flex-start; }
+  .rail-btn { writing-mode: horizontal-tb; transform: none; }
+  .editor-wrap, .parsons-wrap { flex: 0 0 320px; }
   .map-page { height: calc(100dvh - var(--topbar)); }
   .map-hero { width: calc(100% - 32px); }
   .map-stats { display: none; }
@@ -795,3 +802,16 @@ td.ml-metric { min-width: 96px; }
 .hint-history { margin-bottom: 10px; }
 .hint-history > summary { cursor: pointer; font-size: 0.86rem; color: var(--text-dim); padding: 6px 0; }
 .hint-history[open] > summary { margin-bottom: 8px; }
+
+/* ───────────────────────── resizable panes ───────────────────────── */
+.split { position: relative; z-index: 2; touch-action: none; outline: none; }
+.split::after { content: ''; position: absolute; inset: 0; margin: auto; border-radius: 2px; background: var(--line); transition: background 0.15s; }
+.split-x { cursor: col-resize; }
+.split-x::after { width: 2px; }
+.split-y { flex: none; height: 8px; cursor: row-resize; }
+.split-y::after { height: 2px; }
+.split:hover::after, .split.dragging::after, .split:focus-visible::after { background: var(--accent); }
+.split.dragging::after { box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.guide-rail { display: flex; justify-content: center; align-items: flex-start; padding-top: 14px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.rail-btn { writing-mode: vertical-rl; transform: rotate(180deg); font: inherit; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 10px 6px; cursor: pointer; }
+.rail-btn:hover { color: var(--text); border-color: var(--accent); }

@@ -11,12 +11,14 @@ import { go, lessonPath } from '../lib/router'
 import { seededShuffle } from '../lib/shuffle'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/ui'
-import { CodeEditor, setVimActions } from './CodeEditor'
+import { CodeEditor, focusEditor, setVimActions } from './CodeEditor'
 import { Difficulty, STAGES } from './Difficulty'
 import { Hints } from './Hints'
 import { Markdown } from './Markdown'
 import { OutputPanel } from './OutputPanel'
 import { Parsons, restoreOrder } from './Parsons'
+import { SplitHandle } from './Split'
+import { DEFAULT_LAYOUT, type Layout } from '../store/model'
 
 export function LessonView({ id }: { id: string }) {
   const lesson = LESSON_BY_ID[id]
@@ -73,6 +75,28 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     const t = setInterval(() => setSeconds(Math.floor((Date.now() - t0) / 1000)), 15_000)
     return () => clearInterval(t)
   }, [id])
+
+  // pane layout: live while dragging, persisted on release
+  const savedLayout = useStore((s) => s.settings.layout)
+  const [layout, setLayoutState] = useState<Layout>(savedLayout)
+  const layoutRef = useRef(layout)
+  layoutRef.current = layout
+  const commitLayout = (patch: Partial<Layout>) => {
+    const next = { ...layoutRef.current, ...patch }
+    setLayoutState(next)
+    setSetting('layout', next)
+  }
+  const toggleGuide = () => commitLayout({ guideOpen: !layoutRef.current.guideOpen })
+  const lessonEl = useRef<HTMLDivElement>(null)
+  const panesEl = useRef<HTMLDivElement>(null)
+  const [editorFocused, setEditorFocused] = useState(false)
+
+  const trackLessons = lessonsOf(lesson.track)
+  const idx = trackLessons.findIndex((l) => l.id === id)
+  const prev = trackLessons[idx - 1]
+  const next = trackLessons[idx + 1]
+  const nextChapterId = next ? null : nextLessonId(id)
+  const nextChapter = nextChapterId ? LESSON_BY_ID[nextChapterId] : null
 
   const persist = useCallback(
     (text: string) => {
@@ -144,6 +168,36 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     setVimActions({ run: () => runRef.current(), quit: () => go('#/') })
   }, [])
 
+  // page keys: reach the editor and the run button without the mouse; ignored while typing anywhere
+  const forward = next ?? nextChapter
+  useEffect(() => {
+    const focusWork = () => {
+      if (focusEditor()) return
+      document.querySelector<HTMLElement>('.parsons-wrap [tabindex], .parsons-wrap button, .choice')?.focus()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      const mod = e.metaKey || e.ctrlKey
+      if (mod && e.key === 'Enter') { e.preventDefault(); runRef.current(); return }
+      if (mod && e.key === '\\') { e.preventDefault(); toggleGuide(); return }
+      if (mod || e.altKey || t.closest('input, textarea, select, [contenteditable="true"], .cm-editor')) return
+      if (e.key === 'Escape' && document.querySelector('.modal-backdrop')) return
+      const actions: Record<string, () => void> = {
+        i: focusWork,
+        Escape: focusWork,
+        r: () => runRef.current(),
+        '[': () => { if (prev) go(lessonPath(prev.id)) },
+        ']': () => { if (forward) go(lessonPath(forward.id)) },
+        m: () => go('#/'),
+        '?': () => useUi.getState().set({ cheatOpen: true }),
+      }
+      const act = actions[e.key]
+      if (act) { e.preventDefault(); act() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const choose = (i: number) => {
     if (solved || picked.includes(i)) return
     if (i === lesson.answer) {
@@ -184,17 +238,17 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     setResult(null)
   }
 
-  const trackLessons = lessonsOf(lesson.track)
-  const idx = trackLessons.findIndex((l) => l.id === id)
-  const prev = trackLessons[idx - 1]
-  const next = trackLessons[idx + 1]
-  const nextChapterId = next ? null : nextLessonId(id)
-  const nextChapter = nextChapterId ? LESSON_BY_ID[nextChapterId] : null
   const verdict = result && graded && result.tests.length > 0 ? allPassed(result) : null
   const phaseLabel = runtime.phase === 'error' ? 'Python offline' : runtime.phase === 'booting' ? 'Loading Python…' : runtime.phase === 'running' ? 'Running…' : runtime.phase === 'ready' ? 'Python ready' : 'Python idle'
 
   return (
-    <div className="lesson" style={{ ['--tc' as string]: track.color }}>
+    <div ref={lessonEl} className={`lesson ${layout.guideOpen ? '' : 'guide-closed'}`} style={{ ['--tc' as string]: track.color, ['--guide' as string]: `${layout.guide * 100}%`, ['--editor' as string]: `${layout.editor * 100}%` }}>
+      {!layout.guideOpen && (
+        <aside className="guide-rail">
+          <button className="rail-btn" onClick={toggleGuide} title="Show the guide (⌘/Ctrl \)">Guide ▸</button>
+        </aside>
+      )}
+      {layout.guideOpen && (
       <article className="lesson-pane">
         <nav className="crumbs" aria-label="Breadcrumb">
           <a href="#/">Map</a> <span aria-hidden>›</span> <span style={{ color: track.color }}>{track.glyph} {track.name}</span>
@@ -295,9 +349,14 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           )}
         </footer>
       </article>
+      )}
+      {layout.guideOpen && (
+        <SplitHandle axis="x" value={layout.guide} min={0.22} max={0.65} container={lessonEl} label="Resize guide" onChange={(guide) => setLayoutState((l) => ({ ...l, guide }))} onCommit={(guide) => commitLayout({ guide })} onReset={() => commitLayout({ guide: DEFAULT_LAYOUT.guide })} />
+      )}
 
       <section className="workbench" aria-label="Workbench">
         <div className="toolbar">
+          <button className="icon-btn" onClick={toggleGuide} aria-pressed={!layout.guideOpen} aria-label={layout.guideOpen ? 'Hide the guide' : 'Show the guide'} title={`${layout.guideOpen ? 'Hide' : 'Show'} the guide (⌘/Ctrl \\)`}>{layout.guideOpen ? '⇤' : '⇥'}</button>
           <span className="file">{isPredict ? 'read_me.py' : isParsons ? 'arrange.py' : 'cell.py'}</span>
           <span className={`runtime runtime-${runtime.phase}`} title={runtime.detail}><i aria-hidden />{phaseLabel}</span>
           <span className="spacer" />
@@ -313,6 +372,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           )}
         </div>
 
+        <div className="panes" ref={panesEl}>
         {isParsons ? (
           <div className="parsons-wrap">
             <Parsons
@@ -325,7 +385,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
             />
           </div>
         ) : (
-          <div className={`editor-wrap ${isPredict ? 'predict' : ''}`}>
+          <div className={`editor-wrap ${isPredict ? 'predict' : ''}`} onFocusCapture={() => setEditorFocused(true)} onBlurCapture={() => setEditorFocused(false)}>
             <CodeEditor
               docKey={`${id}-${isPredict ? 'ro' : 'rw'}`}
               value={isPredict ? lesson.starter : code}
@@ -339,7 +399,18 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
             />
           </div>
         )}
-        {vimOn && !isPredict && !isParsons && <div className="vim-hint">Vim mode · <code>:w</code> runs · <code>:q</code> back to map · <button className="linklike" onClick={() => useUi.getState().set({ cheatOpen: true })}>cheat sheet</button></div>}
+        {!isPredict && (
+          <div className="keys-hint">
+            {editorFocused ? (
+              vimOn ? <>Vim · <code>:w</code> runs · <code>:q</code> back to map · <button className="linklike" onClick={() => useUi.getState().set({ cheatOpen: true })}>cheat sheet</button></> : <><kbd>⌘/Ctrl ↵</kbd> run · <kbd>⌘/Ctrl \</kbd> toggle guide · <kbd>?</kbd> all keys</>
+            ) : (
+              <><kbd>i</kbd> focus editor · <kbd>r</kbd> run · <kbd>[</kbd> <kbd>]</kbd> prev / next · <kbd>⌘/Ctrl \</kbd> guide · <kbd>?</kbd> keys</>
+            )}
+          </div>
+        )}
+        {!isPredict && (
+          <SplitHandle axis="y" value={layout.editor} min={0.25} max={0.85} container={panesEl} label="Resize editor" onChange={(editor) => setLayoutState((l) => ({ ...l, editor }))} onCommit={(editor) => commitLayout({ editor })} onReset={() => commitLayout({ editor: DEFAULT_LAYOUT.editor })} />
+        )}
 
         {isPredict && (
           <div className="choices" role="group" aria-label="What will this print?">
@@ -364,6 +435,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
         {verdict === false && !running && result && (
           <p className="nudge"><strong>Not yet.</strong> {debugMove(attempts.current)}</p>
         )}
+        </div>
       </section>
     </div>
   )

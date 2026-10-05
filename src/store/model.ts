@@ -27,6 +27,14 @@ export type Accent = (typeof ACCENTS)[number]
 export const DASHBOARD_PANELS = ['weekly', 'chapters', 'radar', 'kinds', 'deck', 'recent', 'journal', 'activity', 'achievements'] as const
 export type DashboardPanel = (typeof DASHBOARD_PANELS)[number]
 
+/** lesson page panes: guide width and editor height as fractions, and whether the guide is shown */
+export interface Layout {
+  guide: number
+  editor: number
+  guideOpen: boolean
+}
+export const DEFAULT_LAYOUT: Layout = { guide: 0.4, editor: 0.58, guideOpen: true }
+
 export interface Settings {
   vim: boolean
   theme: 'dark' | 'light'
@@ -38,6 +46,7 @@ export interface Settings {
   accent: Accent
   dashboardHidden: DashboardPanel[]
   rigor: Rigor
+  layout: Layout
 }
 
 export interface Note {
@@ -75,7 +84,7 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: [], rigor: 'standard' },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: [], rigor: 'standard', layout: { ...DEFAULT_LAYOUT } },
     intro: {},
     tries: {},
     notes: {},
@@ -132,6 +141,10 @@ export function sanitize(raw: unknown): Persisted {
     d.settings.demoSpeed = oneOf(DEMO_SPEEDS, s.demoSpeed, 3000)
     d.settings.accent = oneOf(ACCENTS, s.accent, 'mint')
     d.settings.rigor = oneOf(RIGORS, s.rigor, 'standard')
+    if (isObj(s.layout)) {
+      const frac = (v: unknown, lo: number, hi: number, dflt: number) => Math.min(hi, Math.max(lo, num(v, dflt)))
+      d.settings.layout = { guide: frac(s.layout.guide, 0.22, 0.65, DEFAULT_LAYOUT.guide), editor: frac(s.layout.editor, 0.25, 0.85, DEFAULT_LAYOUT.editor), guideOpen: s.layout.guideOpen !== false }
+    }
     if (Array.isArray(s.dashboardHidden)) d.settings.dashboardHidden = [...new Set(s.dashboardHidden.filter((p): p is DashboardPanel => DASHBOARD_PANELS.includes(p)))]
   }
   if (isObj(raw.intro)) {

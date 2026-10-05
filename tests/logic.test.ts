@@ -86,7 +86,7 @@ describe('sanitize (untrusted import)', () => {
       completed: { 'np-shapes': { at: 5, xp: 20, hints: 99, attempts: 0 }, 'nope': { at: 1, xp: 1, hints: 0, attempts: 1 } },
       code: { 'np-shapes': 'x=1', ghost: 'y', 'np-views': 42 },
       activity: { '2026-10-01': 3, 'bad-key': 2 },
-      settings: { vim: true, theme: 'neon', reduceMotion: 'yes', mapLabels: 'sometimes', introStyle: 'psychic', demoSpeed: 123, accent: 'plaid', dashboardHidden: ['weekly', 'nope', 'weekly', 42], rigor: 'brutal' },
+      settings: { vim: true, theme: 'neon', reduceMotion: 'yes', mapLabels: 'sometimes', introStyle: 'psychic', demoSpeed: 123, accent: 'plaid', dashboardHidden: ['weekly', 'nope', 'weekly', 42], rigor: 'brutal', layout: { guide: 5, editor: -1, guideOpen: false } },
       tries: { 'np-shapes': 3.7, nope: 1, 'np-views': -2 },
       notes: { 'np-shapes': { stuck: 'shapes', takeaway: 42 }, 'np-views': { stuck: '' }, nope: { stuck: 'x' } },
       intro: { 'np-shapes': 'collapsed', 'nope': 'collapsed', 'np-views': 'sideways' },
@@ -98,7 +98,8 @@ describe('sanitize (untrusted import)', () => {
     expect(s.completed['np-shapes'].attempts).toBe(1)
     expect(s.code).toEqual({ 'np-shapes': 'x=1' })
     expect(s.activity).toEqual({ '2026-10-01': 3 })
-    expect(s.settings).toEqual({ vim: true, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: ['weekly'], rigor: 'standard' })
+    expect(s.settings).toEqual({ vim: true, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: ['weekly'], rigor: 'standard', layout: { guide: 0.65, editor: 0.25, guideOpen: false } })
+    expect(sanitize({ settings: { layout: 'wide' } }).settings.layout).toEqual({ guide: 0.4, editor: 0.58, guideOpen: true })
     expect(s.tries).toEqual({ 'np-shapes': 3, 'np-views': 0 })
     expect(s.notes).toEqual({ 'np-shapes': { stuck: 'shapes' } })
     expect(sanitize({ settings: { rigor: 'strict' } }).settings.rigor).toBe('strict')
