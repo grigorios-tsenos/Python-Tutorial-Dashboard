@@ -19,6 +19,14 @@ export function setVimActions(a: VimActions) {
   vimActions = a
 }
 
+let activeView: EditorView | null = null
+/** Focus the lesson's editable editor (page shortcut `i`). False when no editor is mounted, e.g. a Parsons puzzle. */
+export function focusEditor(): boolean {
+  if (!activeView) return false
+  activeView.focus()
+  return true
+}
+
 let exRegistered = false
 function registerEx() {
   if (exRegistered) return
@@ -119,7 +127,9 @@ export function CodeEditor({ docKey, value, onChange, onRun, readOnly, vimMode }
       }),
     })
     view.current = v
+    if (!readOnly) activeView = v
     return () => {
+      if (activeView === v) activeView = null
       v.destroy()
       view.current = null
     }

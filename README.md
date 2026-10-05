@@ -24,7 +24,7 @@ First load fetches the Python runtime (~15 MB from jsDelivr); the browser caches
 - **Dashboard:** level, XP per week, first-try rate, chapter ladders, skill radar, lesson types, review-deck health, recent completions, activity heatmap, achievements. Hide any panel.
 - **Learning loop:** hints unlock only after real attempts (runs or minutes, configurable: off / standard / strict), the solution asks what you tried first, every lesson ends with a one-sentence takeaway, and anything solved with help returns a day later to **redo from memory** (the XP penalty is refunded). The map shows today's loop: recall → redo → learn.
 - **Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, 13 achievements, ⌘K command palette.
-- **Editor:** CodeMirror 6 with Vim mode (`:w` runs, `:q` returns to the map), ⌘/Ctrl+Enter to run.
+- **Editor:** CodeMirror 6 with Vim mode (`:w` runs, `:q` returns to the map). Page keys work even when the editor is not focused: `i` focuses it, `r` or ⌘/Ctrl+Enter runs, `[` `]` move between lessons, ⌘/Ctrl+\\ hides the guide, `?` lists them all. Both panes are resizable (drag the bars, double-click to reset) and the layout is remembered.
 - **Settings:** light/dark, five accent colours, reduced motion, star-title visibility, export/import JSON (IndexedDB, versioned and validated).
 
 ## How the AI libraries work offline
