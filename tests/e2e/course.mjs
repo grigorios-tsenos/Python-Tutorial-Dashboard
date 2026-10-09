@@ -31,8 +31,10 @@ const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
 const page = await ctx.newPage()
 const errors = []
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
-page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`))
-const go = async (hash) => { await page.evaluate((h) => (location.hash = h), hash); await sleep(300) }
+page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()} @ ${page.url().replace(/^.*#/, '#')}`))
+// leaving a lesson while mermaid is still drawing logs an SVG error for the detached diagram, so let it finish first
+const settle = () => page.waitForFunction(() => [...document.querySelectorAll('pre.mermaid')].every((n) => n.querySelector('svg')), null, { timeout: 15000 }).catch(() => {})
+const go = async (hash) => { await settle(); await page.evaluate((h) => (location.hash = h), hash); await sleep(300) }
 const shot = (name) => page.screenshot({ path: `${SHOTS}/${name}.png` })
 
 try {
@@ -68,16 +70,30 @@ try {
   ok((await page.locator('.out-error').count()) === 0, 'no Python error')
   await shot('c2-lesson')
 
-  await page.locator('.quiz-card').scrollIntoViewIfNeeded()
-  for (let i = 0; i < quiz.length; i++) {
-    await page.locator('.quiz .choice').nth(quiz[i].correct).click()
-    await page.waitForSelector('.quiz-explain.ok')
-    await page.locator('.quiz-explain .btn').click()
+  console.log('Lesson flow: predict → read → check → build → quiz (post questions graded)')
+  const stage = (st) => quiz.filter((q) => q.stage === st)
+  const post = stage('post').length ? stage('post') : quiz
+  const answer = async (scope, qs) => {
+    for (const q of qs) {
+      await page.locator(`${scope} .quiz .choice`).nth(q.correct).click()
+      await page.waitForSelector(`${scope} .quiz-explain.ok`)
+      await page.locator(`${scope} .quiz-explain .btn`).click()
+    }
   }
-  await page.waitForSelector('.quiz-score')
-  ok((await page.locator('.quiz-score').innerText()) === `${quiz.length} / ${quiz.length}`, 'all quiz answers accepted')
+  ok((await page.locator('.flow button').count()) >= 4, 'lesson flow nav lists the stages')
+  ok((await page.locator('.stage-check').count()) === (stage('check').length ? 1 : 0), 'check stage sits inside the article when the quiz has check questions')
+  if (stage('pre').length) {
+    await answer('.stage-pre', stage('pre'))
+    ok((await page.locator('.stage-pre .quiz-summary').count()) === 1, 'pre-reading predictions finish without a pass mark')
+  }
+  if (stage('check').length) await answer('.stage-check', stage('check'))
+  ok((await page.locator('.flow button.done').count()) >= 1, 'finished stages tick off in the flow nav')
+  await page.locator('.quiz-card').scrollIntoViewIfNeeded()
+  await answer('.quiz-card', post)
+  await page.waitForSelector('.quiz-card .quiz-score')
+  ok((await page.locator('.quiz-card .quiz-score').innerText()) === `${post.length} / ${post.length}`, 'post questions graded')
   await page.waitForSelector('.done-chip')
-  ok((await page.locator('.done-chip').innerText()).includes(`Passed ${quiz.length}/${quiz.length}`), 'lesson marked passed')
+  ok((await page.locator('.done-chip').innerText()).includes(`Passed ${post.length}/${post.length}`), 'lesson marked passed')
   ok((await page.locator('.toast').first().innerText()).includes('+45 XP'), '90-minute lesson pays 45 XP')
   await shot('c3-quiz')
 
@@ -92,6 +108,54 @@ try {
   await go('#/stats')
   await page.waitForSelector('.kpi-grid')
   ok((await page.locator('.kpi-v', { hasText: '/ 523' }).innerText()) === '1 / 523', 'dashboard KPI shows course lessons')
+
+  console.log('Warm-up recall on the next lesson')
+  await go(`#/course/${LESSON}`)
+  await page.waitForSelector('.lesson-nav')
+  await settle()
+  await page.locator('.lesson-nav a', { hasText: 'Next:' }).click()
+  await page.waitForSelector('.stage-warmup .quiz', { timeout: 15000 })
+  ok(/linear regression/i.test(await page.locator('.stage-warmup h2').innerText()), 'two questions from the previous lesson open the next one')
+
+  console.log('Placement → plan → phase check')
+  await go('#/course')
+  await page.waitForSelector('.plan-cta')
+  await page.locator('.plan-cta .btn').click()
+  await page.waitForSelector('.placement .choice')
+  for (const k of [0, 3, 1, 2, 0, 3, 2, 1, 0, 1]) { // the answer key of src/content/placement.ts
+    await page.locator('.placement .choice').nth(k).click()
+    await sleep(60)
+  }
+  await page.waitForSelector('.placement-areas')
+  ok(/phase 14/i.test(await page.locator('.placement h2').innerText()), '10/10 places the learner at Phase 14')
+  await page.locator('.placement .btn.primary').click()
+  await page.waitForSelector('.phase-status')
+  ok((await page.locator('.phase-link.skip').count()) === 14 && (await page.locator('.phase-link.do').count()) === 6, 'phases 0–13 skipped, 14–19 to do')
+  await page.locator('.course-lessons > h2', { hasText: 'Agent Engineering' }).waitFor({ timeout: 5000 }).catch(() => {})
+  ok((await page.locator('.course-lessons > h2').innerText()) === 'Agent Engineering', 'saving the plan opens the entry phase')
+  ok((await page.locator('.course-progress .btn.primary').innerText()).includes('Continue'), 'continue button follows the plan')
+  await shot('c5-plan')
+  await page.locator('.phase-tools .btn', { hasText: 'Phase check' }).click()
+  await page.waitForSelector('.phase-check .quiz .choice', { timeout: 15000 })
+  ok((await page.locator('.phase-check .chip').innerText()).length > 0, 'phase check tags each question with its lesson')
+  for (let i = 0; i < 8; i++) {
+    await page.locator('.phase-check .quiz .choice').first().click()
+    await page.waitForSelector('.phase-check .quiz-explain')
+    await page.locator('.phase-check .quiz-explain .btn').click()
+  }
+  await page.waitForSelector('.phase-result')
+  ok(/(Mastered|Almost|Developing|Start over)/.test(await page.locator('.phase-result .quiz-score').innerText()), 'phase check graded like check-understanding')
+  await shot('c6-phase-check')
+
+  console.log('Local run for a script the browser cannot run')
+  const localLesson = index.phases.flatMap((p) => p.lessons.map((l) => ({ key: `${p.dir}/${l.dir}`, l }))).find(({ l }) => l.code && l.needs.length === 1 && l.needs[0] === 'threading')
+  await go(`#/course/${localLesson.key}`)
+  await page.waitForSelector('.course-needs')
+  ok((await page.locator('.runtime').innerText()).includes('this machine'), 'toolbar says the script runs on this machine')
+  await page.locator('.btn.run').click()
+  await page.waitForSelector('.out-console', { timeout: 180000 })
+  ok((await page.locator('.out-error').count()) === 0, `threading script ran locally through uv (${localLesson.key})`)
+  await shot('c7-local-run')
 
   console.log('Reading lesson and mobile layout')
   const reading = index.phases.flatMap((p) => p.lessons.map((l) => ({ key: `${p.dir}/${l.dir}`, l }))).find(({ l }) => !l.code)

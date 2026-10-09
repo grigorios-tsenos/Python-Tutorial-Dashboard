@@ -5,6 +5,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { PYODIDE_STDLIB as STDLIB, imports } from './pyimports.mjs'
 
 const SRC = resolve(process.env.CURRICULUM_DIR || join(homedir(), 'ai-engineering-from-scratch'))
 const ROOT = resolve(import.meta.dirname, '..')
@@ -12,23 +13,7 @@ const OUT = join(ROOT, 'public', 'curriculum')
 const INDEX = join(ROOT, 'src', 'content', 'course', 'index.json')
 if (!existsSync(join(SRC, 'phases'))) throw new Error(`no phases/ directory in ${SRC}`)
 
-// Python 3.12 sys.stdlib_module_names minus what cannot work inside Pyodide (threads, processes, sockets, GUIs).
-const STDLIB = new Set(`__future__ abc argparse array ast atexit base64 bisect builtins bz2 calendar cmath cmd code codecs collections colorsys
-compileall configparser contextlib contextvars copy copyreg csv dataclasses datetime decimal difflib dis doctest email
-encodings enum errno fractions functools gc getopt gettext glob graphlib gzip hashlib heapq hmac html importlib inspect io
-ipaddress itertools json keyword linecache locale logging lzma marshal math mimetypes numbers opcode operator optparse os
-pathlib pickle pickletools pkgutil platform pprint profile pstats pyclbr queue random re reprlib runpy sched secrets shelve
-shlex shutil sqlite3 stat statistics string struct sys sysconfig tabnanny tarfile tempfile textwrap time timeit token
-tokenize tomllib trace traceback types typing unicodedata unittest uuid warnings wave weakref xml zipfile zlib zoneinfo`.split(/\s+/))
 const AVAILABLE = { numpy: null, pandas: null, scipy: 'scipy', sklearn: 'scikit-learn', matplotlib: 'matplotlib', langgraph: null, langchain_core: null, mlflow: null, pyspark: null, delta: null }
-
-function imports(py) {
-  const mods = new Set()
-  for (const m of py.matchAll(/^\s*(?:from\s+([\w.]+)\s+import|import\s+([\w.]+(?:\s*,\s*[\w.]+)*))/gm)) {
-    for (const name of (m[1] ?? m[2]).split(',')) mods.add(name.trim().split('.')[0])
-  }
-  return [...mods].filter(Boolean)
-}
 
 const minutesOf = (s) => {
   const m = /(\d+)\s*(hour|min)/.exec(s || '')
@@ -40,11 +25,14 @@ rmSync(OUT, { recursive: true, force: true })
 mkdirSync(OUT, { recursive: true })
 cpSync(join(SRC, 'LICENSE'), join(OUT, 'LICENSE'))
 
+// estimated hours per phase from ROADMAP.md headings: `## Phase 3: Deep Learning Core — ✅ (~15 hours)`
+const HOURS = Object.fromEntries([...readFileSync(join(SRC, 'ROADMAP.md'), 'utf8').matchAll(/^## Phase (\d+):.*\(~(\d+) hours\)/gm)].map((m) => [Number(m[1]), Number(m[2])]))
+
 const phases = []
 for (const phaseDir of readdirSync(join(SRC, 'phases')).filter((d) => /^\d\d-/.test(d)).sort()) {
   const readme = readFileSync(join(SRC, 'phases', phaseDir, 'README.md'), 'utf8').split('\n')
   const head = /^# Phase (\d+):\s*(.+)$/.exec(readme[0])
-  const phase = { dir: phaseDir, n: Number(head?.[1] ?? phaseDir.slice(0, 2)), title: (head?.[2] ?? phaseDir.slice(3)).trim(), blurb: (readme.find((l) => l.startsWith('> ')) ?? '').slice(2).trim(), lessons: [] }
+  const phase = { dir: phaseDir, n: Number(head?.[1] ?? phaseDir.slice(0, 2)), title: (head?.[2] ?? phaseDir.slice(3)).trim(), blurb: (readme.find((l) => l.startsWith('> ')) ?? '').slice(2).trim(), hours: HOURS[Number(head?.[1] ?? phaseDir.slice(0, 2))] ?? 0, lessons: [] }
   for (const lessonDir of readdirSync(join(SRC, 'phases', phaseDir)).filter((d) => /^\d\d-/.test(d)).sort()) {
     const dir = join(SRC, 'phases', phaseDir, lessonDir)
     const mdPath = join(dir, 'docs', 'en.md')

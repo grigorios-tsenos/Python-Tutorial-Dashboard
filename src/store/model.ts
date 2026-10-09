@@ -1,5 +1,5 @@
 import { LESSON_BY_ID } from '../content'
-import { COURSE_BY_KEY } from '../content/course'
+import { COURSE_BY_KEY, PATH_BY_ID, PHASE_BY_DIR, type CoursePlan, type PhaseStatus } from '../content/course'
 import type { Card } from '../lib/gamification'
 
 export const STORE_VERSION = 1
@@ -97,6 +97,14 @@ export interface Persisted {
   course: Record<string, CourseProgress>
   courseCode: Record<string, string>
   courseLast: string | null
+  /** the study plan from placement (or a chosen entry phase); null = no plan, every phase is Do */
+  coursePlan: CoursePlan | null
+  /** lessons whose last quiz scored under 70 %, keyed by lesson, value = when; cleared on a pass */
+  courseReview: Record<string, number>
+  /** best phase check (8 questions) per phase dir */
+  coursePhaseCheck: Record<string, { at: number; score: number; total: number }>
+  /** a learning path the learner chose to follow: Continue and next/prev use its order */
+  coursePathActive: string | null
 }
 
 export function defaults(): Persisted {
@@ -119,6 +127,10 @@ export function defaults(): Persisted {
     course: {},
     courseCode: {},
     courseLast: null,
+    coursePlan: null,
+    courseReview: {},
+    coursePhaseCheck: {},
+    coursePathActive: null,
   }
 }
 
@@ -217,5 +229,23 @@ export function sanitize(raw: unknown): Persisted {
     for (const [key, v] of Object.entries(raw.courseCode)) if (COURSE_BY_KEY[key] && typeof v === 'string' && v.length < 200_000) d.courseCode[key] = v
   }
   d.courseLast = typeof raw.courseLast === 'string' && COURSE_BY_KEY[raw.courseLast] ? raw.courseLast : null
+  if (isObj(raw.coursePlan) && isObj(raw.coursePlan.status)) {
+    const p = raw.coursePlan
+    const status: Record<string, PhaseStatus> = {}
+    for (const [dir, v] of Object.entries(p.status as Record<string, unknown>)) if (PHASE_BY_DIR[dir] && (v === 'skip' || v === 'review' || v === 'do')) status[dir] = v
+    const areas = Array.isArray(p.areas) ? p.areas.slice(0, 5).map((a) => Math.min(2, Math.max(0, Math.floor(num(a))))) : []
+    d.coursePlan = { at: num(p.at), score: p.score === null ? null : Math.min(10, Math.max(0, Math.floor(num(p.score)))), areas, entry: Math.min(19, Math.max(0, Math.floor(num(p.entry)))), status }
+  }
+  if (isObj(raw.courseReview)) {
+    for (const [key, v] of Object.entries(raw.courseReview)) if (COURSE_BY_KEY[key] && !d.course[key]) d.courseReview[key] = num(v)
+  }
+  if (isObj(raw.coursePhaseCheck)) {
+    for (const [dir, v] of Object.entries(raw.coursePhaseCheck)) {
+      if (!PHASE_BY_DIR[dir] || !isObj(v)) continue
+      const total = Math.max(1, Math.floor(num(v.total, 8)))
+      d.coursePhaseCheck[dir] = { at: num(v.at), score: Math.min(total, Math.max(0, Math.floor(num(v.score)))), total }
+    }
+  }
+  d.coursePathActive = typeof raw.coursePathActive === 'string' && PATH_BY_ID[raw.coursePathActive] ? raw.coursePathActive : null
   return d
 }
