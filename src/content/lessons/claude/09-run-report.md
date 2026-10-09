@@ -33,25 +33,6 @@ Real logs contain blank lines, truncated writes and junk. A good parser **skips 
 > | `skipped` | lines that aren't valid JSON objects, or known events with invalid fields (blank lines don't count) |
 
 Valid means: a non-empty string tool name; a boolean `is_error` when present (missing means `false`); non-negative integer token counts (booleans don't count; missing means `0`). Count an invalid event once as skipped and keep reading. Ignore unknown event types; each call is independent.
-
-@@step Read JSONL line by line, skipping junk
-Set up the five counters inside the function, then walk the lines: skip blanks, parse each line in a `try`, and count anything that is not a JSON **object** as skipped. Return the dict with all five keys.
-@@stepcheck
-test("empty log gives zeros", lambda: summarize("") == {"tools": {}, "errors": 0, "blocked": 0, "tokens": 0, "skipped": 0}, "return {'tools': tools, 'errors': errors, 'blocked': blocked, 'tokens': tokens, 'skipped': skipped}")
-test("junk lines are skipped and counted; blank lines are ignored", lambda: summarize("not json\n\n[1, 2]\n \n") == {"tools": {}, "errors": 0, "blocked": 0, "tokens": 0, "skipped": 2}, "json.JSONDecodeError and non-dict values both count as skipped")
-@@step Count tool uses, errors and blocks
-Branch on `event.get("type")`. A `tool_use` or `hook_block` needs a non-empty string tool name; a `tool_result` needs a boolean `is_error` (default `False`). Invalid fields add one to `skipped` and move on.
-@@stepcheck
-LOG2 = "\n".join(['{"type": "tool_use", "tool": "Bash"}', '{"type": "tool_use", "tool": "Bash"}', '{"type": "tool_use", "tool": "Edit"}', '{"type": "tool_result", "is_error": true}', '{"type": "tool_result", "is_error": false}', '{"type": "hook_block", "tool": "Bash", "reason": "rm -rf"}', 'not json'])
-r = summarize(LOG2)
-test("tool counts, errors and blocks", lambda: r["tools"] == {"Bash": 2, "Edit": 1} and r["errors"] == 1 and r["blocked"] == 1 and r["skipped"] == 1, "got " + str(r))
-test("invalid tool names and non-boolean is_error are skipped", lambda: summarize('{"type":"hook_block","tool":" "}\n{"type":"tool_use","tool":[]}\n{"type":"tool_result","is_error":"true"}')["skipped"] == 3)
-@@step Sum tokens, with strict validation
-For `usage`, both counts default to `0` and must be non-negative integers. Python's `bool` is a subclass of `int`, so test `type(n) is int` rather than `isinstance`.
-@@stepcheck
-test("tokens = input + output over all usage events", lambda: summarize('{"type": "usage", "input_tokens": 1200, "output_tokens": 300}\n{"type": "usage", "input_tokens": 800, "output_tokens": 150}')["tokens"] == 2450)
-messy = "\n".join(['{"type": "usage", "input_tokens": "8"}', '{"type": "usage", "input_tokens": -1}', '{"type": "usage", "output_tokens": true}', '{"type": "usage", "input_tokens": 1.5}', '{"type": "future_event", "data": [1, 2]}', '{"type": "usage", "output_tokens": 3}'])
-test("invalid token fields are skipped once, unknown events ignored", lambda: summarize(messy) == {"tools": {}, "errors": 0, "blocked": 0, "tokens": 3, "skipped": 4}, "type(n) is int and n >= 0")
 @@starter
 import json
 

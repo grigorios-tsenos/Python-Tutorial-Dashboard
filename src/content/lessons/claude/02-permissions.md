@@ -29,54 +29,6 @@ A rule is `Tool(specifier)`. `Bash(npm run test:*)` is a **prefix** match; witho
 3. else → Claude **asks** you first
 
 > **Mission:** (1) `build_settings(allow, deny)` returns the settings dict. (2) `matches(rule, tool, arg)` says whether one rule applies to one call. (3) `decide(settings, tool, arg)` returns `"deny"`, `"allow"` or `"ask"` using the rules above.
-
-@@step build_settings is a nested dict
-The JSON above is just a dict with a dict inside. Copy the lists so callers can't mutate your settings later:
-
-```python
-return {"permissions": {"allow": list(allow), "deny": list(deny)}}
-```
-
-**Do:** implement `build_settings`, then Run. The printed JSON should match the shape above.
-@@stepcheck
-test("settings have the right shape", lambda: build_settings(allow=["Bash(git diff:*)"], deny=["Read(./.env)"]) == {"permissions": {"allow": ["Bash(git diff:*)"], "deny": ["Read(./.env)"]}}, '{"permissions": {"allow": [...], "deny": [...]}}')
-test("empty lists are kept", lambda: build_settings([], []) == {"permissions": {"allow": [], "deny": []}})
-@@step matches: one rule against one call
-Split the rule at the first `(`: the part before is the tool name, the part inside the parentheses is the specifier. A specifier ending in `:*` is a prefix; anything else must match exactly:
-
-```python
-def matches(rule, tool, arg):
-    name, _, rest = rule.partition("(")
-    if name != tool:
-        return False
-    pattern = rest[:-1]                      # drop the closing ')'
-    if pattern.endswith(":*"):
-        return arg.startswith(pattern[:-2])
-    return arg == pattern
-```
-
-**Do:** add `matches` as a module-level function, then Run.
-@@stepcheck
-test("prefix rules match by startswith", lambda: matches("Bash(npm run test:*)", "Bash", "npm run test:unit") is True and matches("Bash(npm run test:*)", "Bash", "npm install") is False, 'pattern.endswith(":*") -> arg.startswith(pattern[:-2])')
-test("exact rules and tool names must match", lambda: matches("Read(./.env)", "Read", "./.env") is True and matches("Read(./.env)", "Read", "./.env.local") is False and matches("Bash(git:*)", "Edit", "git status") is False)
-@@step decide: deny, then allow, then ask
-Order is the policy. Check every deny rule first, then every allow rule, and fall back to asking:
-
-```python
-perms = settings.get("permissions", {})
-if any(matches(r, tool, arg) for r in perms.get("deny", [])):
-    return "deny"
-if any(matches(r, tool, arg) for r in perms.get("allow", [])):
-    return "allow"
-return "ask"
-```
-
-**Do:** implement `decide`, then Run. The cell should print `deny` for the force push.
-@@stepcheck
-cfg = build_settings(allow=["Bash(npm run test:*)", "Bash(git:*)"], deny=["Bash(git push:*)", "Read(./.env)"])
-test("prefix allow rule", lambda: decide(cfg, "Bash", "npm run test:unit") == "allow")
-test("deny beats allow", lambda: decide(cfg, "Bash", "git push origin main") == "deny", "check deny rules before allow rules")
-test("unmatched -> ask", lambda: decide(cfg, "Bash", "curl example.com") == "ask")
 @@starter
 import json
 

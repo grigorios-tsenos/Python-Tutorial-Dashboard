@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LESSON_BY_ID, lessonsOf, nextLessonId } from '../content'
+import { CODING_GUIDES } from '../content/guided'
 import { LessonWalkthrough } from '../labs/LessonWalkthrough'
 import { TRACK_BY_ID } from '../content/tracks'
 import { KIND_LABEL, type Lesson } from '../content/types'
@@ -7,7 +8,6 @@ import { allPassed } from '../engine/outputText'
 import { runner, useRunnerStatus } from '../engine/runner'
 import type { RunResult } from '../engine/types'
 import { debugMove } from '../lib/learning'
-import { firstOpenStep } from '../lib/steps'
 import { go, lessonPath } from '../lib/router'
 import { seededShuffle } from '../lib/shuffle'
 import { useStore } from '../store/useStore'
@@ -15,11 +15,12 @@ import { useUi } from '../store/ui'
 import { CodeEditor, focusEditor, setVimActions } from './CodeEditor'
 import { Difficulty, STAGES } from './Difficulty'
 import { Hints } from './Hints'
+import { GuidedPractice } from './GuidedPractice'
+import { PredictionGuide } from './PredictionGuide'
 import { Markdown } from './Markdown'
 import { OutputPanel } from './OutputPanel'
 import { Parsons, restoreOrder } from './Parsons'
 import { SplitHandle } from './Split'
-import { NowBar, Steps } from './Steps'
 import { DEFAULT_LAYOUT, type Layout } from '../store/model'
 
 export function LessonView({ id }: { id: string }) {
@@ -51,8 +52,11 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
 
   const isParsons = lesson.kind === 'parsons'
   const isPredict = lesson.kind === 'predict'
-  const steps = lesson.steps
-  const graded = !!lesson.check || steps.length > 0
+  const graded = !!lesson.check
+  const codingGuide = CODING_GUIDES[id]
+  const [guided, setGuided] = useState(true)
+  const [predictionReady, setPredictionReady] = useState(false)
+  const guidedRun = useRef<(() => void) | null>(null)
 
   const [code, setCodeState] = useState(savedCode ?? lesson.starter)
   const [order, setOrder] = useState<string[]>(() => restoreOrder(savedCode, lesson.lines) ?? seededShuffle(lesson.lines, lesson.id))
@@ -60,8 +64,6 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   const [running, setRunning] = useState(false)
   const [picked, setPicked] = useState<number[]>([])
   const [solved, setSolved] = useState(!!done)
-  // the step to work on; steps.length means every step passes and only the final checks remain
-  const [current, setCurrent] = useState(done ? steps.length : 0)
   const [resetArmed, setResetArmed] = useState(false)
   const attempts = useRef(0)
   const token = useRef(0)
@@ -139,22 +141,15 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   )
 
   const execute = useCallback(
-    async (source: string, opts: { check: boolean; complete: boolean; tries?: number; silent?: boolean }) => {
+    async (source: string, opts: { check: boolean; complete: boolean; tries?: number }) => {
       const mine = ++token.current
       setRunning(true)
-      if (!opts.silent) recordRun(opts.check ? id : undefined, useStore.getState().settings.vim)
-      const res = await runner.run({
-        code: source,
-        check: opts.check && lesson.check ? lesson.check : undefined,
-        checks: opts.check && steps.length ? steps.map((st) => st.check) : undefined,
-        packages: lesson.packages,
-      })
+      recordRun(opts.check ? id : undefined, useStore.getState().settings.vim)
+      const res = await runner.run({ code: source, check: opts.check && lesson.check ? lesson.check : undefined, packages: lesson.packages })
       if (mine !== token.current) return
       setRunning(false)
       setResult(res)
-      if (!opts.silent) attempts.current += 1
-      const open = firstOpenStep(res, steps)
-      if (open !== null) setCurrent(open)
+      attempts.current += 1
       if (opts.complete) {
         const pass = opts.check && lesson.check ? allPassed(res) : res.ok && !res.infra
         if (pass) finish(opts.tries ?? attempts.current)
@@ -164,18 +159,15 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   )
 
   const run = useCallback(() => {
+    if (guided && codingGuide) { guidedRun.current?.(); return }
     if (running || isPredict) return
     const source = isParsons ? order.join('\n') : code
     void execute(source, { check: true, complete: true })
-  }, [running, isPredict, isParsons, order, code, execute])
+  }, [guided, codingGuide, running, isPredict, isParsons, order, code, execute])
 
   // already-completed predict lessons show their real output straight away
   useEffect(() => {
     if (isPredict && done) void execute(lesson.starter, { check: false, complete: false })
-  }, [])
-  // coming back to work in progress: a silent run puts the step ladder where you left it
-  useEffect(() => {
-    if (!isPredict && !isParsons && steps.length && !done && savedCode && savedCode !== lesson.starter) void execute(savedCode, { check: true, complete: true, silent: true })
   }, [])
 
   const runRef = useRef(run)
@@ -232,7 +224,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     setResult(null)
     setPicked([])
     setSolved(false)
-    setCurrent(0)
+    setGuided(false)
     if (isParsons) setOrder(seededShuffle(lesson.lines, lesson.id))
     else setCodeState(lesson.starter)
   }
@@ -280,10 +272,18 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           <p className="tagline">{lesson.tagline}</p>
           <Difficulty lesson={lesson} />
         </header>
-        <LessonWalkthrough lessonId={id} solutionRevealed={hintsUsed >= 3} />
-        <Markdown src={lesson.body} />
-        {steps.length > 0 && <Steps steps={steps} current={current} result={result} done={!!done} hasFinal={!!lesson.check} />}
-        <Hints
+        {guided ? (
+          <>
+            <section className="guided-intro">
+              <h2>{isPredict ? 'Read → trace → predict' : 'Write → check → continue'}</h2>
+              <p>{isPredict ? 'Follow the code one step at a time. Keep track of what changes, then make your prediction and compare it with the real output.' : 'Tackle one small goal at a time. Each step explains the behavior to build and what to verify; you decide how to write the code. The final check verifies the complete exercise.'}</p>
+              <p className="dim">Take your time. Your progress is saved, and retries are part of learning.</p>
+            </section>
+            <details className="guided-notes"><summary>Chapter notes and full mission</summary><Markdown src={lesson.body} /></details>
+            <details className="guided-notes"><summary>Warm-up and concept demo</summary><LessonWalkthrough lessonId={id} solutionRevealed={hintsUsed >= 3} /></details>
+          </>
+        ) : <><LessonWalkthrough lessonId={id} solutionRevealed={hintsUsed >= 3} /><Markdown src={lesson.body} /></>}
+        {!guided && <Hints
           lesson={lesson}
           used={hintsUsed}
           completed={!!done && done.hints === 0}
@@ -304,7 +304,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
               setCode(id, text)
             }
           }}
-        />
+        />}
         {(done || (isPredict && solved)) && (
           <>
             <section className="lockin">
@@ -373,12 +373,17 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
       )}
 
       <section className="workbench" aria-label="Workbench">
+        <div className="practice-modes" role="group" aria-label="Practice mode">
+          <button className={`btn small ${guided ? 'primary' : 'ghost'}`} aria-pressed={guided} disabled={runtime.phase === 'running' || running} onClick={() => setGuided(true)}>Line by line</button>
+          <button className={`btn small ${!guided ? 'primary' : 'ghost'}`} aria-pressed={!guided} disabled={runtime.phase === 'running' || running} onClick={() => setGuided(false)}>Full exercise</button>
+          <span className="small dim">{guided ? 'Small steps, with checks and guidance' : 'Practice the whole exercise'}</span>
+        </div>
         <div className="toolbar">
           <button className="icon-btn" onClick={toggleGuide} aria-pressed={!layout.guideOpen} aria-label={layout.guideOpen ? 'Hide the guide' : 'Show the guide'} title={`${layout.guideOpen ? 'Hide' : 'Show'} the guide (⌘/Ctrl \\)`}>{layout.guideOpen ? '⇤' : '⇥'}</button>
           <span className="file">{isPredict ? 'read_me.py' : isParsons ? 'arrange.py' : 'cell.py'}</span>
           <span className={`runtime runtime-${runtime.phase}`} title={runtime.detail}><i aria-hidden />{phaseLabel}</span>
           <span className="spacer" />
-          {!isPredict && (
+          {!isPredict && !guided && (
             <>
               <button className={`pill ${vimOn ? 'on' : ''}`} onClick={() => setSetting('vim', !vimOn)} aria-pressed={vimOn} title="Toggle Vim keybindings">⌨ Vim {vimOn ? 'on' : 'off'}</button>
               {vimOn && !isParsons && <button className="icon-btn" onClick={() => useUi.getState().set({ cheatOpen: true })} aria-label="Vim cheat sheet" title="Vim cheat sheet">?</button>}
@@ -390,9 +395,9 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           )}
         </div>
 
-        {steps.length > 0 && <NowBar steps={steps} current={current} done={!!done} hasFinal={!!lesson.check} />}
+        {guided && codingGuide ? <GuidedPractice lesson={lesson} guide={codingGuide} runRef={guidedRun} onComplete={finish} /> : (
         <div className="panes" ref={panesEl}>
-        {isParsons ? (
+        {guided && isPredict ? <PredictionGuide lesson={lesson} onReady={setPredictionReady} /> : isParsons ? (
           <div className="parsons-wrap">
             <Parsons
               order={order}
@@ -431,7 +436,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           <SplitHandle axis="y" value={layout.editor} min={0.25} max={0.85} container={panesEl} label="Resize editor" onChange={(editor) => setLayoutState((l) => ({ ...l, editor }))} onCommit={(editor) => commitLayout({ editor })} onReset={() => commitLayout({ editor: DEFAULT_LAYOUT.editor })} />
         )}
 
-        {isPredict && (
+        {isPredict && (!guided || predictionReady || solved) && (
           <div className="choices" role="group" aria-label="What will this print?">
             <div className="choices-title">{solved ? 'Correct!' : 'What does it print?'}</div>
             {lesson.choices.map((c, i) => {
@@ -446,15 +451,17 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
                 </button>
               )
             })}
-            {picked.length > 0 && !solved && <p className="dim">Added to your Review deck. Try another option{hintsUsed < 2 ? ' or reveal a hint' : ''}.</p>}
+            {picked.length > 0 && !solved && <p className="dim">Not quite yet. Trace the changing value once more, then try another option. Your attempt is useful practice.</p>}
+            {solved && <p className="dim">✓ Your prediction matches. Compare it with the real output below and the explanation in the guide.</p>}
           </div>
         )}
 
-        <OutputPanel key={attempts.current} result={result} running={running} graded={graded} completed={!!done} visualFirst={lesson.kind === 'lab' || lesson.track === 'viz'} steps={steps} current={current} />
+        <OutputPanel key={attempts.current} result={result} running={running} graded={graded} completed={!!done} visualFirst={lesson.kind === 'lab' || lesson.track === 'viz'} />
         {verdict === false && !running && result && (
           <p className="nudge"><strong>Not yet.</strong> {debugMove(attempts.current)}</p>
         )}
         </div>
+        )}
       </section>
     </div>
   )

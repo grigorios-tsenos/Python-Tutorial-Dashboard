@@ -22,38 +22,6 @@ df.select("city", "fare")    # PICK columns -> a NEW DataFrame
 Two rules: **nothing prints by itself** (`select` only *describes* a smaller table; `.show()` looks at it), and **DataFrames never change** (every operation returns a new one).
 
 > **Mission:** look at the trips table with `.show()`, store how many trips there are in `n`, and build `fares`: a new DataFrame with only the `city` and `fare` columns (then show it too).
-
-@@step Look at the table
-`show()` prints the first rows as an ASCII table. Nothing else in Spark prints on its own:
-
-```python
-trips.show()
-```
-
-**Do:** add the line under TODO 1, then Run. Two tables appear: `trips`, and `fares` (still identical to `trips` for now).
-@@stepcheck
-test("the trips table was shown", lambda: "passengers" in __stdout__ and __stdout__.count("NYC") >= 4, "trips.show() prints the table; it should appear in addition to fares.show()")
-@@step Count across the cluster
-`count()` is an **action**: Spark runs the plan and returns a plain Python number.
-
-```python
-n = trips.count()
-```
-
-**Do:** replace `n = 0`, then Run.
-@@stepcheck
-test("n counts every trip", lambda: n == 5, "n = trips.count()")
-@@step Select two columns into a new DataFrame
-`select` returns a new, narrower DataFrame and leaves `trips` exactly as it was:
-
-```python
-fares = trips.select("city", "fare")
-```
-
-**Do:** replace `fares = trips`, then Run. The second printed table has two columns.
-@@stepcheck
-test("fares keeps only city and fare", lambda: fares.columns == ["city", "fare"], 'fares = trips.select("city", "fare")')
-test("selecting did not change the original table", lambda: trips.columns == ["city", "fare", "passengers"] and fares.count() == 5)
 @@starter
 from pyspark.sql import SparkSession
 

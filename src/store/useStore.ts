@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, type Achievement } from '../lib/achievements'
 import { dayKey } from '../lib/dates'
 import { QUEST_BONUS, QUEST_TARGET, levelFromXp, newCard, schedule, xpAward, type Grade } from '../lib/gamification'
 import { idbStorage } from './idb'
-import { STORE_VERSION, defaults, sanitize, type Note, type Persisted, type Settings } from './model'
+import { STORE_VERSION, defaults, sanitize, type GuidedProgress, type Note, type Persisted, type Settings } from './model'
 
 export interface CompletionSummary {
   xp: number
@@ -20,6 +20,7 @@ export interface CompletionSummary {
 
 interface Actions {
   setCode: (id: string, code: string) => void
+  setGuided: (id: string, progress: GuidedProgress) => void
   /** every run counts for stats; a graded run on `id` also counts toward that lesson's hint gate */
   recordRun: (id: string | undefined, vim: boolean) => void
   revealHint: (id: string) => number
@@ -54,6 +55,7 @@ export const useStore = create<Store>()(
       hydrated: false,
 
       setCode: (id, code) => set((s) => ({ code: { ...s.code, [id]: code } })),
+      setGuided: (id, progress) => set((s) => ({ guided: { ...s.guided, [id]: progress } })),
 
       recordRun: (id, vim) =>
         set((s) => {
@@ -149,7 +151,8 @@ export const useStore = create<Store>()(
       redoLesson: (id) =>
         set((s) => {
           const { [id]: _code, ...code } = s.code
-          return { code, hints: { ...s.hints, [id]: 0 }, tries: { ...s.tries, [id]: 0 } }
+          const { [id]: _guided, ...guided } = s.guided
+          return { code, guided, hints: { ...s.hints, [id]: 0 }, tries: { ...s.tries, [id]: 0 } }
         }),
       setLastLesson: (id) => set({ lastLesson: id }),
 

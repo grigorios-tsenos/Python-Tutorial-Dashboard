@@ -29,26 +29,6 @@ Your raw orders contain a duplicate `o2`, an order with no user, an amount of `"
 > Use `mode("overwrite")` so a second run doesn't crash.
 
 The boss changes cities and IDs, includes negative amounts (valid refunds) and ends with an empty batch: give bronze an explicit all-string schema (`order_id`, `user`, `amount`, `city`) so even an empty batch creates all three tables. Keep `raw_rows` unchanged.
-
-@@step Bronze: land the raw rows with an explicit schema
-Create the DataFrame with the schema string `"order_id string, user string, amount string, city string"` (so an empty batch still has columns), save it with `.write.format("delta").mode("overwrite").saveAsTable("main.shop.bronze")`, and return it for now.
-@@stepcheck
-run_pipeline(spark, RAW)
-bronze = spark.table("main.shop.bronze")
-test("bronze keeps every raw row with an all-string schema", lambda: bronze.count() == 7 and [t for _, t in bronze.dtypes] == ["string"] * 4, 'createDataFrame(raw_rows, "order_id string, user string, amount string, city string") then saveAsTable')
-@@step Silver: clean, cast, dedupe
-From bronze: keep rows whose trimmed `user` is non-empty, cast `amount` to double and keep only rows where the cast succeeded, then `dropDuplicates(["order_id"])`. Save as `main.shop.silver`.
-@@stepcheck
-run_pipeline(spark, RAW)
-silver = spark.table("main.shop.silver")
-test("silver is clean: 4 valid, unique orders with double amounts", lambda: silver.count() == 4 and dict(silver.dtypes)["amount"] == "double", "filter user, cast amount, filter isNotNull, dropDuplicates")
-@@step Gold: aggregate, sort, save, return
-Group silver by `city`, aggregate `F.round(F.sum("amount"), 2).alias("revenue")` and `F.count("*").alias("orders")`, order by revenue descending then city, save as `main.shop.gold_revenue`, and return the DataFrame.
-@@stepcheck
-g = run_pipeline(spark, RAW)
-rows = [(r["city"], r["revenue"], r["orders"]) for r in g.collect()]
-test("gold: revenue per city, biggest first", lambda: rows == [("NYC", 50.0, 2), ("LA", 12.0, 1), ("SF", 5.0, 1)], "got " + str(rows))
-test("gold saved as a table", lambda: spark.table("main.shop.gold_revenue").count() == 3)
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

@@ -61,9 +61,15 @@ export interface Note {
   takeaway?: string
 }
 
+export interface GuidedProgress {
+  step: number
+  drafts: string[]
+}
+
 export interface Persisted {
   completed: Record<string, Completion>
   code: Record<string, string>
+  guided: Record<string, GuidedProgress>
   hints: Record<string, number>
   xp: number
   activity: Record<string, number>
@@ -84,6 +90,7 @@ export function defaults(): Persisted {
   return {
     completed: {},
     code: {},
+    guided: {},
     hints: {},
     xp: 0,
     activity: {},
@@ -118,6 +125,13 @@ export function sanitize(raw: unknown): Persisted {
   }
   if (isObj(raw.code)) {
     for (const [id, v] of Object.entries(raw.code)) if (LESSON_BY_ID[id] && typeof v === 'string' && v.length < 100_000) d.code[id] = v
+  }
+  if (isObj(raw.guided)) {
+    for (const [id, v] of Object.entries(raw.guided)) {
+      if (!LESSON_BY_ID[id] || !isObj(v) || !Array.isArray(v.drafts) || v.drafts.length > 100) continue
+      if (!v.drafts.every((draft) => typeof draft === 'string' && draft.length < 100_000)) continue
+      d.guided[id] = { step: Math.min(v.drafts.length, Math.max(0, Math.floor(num(v.step)))), drafts: v.drafts }
+    }
   }
   if (isObj(raw.hints)) {
     for (const [id, v] of Object.entries(raw.hints)) if (LESSON_BY_ID[id]) d.hints[id] = Math.min(3, Math.max(0, Math.floor(num(v))))

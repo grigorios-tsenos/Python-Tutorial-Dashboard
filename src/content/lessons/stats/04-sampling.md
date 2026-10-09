@@ -21,53 +21,6 @@ rng.binomial(n, p, size=trials)          # successes out of n, repeated `trials`
 ```
 
 > **Mission:** implement `simulate_rates(p, n, trials, seed=0)` → an array of `trials` conversion rates, each from `n` visitors who convert with probability `p`. Reject `n < 1`, `trials < 1` or `p` outside `[0, 1]` with `ValueError`. Then prove the law of large numbers: rates from 1000 visitors must vary less than rates from 10.
-
-@@step Seed a generator and draw binomial counts
-A binomial draw answers "out of `n` visitors, how many converted?" Ask for `trials` of them at once, then turn counts into rates:
-
-```python
-rng = np.random.default_rng(seed)
-counts = rng.binomial(n, p, size=trials)
-return counts / n
-```
-
-**Do:** implement the draw, then Run.
-@@stepcheck
-import numpy as np
-r = simulate_rates(0.1, 50, 200, seed=3)
-test("one rate per trial, reproducible from the seed", lambda: r.shape == (200,) and np.array_equal(r, simulate_rates(0.1, 50, 200, seed=3)), "np.random.default_rng(seed).binomial(n, p, size=trials) / n")
-test("rates are fractions in [0, 1] that average near p", lambda: bool((r >= 0).all() and (r <= 1).all()) and abs(r.mean() - 0.1) < 0.02)
-@@step Validate the inputs
-A probability outside `[0, 1]` or a non-positive sample size would raise a cryptic error deep inside NumPy. Check up front:
-
-```python
-if not 0 <= p <= 1 or n < 1 or trials < 1:
-    raise ValueError("need 0 <= p <= 1, n >= 1 and trials >= 1")
-```
-
-**Do:** add the guard, then Run.
-@@stepcheck
-def rejects(*args):
-    try:
-        simulate_rates(*args)
-    except ValueError:
-        return True
-    return False
-test("invalid inputs are rejected", lambda: rejects(1.5, 10, 10) and rejects(-0.1, 10, 10) and rejects(0.5, 0, 10) and rejects(0.5, 10, 0), "raise ValueError before drawing")
-@@step Show the law of large numbers
-Compare the spread of rates from small and large samples. Standard deviation is the right measure of wobble here:
-
-```python
-small = simulate_rates(0.12, 10, 2000).std()
-large = simulate_rates(0.12, 1000, 2000).std()
-print(f"spread with 10 visitors: {small:.3f}, with 1000: {large:.3f}")
-```
-
-Rates from 1000 visitors should wobble about ten times less (the spread shrinks with the square root of `n`).
-
-**Do:** add the comparison, store the two spreads in `small` and `large`, then Run.
-@@stepcheck
-test("large samples wobble far less than small ones", lambda: large < small / 5, "small = simulate_rates(0.12, 10, 2000).std(); large = simulate_rates(0.12, 1000, 2000).std()")
 @@starter
 import numpy as np
 

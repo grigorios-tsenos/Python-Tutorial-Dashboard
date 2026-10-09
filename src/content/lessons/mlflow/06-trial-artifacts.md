@@ -16,59 +16,6 @@ minutes: 6
 > **Mission:** implement `record_trial(name, params, scores)`. Start one run named `name` in experiment `trial-history`, log every supplied parameter, and log each quality score at its zero-based step. Save exactly `{"steps": len(scores), "best": max(scores), "last": scores[-1]}` as `summary.json`. Return the run ID after the run finishes. Reject an empty score list with `ValueError` before starting a run. Keep the input params and scores unchanged.
 
 Each call creates an independent run, even when the best score arrives before the final step.
-
-@@step Validate, open a named run, log the params
-Reject bad input *before* a run exists, so no empty run litters the history. Then open the run and keep a handle on it with `as run`:
-
-```python
-if not scores:
-    raise ValueError("a trial needs at least one score")
-mlflow.set_experiment("trial-history")
-with mlflow.start_run(run_name=name) as run:
-    mlflow.log_params(params)
-    run_id = run.info.run_id
-return run_id
-```
-
-**Do:** write this skeleton, then Run.
-@@stepcheck
-import mlflow
-rid = record_trial("skeleton", {"temperature": 0.5, "model": "new"}, [0.2, 0.9, 0.4])
-run = mlflow.get_run(rid)
-test("run name, experiment and parameters are recorded", lambda: run.info.run_name == "skeleton" and run.info.experiment_name == "trial-history" and run.data.params == {"temperature": "0.5", "model": "new"}, "with mlflow.start_run(run_name=name) as run: mlflow.log_params(params)")
-def rejected():
-    try:
-        record_trial("empty", {}, [])
-    except ValueError:
-        return True
-    return False
-test("empty histories are rejected before a run is started", rejected)
-@@step Log each score at its step
-`enumerate` gives you the zero-based position of every score; pass it as `step=`:
-
-```python
-for step, score in enumerate(scores):
-    mlflow.log_metric("quality", score, step=step)
-```
-
-**Do:** add the loop inside the run, then Run.
-@@stepcheck
-import mlflow
-run = mlflow.get_run(record_trial("curve", {}, [0.2, 0.9, 0.4]))
-test("each score keeps its zero-based step", lambda: run.metrics.get("quality") == [(0, 0.2), (1, 0.9), (2, 0.4)], "mlflow.log_metric('quality', score, step=step)")
-@@step Save the summary artifact
-`log_dict` writes JSON into the run's artifact store. The summary separates the best score from the last one, which the latest-value metric cannot:
-
-```python
-mlflow.log_dict({"steps": len(scores), "best": max(scores), "last": scores[-1]}, "summary.json")
-```
-
-**Do:** add the artifact inside the run, then Run.
-@@stepcheck
-import mlflow
-run = mlflow.get_run(record_trial("summary", {}, [0.2, 0.9, 0.4]))
-test("summary distinguishes best score from final score", lambda: run.artifacts.get("summary.json") == {"steps": 3, "best": 0.9, "last": 0.4} and run.data.metrics.get("quality") == 0.4, 'mlflow.log_dict({...}, "summary.json")')
-test("the returned run is finished", lambda: run.info.status == "FINISHED" and mlflow.active_run() is None)
 @@starter
 import mlflow
 

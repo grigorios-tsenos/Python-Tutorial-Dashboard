@@ -22,57 +22,6 @@ probs  = softmax(logits)         each row sums to 1
 Shapes are the whole story: `W1` is `(d, hidden)`, `W2` is `(hidden, k)`, and the biases are one per output column. The **cache** of intermediate values (`X`, `h`, `probs`) is what backpropagation will need later, so the forward pass returns it.
 
 > **Mission:** implement `hidden(X, params)` → `h`, and `forward(X, params)` → `(probs, cache)` where `cache` is a dict with keys `X`, `h` and `probs`. Softmax must subtract each row's maximum before `exp`.
-
-@@step The hidden layer
-One product, one bias, one bend:
-
-```python
-def hidden(X, params):
-    return relu(X @ params["W1"] + params["b1"])
-```
-
-**Do:** implement `hidden`, then Run.
-@@stepcheck
-import numpy as np
-P = init_params(2, 3, 2, seed=1)
-Xs = np.array([[1.0, -1.0], [0.5, 2.0]])
-ref = np.maximum(0, Xs @ P["W1"] + P["b1"])
-test("hidden is relu(X @ W1 + b1) with shape (n, hidden)", lambda: hidden(Xs, P).shape == (2, 3) and np.allclose(hidden(Xs, P), ref), 'relu(X @ params["W1"] + params["b1"])')
-@@step Logits and a stable softmax
-Scores per class, then probabilities per row. Subtract the row maximum first so `exp` cannot overflow (the probabilities are unchanged by that shift):
-
-```python
-h = hidden(X, params)
-logits = h @ params["W2"] + params["b2"]
-shifted = logits - logits.max(axis=1, keepdims=True)
-exp = np.exp(shifted)
-probs = exp / exp.sum(axis=1, keepdims=True)
-```
-
-**Do:** compute `probs` and return `probs, {}` for now, then Run.
-@@stepcheck
-import numpy as np
-P = init_params(2, 3, 2, seed=1)
-Xs = np.array([[1.0, -1.0], [0.5, 2.0], [100.0, 100.0]])
-probs, _ = forward(Xs, P)
-h = np.maximum(0, Xs @ P["W1"] + P["b1"])
-logits = h @ P["W2"] + P["b2"]
-e = np.exp(logits - logits.max(axis=1, keepdims=True))
-test("probs has one distribution per row, matching the reference", lambda: probs.shape == (3, 2) and np.allclose(probs.sum(axis=1), 1) and np.allclose(probs, e / e.sum(axis=1, keepdims=True)) and bool(np.isfinite(probs).all()), "subtract logits.max(axis=1, keepdims=True) before np.exp")
-@@step Return the cache
-Backprop needs the inputs, the hidden activations and the output probabilities. Pack them:
-
-```python
-return probs, {"X": X, "h": h, "probs": probs}
-```
-
-**Do:** fill the cache, then Run.
-@@stepcheck
-import numpy as np
-P = init_params(2, 3, 2, seed=1)
-Xs = np.array([[1.0, -1.0], [0.5, 2.0]])
-probs, cache = forward(Xs, P)
-test("the cache holds X, h and probs", lambda: set(cache) == {"X", "h", "probs"} and cache["X"] is Xs and np.allclose(cache["h"], hidden(Xs, P)) and np.allclose(cache["probs"], probs), '{"X": X, "h": h, "probs": probs}')
 @@starter
 import numpy as np
 

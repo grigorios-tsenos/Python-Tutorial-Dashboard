@@ -24,32 +24,6 @@ A **step** (a *node* in LangGraph) is a plain function: whole state in, **only t
 Two rules: **don't modify the old state** (build a new dict, so pause and resume keep working), and **keep steps small** (a step that returns `{"draft": ...}` can be tested alone, reordered, or retried).
 
 > **Mission:** implement `merge(state, update)` (a new dict; neither input modified), then run the two supplied steps in order so `final` contains the question, the facts and the draft.
-
-@@step merge builds a new dict
-Dictionary unpacking copies keys into a fresh dict; later keys win:
-
-```python
-return {**state, **update}
-```
-
-First every key of `state`, then every key of `update` on top. Neither input is touched.
-
-**Do:** implement `merge`, then Run.
-@@stepcheck
-s, u = {"a": 1, "b": 2}, {"b": 9, "c": 3}
-merged = merge(s, u)
-test("merge layers the update over the state in a new dict", lambda: merged == {"a": 1, "b": 9, "c": 3} and merged is not s and s == {"a": 1, "b": 2} and u == {"b": 9, "c": 3}, "return {**state, **update}")
-@@step Run the two steps in order
-Each step reads the state so far and returns only what it adds. Merge after each one, so the second step can see the first step's work:
-
-```python
-final = merge(state, research(state))
-final = merge(final, draft(final))
-```
-
-**Do:** replace `final = state`, then Run.
-@@stepcheck
-test("research's facts reached the draft step", lambda: final.get("question") == "What is a vector store?" and final.get("facts") == "3 docs about: What is a vector store?" and final.get("draft") == "Answer using 3 docs about: What is a vector store?", "merge after each step: research, then draft")
 @@starter
 def merge(state, update):
     """A NEW dict with update's keys layered over state's. Don't modify either."""

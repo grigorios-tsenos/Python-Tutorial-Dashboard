@@ -24,33 +24,6 @@ result     (3, 4)
 When a result surprises you, `print(a.shape, b.shape)` first. The starter opens the **Broadcast Lab**, which draws both inputs and the stretched result.
 
 > **Mission:** build a full 3 × 4 price table where each row is a product and each column is a discount: `prices * (1 - discounts)`. Store it in `table`.
-
-@@step Turn discounts into pay-fractions
-A 25% discount means you pay 75% of the price. Subtracting from 1 does that for the whole row at once:
-
-```python
-factors = 1 - discounts     # [1.0, 0.9, 0.75, 0.5]
-```
-
-This is broadcasting too: the single number `1` is stretched to meet all four discounts.
-
-**Do:** add the line above right after `discounts`, and pass `factors` to `orbit.show_broadcast` instead of `1 - discounts`. Run and look at the lab.
-@@stepcheck
-import numpy as np
-test("factors is the row of pay-fractions", lambda: np.allclose(factors, [1.0, 0.9, 0.75, 0.5]), "factors = 1 - discounts")
-@@step Multiply the column by the row
-`prices` is `(3, 1)`: three rows, one value each. `factors` is `(4,)`. Multiplying them directly already triggers the rule:
-
-```python
-table = prices * factors    # (3, 1) * (4,) -> (3, 4)
-```
-
-Read the lab: each price is reused across the four columns, each factor down the three rows. No loop, no `np.tile`, no copies.
-
-**Do:** replace `table = prices` with the line above, then Run. The result grid should show `15` in the bottom-right corner: 30 at half price.
-@@stepcheck
-test("table is 3 x 4", lambda: table.shape == (3, 4), "table = prices * factors")
-test("30 at 50% off is 15", lambda: table[2, 3] == 15.0)
 @@starter
 import numpy as np
 import orbit

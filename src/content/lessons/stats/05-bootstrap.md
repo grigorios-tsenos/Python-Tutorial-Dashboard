@@ -22,62 +22,6 @@ np.percentile(stats, [2.5, 97.5])                     # the 95% interval
 It works for any statistic, mean or median or p95, and needs no formula.
 
 > **Mission:** implement `bootstrap_stats(x, stat=np.mean, n_boot=1000, seed=0)` → an array of `n_boot` resampled statistics, and `bootstrap_ci(x, stat=np.mean, n_boot=1000, alpha=0.05, seed=0)` → `(low, high)`, the `alpha/2` and `1 − alpha/2` percentiles of those statistics. Reject an empty `x` and an `alpha` outside `(0, 1)` with `ValueError`.
-
-@@step Resample with replacement, many times at once
-One `rng.choice` call builds the whole matrix of resamples; `axis=1` computes the statistic for every row without a loop:
-
-```python
-x = np.asarray(x, dtype=float)
-rng = np.random.default_rng(seed)
-resamples = rng.choice(x, size=(n_boot, len(x)), replace=True)
-return stat(resamples, axis=1)
-```
-
-**Do:** implement `bootstrap_stats`, then Run.
-@@stepcheck
-import numpy as np
-x = np.array([120.0, 135, 128, 142, 131, 119, 125, 900])
-s = bootstrap_stats(x, n_boot=500, seed=1)
-ref = np.mean(np.random.default_rng(1).choice(x, size=(500, 8), replace=True), axis=1)
-test("one statistic per resample, drawn with replacement from the seed", lambda: s.shape == (500,) and np.allclose(s, ref), "rng.choice(x, size=(n_boot, len(x)), replace=True) then stat(..., axis=1)")
-test("any statistic works", lambda: bootstrap_stats(x, stat=np.median, n_boot=50).shape == (50,))
-@@step Read the interval off the percentiles
-The interval is the middle `1 − alpha` of the bootstrap distribution:
-
-```python
-stats = bootstrap_stats(x, stat, n_boot, seed)
-low, high = np.percentile(stats, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-return float(low), float(high)
-```
-
-**Do:** implement `bootstrap_ci`, then Run. The interval should contain the sample mean.
-@@stepcheck
-import numpy as np
-x = np.array([120.0, 135, 128, 142, 131, 119, 125, 900])
-low, high = bootstrap_ci(x, n_boot=2000, seed=0)
-test("the interval brackets the sample statistic", lambda: low < x.mean() < high and high - low > 0, "np.percentile(stats, [100 * alpha / 2, 100 * (1 - alpha / 2)])")
-test("a wider alpha gives a narrower interval", lambda: (lambda a, b: (b[1] - b[0]) < (a[1] - a[0]))(bootstrap_ci(x, alpha=0.05), bootstrap_ci(x, alpha=0.5)))
-@@step Refuse inputs that cannot produce an interval
-No data means nothing to resample, and `alpha` must leave room for an interval:
-
-```python
-if len(x) == 0:
-    raise ValueError("cannot bootstrap an empty sample")
-if not 0 < alpha < 1:
-    raise ValueError("alpha must be between 0 and 1")
-```
-
-Put the first guard in `bootstrap_stats` and the second in `bootstrap_ci`.
-
-**Do:** add both guards, then Run.
-@@stepcheck
-def rejects(fn):
-    try:
-        fn()
-    except ValueError:
-        return True
-    return False
-test("empty samples and impossible alphas are rejected", lambda: rejects(lambda: bootstrap_stats([])) and rejects(lambda: bootstrap_ci([1, 2, 3], alpha=0)) and rejects(lambda: bootstrap_ci([1, 2, 3], alpha=1.5)), "raise ValueError")
 @@starter
 import numpy as np
 

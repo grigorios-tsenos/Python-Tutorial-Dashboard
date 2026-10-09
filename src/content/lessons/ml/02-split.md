@@ -21,46 +21,6 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random
 `random_state` makes the split reproducible; a different seed gives a different split and slightly different scores, which is itself useful information.
 
 > **Mission:** implement `split(X, y, seed)` → the four arrays from a 75/25 split, and `holdout_scores(X, y, seed)` → `(train_r2, test_r2)` for a `LinearRegression` fitted on the training part only.
-
-@@step One reproducible split
-Wrap the library call so every later function uses the same split rule:
-
-```python
-return train_test_split(X, y, test_size=0.25, random_state=seed)
-```
-
-The four results come back in a fixed order: `X_train, X_test, y_train, y_test`.
-
-**Do:** implement `split`, then Run.
-@@stepcheck
-import numpy as np
-Xs = np.arange(40).reshape(-1, 1)
-ys = np.arange(40)
-a = split(Xs, ys, 0)
-b = split(Xs, ys, 0)
-test("a 75/25 split, in the standard order", lambda: len(a) == 4 and len(a[0]) == 30 and len(a[1]) == 10 and len(a[2]) == 30 and len(a[3]) == 10, "train_test_split(X, y, test_size=0.25, random_state=seed)")
-test("the same seed gives the same split", lambda: np.array_equal(a[1], b[1]) and not np.array_equal(a[1], split(Xs, ys, 1)[1]))
-@@step Fit on train, score on both
-Fit **only** on the training arrays. Score on both so you can compare: a big gap between the two numbers is the signature of overfitting.
-
-```python
-X_train, X_test, y_train, y_test = split(X, y, seed)
-model = LinearRegression().fit(X_train, y_train)
-return model.score(X_train, y_train), model.score(X_test, y_test)
-```
-
-**Do:** implement `holdout_scores`, then Run.
-@@stepcheck
-import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-rng = np.random.default_rng(0)
-Xs = rng.uniform(0, 10, (80, 1))
-ys = 3 * Xs[:, 0] + rng.normal(0, 1, 80)
-tr, te = holdout_scores(Xs, ys, 4)
-Xtr, Xte, ytr, yte = train_test_split(Xs, ys, test_size=0.25, random_state=4)
-m = LinearRegression().fit(Xtr, ytr)
-test("scores come from a model fitted on the training part only", lambda: np.isclose(tr, m.score(Xtr, ytr)) and np.isclose(te, m.score(Xte, yte)), "fit on X_train, y_train; score on each part")
 @@starter
 import numpy as np
 from sklearn.linear_model import LinearRegression

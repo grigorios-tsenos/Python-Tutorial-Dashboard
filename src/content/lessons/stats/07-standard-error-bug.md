@@ -20,43 +20,6 @@ SE = s / sqrt(n)         s = sample std (ddof=1)
 The starter builds the interval with `s` instead of `SE`, and with the population formula for `s`. With 400 samples its interval is twenty times too wide, so every real effect looks "not significant". Two bugs, two fixes.
 
 > **Mission:** fix `mean_ci(x, z=1.96)` so it returns `(low, high)` using the sample standard deviation (`ddof=1`) divided by `sqrt(n)`. A sample with fewer than 2 values raises `ValueError`.
-
-@@step Divide by the square root of n
-Run the starter: with 400 latencies the interval spans hundreds of milliseconds around a mean that moves by a few. The spread of the *data* is not the uncertainty of the *mean*. Divide by `sqrt(n)`:
-
-```python
-se = np.std(x) / np.sqrt(len(x))
-```
-
-**Do:** fix the scaling, then Run.
-@@stepcheck
-import numpy as np
-big = np.random.default_rng(0).normal(130, 20, 400)
-low, high = mean_ci(big)
-half = (high - low) / 2
-test("the half-width scales with 1/sqrt(n)", lambda: abs(half - 1.96 * np.std(big, ddof=1) / 20) < 0.3, "se = std / np.sqrt(len(x))")
-@@step Use the sample standard deviation
-`np.std` divides by `n` by default. For a sample, `ddof=1` divides by `n − 1`, which matters when `n` is small. Also, one value has no spread at all, so refuse it:
-
-```python
-if len(x) < 2:
-    raise ValueError("need at least two values for an interval")
-se = np.std(x, ddof=1) / np.sqrt(len(x))
-```
-
-**Do:** add `ddof=1` and the guard, then Run.
-@@stepcheck
-import numpy as np
-small = np.array([10.0, 12.0, 11.0, 13.0, 9.0])
-low, high = mean_ci(small)
-test("small samples use ddof=1", lambda: np.isclose((high - low) / 2, 1.96 * np.std(small, ddof=1) / np.sqrt(5)), "np.std(x, ddof=1)")
-def rejected():
-    try:
-        mean_ci([4.0])
-    except ValueError:
-        return True
-    return False
-test("a single value is rejected", rejected)
 @@starter
 import numpy as np
 

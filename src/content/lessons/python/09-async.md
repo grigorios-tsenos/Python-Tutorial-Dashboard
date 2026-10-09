@@ -27,60 +27,6 @@ results = await asyncio.gather(*coros)   # run concurrently, keep input order
 > - return `[]` for no prompts; reject `limit < 1` or `retries < 1` with `ValueError`
 
 The boss changes completion order and checks the exact retry count. Retry `TimeoutError` only; other exceptions must propagate immediately. Orbit supports top-level `await`, so test it right in the cell.
-
-@@step Fan out with gather, keep the order
-Define an inner `async def one(prompt)` that awaits `call_llm(prompt)`, then run one coroutine per prompt concurrently. `gather` returns results in the order you passed the coroutines, whatever order they finish in.
-@@stepcheck
-import asyncio
-async def llm(p):
-    await asyncio.sleep(0.03 if p == "a" else 0.005)
-    return p.upper()
-res = await fetch_all(["a", "b", "c", "d", "e"], llm, limit=5)
-test("results keep input order even when the first prompt finishes last", lambda: list(res) == ["A", "B", "C", "D", "E"], "return await asyncio.gather(*(one(p) for p in prompts))")
-@@step Cap the number in flight
-A semaphore with `limit` slots, acquired with `async with sem:` around the call inside `one`, means at most `limit` calls run at once; the rest wait for a slot.
-@@stepcheck
-import asyncio
-inflight = 0
-peak = 0
-async def llm(p):
-    global inflight, peak
-    inflight += 1
-    peak = max(peak, inflight)
-    await asyncio.sleep(0.03 if p == "a" else 0.005)
-    inflight -= 1
-    return p.upper()
-await fetch_all(["a", "b", "c", "d", "e"], llm, limit=2)
-test("runs concurrently, up to the limit (peak in flight is 2)", lambda: peak == 2, "peak in-flight calls was " + str(peak) + "; use asyncio.Semaphore(limit) inside one()")
-@@step Retry timeouts only, validate the inputs
-Inside the semaphore, loop `for attempt in range(retries)` with `try`/`except TimeoutError`, re-raising on the last attempt. Other exceptions are not caught. Validate `limit` and `retries` before building the semaphore.
-@@stepcheck
-import asyncio
-attempts = {}
-async def flaky(p):
-    attempts[p] = attempts.get(p, 0) + 1
-    if attempts[p] < 3:
-        raise TimeoutError("slow")
-    return p + "!"
-res2 = await fetch_all(["x", "y"], flaky, limit=2, retries=3)
-test("retries timeouts until success, exactly three attempts each", lambda: list(res2) == ["x!", "y!"] and attempts == {"x": 3, "y": 3}, "for attempt in range(retries): try ... except TimeoutError: if attempt == retries - 1: raise")
-other = 0
-async def invalid(p):
-    global other
-    other += 1
-    raise RuntimeError("bad response")
-try:
-    await fetch_all(["z"], invalid)
-    propagated = False
-except RuntimeError:
-    propagated = True
-test("non-timeout failures propagate without retries", lambda: propagated and other == 1)
-try:
-    await fetch_all([], invalid, limit=0)
-    bad = False
-except ValueError:
-    bad = True
-test("invalid limits are rejected", lambda: bad)
 @@starter
 import asyncio
 

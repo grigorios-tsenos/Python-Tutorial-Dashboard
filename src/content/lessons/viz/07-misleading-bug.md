@@ -17,31 +17,6 @@ Three models score 98.1%, 98.4% and 98.6%. The starter zooms the y axis into `[0
 The fixes are the habits from the last lesson, applied as rules: a zero-based axis for a bounded quantity, labelled axes, values printed on the bars so the reader sees the numbers, and a title that states what the data supports.
 
 > **Mission:** fix the chart: y axis from `0` to `1`, axis labels `model` and `accuracy`, the exact value printed on each bar, and a title that does not contain `3x`.
-
-@@step Start the axis at zero
-Run the starter and look at the chart: "ours" towers over "baseline". Change the limits so the bars show the whole quantity:
-
-```python
-ax.set_ylim(0, 1)
-```
-
-**Do:** fix the limits, then Run. The three bars now look nearly identical, which is the truth.
-@@stepcheck
-test("the y axis runs from 0 to 1", lambda: ax.get_ylim() == (0.0, 1.0), "ax.set_ylim(0, 1)")
-@@step Label, print the values, tell the truth
-Axis labels, the exact numbers on the bars, and a title the data can support:
-
-```python
-ax.set_xlabel("model")
-ax.set_ylabel("accuracy")
-ax.bar_label(ax.containers[0], fmt="%.3f")
-ax.set_title("Accuracy on the test set (n = 2000)")
-```
-
-**Do:** replace the old title and add the rest, then Run.
-@@stepcheck
-test("axes are labelled and the values are printed on the bars", lambda: ax.get_xlabel() == "model" and ax.get_ylabel() == "accuracy" and len(ax.texts) == 3, 'ax.bar_label(ax.containers[0], fmt="%.3f")')
-test("the title no longer claims 3x", lambda: "3x" not in ax.get_title().lower() and ax.get_title().strip() != "")
 @@starter
 import matplotlib.pyplot as plt
 

@@ -18,30 +18,6 @@ The churn model below scores a perfect test accuracy. Nobody celebrates, because
 2. **Preprocessing fitted on all rows before the split.** The scaler's means include the test rows, so the test score is slightly rosier than production will be.
 
 > **Mission:** remove the leaky feature from `FEATURES`, and make `model` a `Pipeline` of `StandardScaler` and `LogisticRegression` fitted on the training rows only (keep the split's `random_state=0`). The honest accuracy is well below 1.0.
-
-@@step Remove the feature that is the label in disguise
-Run the starter and look at the accuracy. Then ask of every feature: *would I know this at prediction time?* `days_since_churn` only exists after the customer has churned. Delete it from `FEATURES`.
-
-**Do:** fix the list, then Run.
-@@stepcheck
-test("the leaky feature is gone", lambda: "days_since_churn" not in FEATURES and set(FEATURES) == {"tenure", "monthly", "support_calls"}, 'FEATURES = ["tenure", "monthly", "support_calls"]')
-test("accuracy drops to an honest level", lambda: accuracy < 0.97, "a perfect score means the answer is still in the features")
-@@step Fit the scaler inside the split
-Delete the manual scaling. Split the raw features, then fit a pipeline on the training part so the scaler never sees test rows:
-
-```python
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
-model = Pipeline([("scale", StandardScaler()), ("clf", LogisticRegression())]).fit(X_train, y_train)
-accuracy = model.score(X_test, y_test)
-```
-
-**Do:** restructure the fitting, then Run.
-@@stepcheck
-import numpy as np
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import train_test_split
-Xtr, Xte, ytr, yte = train_test_split(df[FEATURES].values, df["churned"].values, test_size=0.25, random_state=0)
-test("the model is a pipeline whose scaler saw only training rows", lambda: isinstance(model, Pipeline) and np.allclose(model.named_steps["scale"].mean_, Xtr.mean(axis=0)), "Pipeline([...]).fit(X_train, y_train) after the split")
 @@starter
 import numpy as np
 import pandas as pd

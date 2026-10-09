@@ -452,7 +452,7 @@ class DataFrameReader:
         self._opts[k] = v
         return self
 
-    def _read(self, name, store):
+    def _read(self, name, store) -> "DataFrame":
         if name not in store:
             raise AnalysisException(f"[TABLE_OR_VIEW_NOT_FOUND] The table or view `{name}` cannot be found. Verify the spelling and correctness of the schema and catalog.")
         versions = store[name]
@@ -505,7 +505,7 @@ class SparkSession:
     def read(self):
         return DataFrameReader(self)
 
-    def createDataFrame(self, data, schema=None):
+    def createDataFrame(self, data, schema=None) -> "DataFrame":
         if isinstance(data, pd.DataFrame):
             return DataFrame(data.copy())
         names, types = None, None
@@ -530,7 +530,7 @@ class SparkSession:
                 pdf[c] = pdf[c].astype(t)
         return DataFrame(pdf)
 
-    def range(self, start, end=None, step=1):
+    def range(self, start, end=None, step=1) -> "DataFrame":
         if end is None:
             start, end = 0, start
         return DataFrame(pd.DataFrame({"id": np.arange(start, end, step, dtype="int64")}))
@@ -538,7 +538,7 @@ class SparkSession:
     def table(self, name):
         return self.read.table(name)
 
-    def sql(self, query, args=None, **kwargs):
+    def sql(self, query, args=None, **kwargs) -> "DataFrame":
         if args is not None and not isinstance(args, dict):
             raise NotImplementedError("Orbit's mini Spark SQL supports named parameter markers only: spark.sql('... WHERE x = :x', args={'x': 1}).")
         q = query.strip().rstrip(";")
@@ -567,7 +567,7 @@ class SparkSession:
         pass
 
 
-def _history(name):
+def _history(name) -> "DataFrame":
     if name not in _tables:
         raise AnalysisException(f"[TABLE_OR_VIEW_NOT_FOUND] The table or view `{name}` cannot be found.")
     rows = [{"version": v["version"], "timestamp": pd.Timestamp(v["ts"], unit="s").strftime("%Y-%m-%d %H:%M:%S"), "operation": v["op"]} for v in reversed(_tables[name])]

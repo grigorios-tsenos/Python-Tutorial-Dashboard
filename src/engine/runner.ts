@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { RunRequest, RunResult } from './types'
+import type { HoverDoc, RunRequest, RunResult } from './types'
 
 export type Phase = 'idle' | 'booting' | 'ready' | 'running' | 'error'
 export interface RunnerStatus {
@@ -19,6 +19,7 @@ const infraResult = (message: string): RunResult => ({ ok: false, stdout: '', er
 class Runner {
   private worker: Worker | null = null
   private pending = new Map<number, Pending>()
+  private hovers = new Map<number, (doc: HoverDoc | null) => void>()
   private nextId = 1
   private listeners = new Set<() => void>()
   private status: RunnerStatus = { phase: 'idle', detail: '' }
@@ -76,6 +77,9 @@ class Runner {
       this.pending.delete(msg.id)
       p.resolve(msg.result)
       if (this.pending.size === 0 && this.status.phase !== 'error') this.setStatus({ phase: 'ready', detail: '' })
+    } else if (msg.type === 'hover') {
+      this.hovers.get(msg.id)?.(msg.doc)
+      this.hovers.delete(msg.id)
     }
   }
 
@@ -97,6 +101,8 @@ class Runner {
       p.resolve(infraResult(message))
       this.pending.delete(id)
     }
+    for (const resolve of this.hovers.values()) resolve(null)
+    this.hovers.clear()
   }
 
   run(req: RunRequest): Promise<RunResult> {
@@ -106,6 +112,17 @@ class Runner {
       this.pending.set(id, { resolve })
       if (this.status.phase === 'ready') this.setStatus({ phase: 'running', detail: '' })
       worker.postMessage({ type: 'run', id, ...req })
+    })
+  }
+
+  /** Docs for the function or class at (1-based line, 0-based col). Never boots Python or touches the run status. */
+  hover(code: string, line: number, col: number): Promise<HoverDoc | null> {
+    const worker = this.worker
+    if (!worker) return Promise.resolve(null)
+    const id = this.nextId++
+    return new Promise((resolve) => {
+      this.hovers.set(id, resolve)
+      worker.postMessage({ type: 'hover', id, code, line, col })
     })
   }
 }

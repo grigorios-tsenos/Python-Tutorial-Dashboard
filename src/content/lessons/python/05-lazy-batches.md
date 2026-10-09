@@ -18,45 +18,6 @@ An embedding API takes several texts per request, but your dataset may be a gene
 > **Mission:** fix `batches(items, size=3)` so it returns a lazy iterator of tuples, in original order. Keep a partial final batch. It must work with one-shot generators and infinite sources: creating the iterator reads no items, and requesting its first batch reads only that batch. `size <= 0` raises `ValueError`.
 
 Empty input produces no batches. The checker watches how many source items were read, not just the output.
-
-@@step Stop reading the whole source
-`tuple(items)` pulls every item into memory before anything is returned, and then hands back one giant batch. Replace the body with the lazy tool:
-
-```python
-return batched(items, size)
-```
-
-Nothing is read until the caller asks for the first batch, and then exactly `size` items are read.
-
-**Do:** return `batched(items, size)`, then Run. The printed list should show three tuples.
-@@stepcheck
-seen = []
-def source():
-    for i in range(7):
-        seen.append(i)
-        yield i
-groups = batches(source(), 3)
-test("creating a batch iterator reads nothing", lambda: seen == [], "return batched(items, size); never wrap items in list() or tuple()")
-first = next(groups)
-test("the first request reads exactly one batch", lambda: first == (0, 1, 2) and seen == [0, 1, 2])
-@@step Keep order, keep the short tail, reject bad sizes
-A final batch with fewer than `size` items is still a batch: dropping it would lose records. `batched` keeps it, and it validates `size` for you. Confirm by running: the check feeds `size=0` and expects `ValueError`, and reads an infinite source for three batches only.
-@@stepcheck
-from itertools import count, islice
-test("full and partial batches preserve order", lambda: list(batches(range(8), 3)) == [(0, 1, 2), (3, 4, 5), (6, 7)] and list(batches([], 2)) == [])
-def guarded_infinite():
-    for item in count(10):
-        if item >= 17:
-            raise AssertionError("the source was read past the requested batches")
-        yield item
-test("unbounded sources are read only for requested batches", lambda: list(islice(batches(guarded_infinite(), 2), 3)) == [(10, 11), (12, 13), (14, 15)])
-def rejects(size):
-    try:
-        list(batches([1, 2], size))
-    except ValueError:
-        return True
-    return False
-test("invalid batch sizes are rejected", lambda: rejects(0) and rejects(-1))
 @@starter
 from itertools import batched
 

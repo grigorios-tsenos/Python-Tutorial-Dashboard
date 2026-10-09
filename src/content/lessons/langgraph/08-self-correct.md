@@ -30,63 +30,6 @@ START ─> generate ─> validate ─┬─ valid ──────────
 > - after `validate`: end when `status` is `"ok"`; else back to `generate` while `attempts < max_attempts`, else `fallback`
 > - `fallback` sets `order=None`, `status="needs_human"`, then ends
 > - `max_attempts < 1` raises `ValueError`; every `invoke` starts a fresh count
-
-@@step generate: pass the feedback, count the attempt
-The previous error lives in state (absent on the first pass), and so does the attempt count:
-
-```python
-return {"raw": model(state["message"], state.get("error")), "attempts": state.get("attempts", 0) + 1}
-```
-
-`state.get(key, default)` is the idiom for optional keys in a `TypedDict` state.
-
-**Do:** implement `generate`, then Run.
-@@stepcheck
-good = scripted('{"sku": "A", "quantity": 1}')
-out = build_extractor(good).invoke({"message": "x"})
-test("generate stores the reply, counts the attempt and passes no feedback at first", lambda: out["raw"] == '{"sku": "A", "quantity": 1}' and out["attempts"] == 1 and good.feedback == [None], '{"raw": model(state["message"], state.get("error")), "attempts": state.get("attempts", 0) + 1}')
-@@step validate: parse, or record why it failed
-Success and failure both return a partial update; only the keys differ:
-
-```python
-try:
-    return {"order": parse_order(state["raw"]), "status": "ok", "error": None}
-except ValueError as error:
-    return {"error": str(error)}
-```
-
-**Do:** implement `validate`, then Run.
-@@stepcheck
-good = scripted('{"sku": " MS-7 ", "quantity": 1}')
-first = build_extractor(good).invoke({"message": "one mouse"})
-test("a valid first reply finishes after one attempt", lambda: first["status"] == "ok" and first["order"] == {"sku": "MS-7", "quantity": 1} and first["error"] is None, "try parse_order(...) except ValueError as error: return {'error': str(error)}")
-@@step Route within the budget, fall back after it
-The router ends on success, retries while attempts remain, and otherwise hands over to `fallback`. Validate the budget when the graph is built:
-
-```python
-def route(state):
-    if state.get("status") == "ok":
-        return END
-    return "generate" if state["attempts"] < max_attempts else "fallback"
-```
-
-`fallback` returns `{"order": None, "status": "needs_human"}`. At the top of `build_extractor`: `if max_attempts < 1: raise ValueError(...)`.
-
-**Do:** implement `route`, `fallback` and the guard, then Run.
-@@stepcheck
-fixed = scripted('not json', '{"sku": "KB-01", "quantity": 0}', '{"sku": "KB-01", "quantity": 2}')
-second = build_extractor(fixed, max_attempts=3).invoke({"message": "two keyboards"})
-test("each retry receives the previous validation error", lambda: fixed.feedback == [None, "reply must be valid JSON", "quantity must be an integer from 1 to 99"] and second["status"] == "ok" and second["attempts"] == 3, 'return "generate" if state["attempts"] < max_attempts else "fallback"')
-stubborn = scripted('{"sku": ""}', '{"sku": ""}', '{"sku": ""}', '{"sku": "late", "quantity": 1}')
-spent = build_extractor(stubborn, max_attempts=2).invoke({"message": "???"})
-test("an exhausted budget routes to fallback instead of looping", lambda: spent["status"] == "needs_human" and spent["order"] is None and spent["attempts"] == 2)
-def rejected():
-    try:
-        build_extractor(fixed, max_attempts=0)
-    except ValueError:
-        return True
-    return False
-test("a budget below one is rejected", rejected)
 @@starter
 import json
 from typing import TypedDict

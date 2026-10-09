@@ -21,50 +21,6 @@ a = sigmoid(z)           squashed into (0, 1): a probability-like activation
 With a batch of inputs stacked as rows of `X`, the same thing is one matrix product: `X @ w + b` gives one `z` per row. Everything in this chapter is these two lines, stacked and repeated.
 
 > **Mission:** compute `z` for one input, implement `sigmoid` and apply it to get `a`, then compute `A` for a batch of three inputs at once.
-
-@@step The weighted sum
-`@` is the dot product for vectors. The bias shifts the result:
-
-```python
-z = w @ x + b
-```
-
-With `w = [0.5, -1.0]`, `x = [2.0, 1.0]` and `b = 0.5`: `1.0 − 1.0 + 0.5 = 0.5`.
-
-**Do:** replace `z = 0`, then Run.
-@@stepcheck
-import numpy as np
-test("z is the dot product plus the bias", lambda: np.isclose(z, 0.5), "z = w @ x + b")
-@@step Squash it with a sigmoid
-The sigmoid maps any number into `(0, 1)`: large negatives go to 0, large positives to 1, zero to 0.5:
-
-```python
-def sigmoid(t):
-    return 1 / (1 + np.exp(-t))
-
-a = sigmoid(z)
-```
-
-**Do:** implement `sigmoid` and compute `a`, then Run. Expect about `0.622`.
-@@stepcheck
-import numpy as np
-test("sigmoid squashes into (0, 1)", lambda: np.isclose(sigmoid(0), 0.5) and sigmoid(10) > 0.99 and sigmoid(-10) < 0.01, "1 / (1 + np.exp(-t))")
-test("a is sigmoid(z)", lambda: np.isclose(a, 0.6224593))
-@@step A whole batch in one product
-Stack inputs as rows. `X @ w` computes every row's dot product at once, and the bias broadcasts to all of them:
-
-```python
-Z = X @ w + b
-A = sigmoid(Z)
-```
-
-Three inputs in, three activations out, no loop.
-
-**Do:** compute `Z` and `A`, then Run.
-@@stepcheck
-import numpy as np
-test("Z holds one weighted sum per row", lambda: np.allclose(Z, [0.5, 0.5, -2.0]), "Z = X @ w + b")
-test("A squashes each one", lambda: A.shape == (3,) and np.allclose(A, 1 / (1 + np.exp(-np.array([0.5, 0.5, -2.0])))))
 @@starter
 import numpy as np
 

@@ -25,29 +25,6 @@ Two gotchas:
 - **The model here is fake.** `FakeListChatModel` returns scripted responses: offline, deterministic. Only the constructor differs from real code.
 
 > **Mission:** ask the model a question with `.invoke(...)`, store the whole reply in `reply`, and pull the plain text out into `text`. Print `type(reply).__name__` and `text`.
-
-@@step Call the model with invoke
-Every LangChain object that does work has one method: `.invoke(input)`. For a chat model the input can be a plain string:
-
-```python
-reply = llm.invoke("What is RAG?")
-```
-
-**Do:** replace `reply = None`, then Run. The first printed line should say `AIMessage`.
-@@stepcheck
-from langchain_core.messages import AIMessage
-test("reply is the model's message object", lambda: isinstance(reply, AIMessage), 'reply = llm.invoke("...") returns an AIMessage')
-@@step Read the text out of the message
-An `AIMessage` is a container: role, content, tool calls, metadata. The words live in `.content`:
-
-```python
-text = reply.content
-```
-
-**Do:** replace `text = ""`, then Run.
-@@stepcheck
-test("text holds the plain text from inside it", lambda: text == "RAG retrieves documents, then asks the model with them as context.", "text = reply.content")
-test("both were printed", lambda: "AIMessage" in __stdout__ and "RAG retrieves documents" in __stdout__)
 @@starter
 from langchain_core.language_models import FakeListChatModel
 

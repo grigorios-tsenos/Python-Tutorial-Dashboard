@@ -22,35 +22,6 @@ Product needs answers within **150 ms**, so you want the best model **that meets
 > **Mission:** implement `best_within_budget(experiment, max_latency_ms)` → `{"run_id", "model", "accuracy", "latency_ms"}` for the most accurate **finished** run in that experiment with `latency_ms` **at most** the budget; ties go to the lower latency. Return `None` when nothing qualifies. Don't log runs.
 
 The supplied `log_candidate` fills the history, including a crashed run that looks best on paper.
-
-@@step Filter on the server: budget and status
-The starter picks the globally best run, which is the crashed `small-v2`. Push the conditions into the query so the server returns only candidates that qualify:
-
-```python
-filter_string=f"metrics.latency_ms <= {max_latency_ms} and attributes.status = 'FINISHED'",
-```
-
-Metric values go in unquoted; the status is a string and must be quoted.
-
-**Do:** add the filter to `search_runs`, then Run. The pick becomes `small` at 0.88.
-@@stepcheck
-pick = best_within_budget("ticket-classifier", 150)
-test("the best finished run inside the budget wins", lambda: pick is not None and pick["model"] == "small" and pick["accuracy"] == 0.88 and pick["latency_ms"] == 95, "filter_string with metrics.latency_ms <= ... and attributes.status = 'FINISHED'")
-@@step Scope to the experiment, break ties, handle nothing
-Three more rules: `experiment_names=[experiment]` so the active experiment does not matter; `order_by=["metrics.accuracy DESC", "metrics.latency_ms ASC"]` so equal accuracies prefer the faster run; and `if runs.empty: return None` before `.iloc[0]`.
-
-**Do:** add all three, then Run.
-@@stepcheck
-import mlflow
-mlflow.set_experiment("other-team")
-log_candidate("their-best", "huge", 0.99, 10)
-mlflow.set_experiment("ties")
-log_candidate("slow-twin", "a", 0.9, 70)
-log_candidate("fast-twin", "b", 0.9, 30)
-mlflow.set_experiment("Default")
-test("other experiments are ignored, whatever experiment is active", lambda: best_within_budget("ticket-classifier", 150)["model"] == "small", "experiment_names=[experiment]")
-test("accuracy ties go to the faster run", lambda: best_within_budget("ties", 100)["model"] == "b", 'order_by=["metrics.accuracy DESC", "metrics.latency_ms ASC"]')
-test("nothing within budget gives None", lambda: best_within_budget("ticket-classifier", 5) is None, "if runs.empty: return None")
 @@starter
 import mlflow
 

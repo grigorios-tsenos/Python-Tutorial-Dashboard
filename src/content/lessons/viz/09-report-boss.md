@@ -21,32 +21,6 @@ An experiment is finished when someone else can judge it from one figure. Four p
 > - `confusion`: a square 2-D array of counts
 >
 > Panels, in `fig.axes` order: `[0]` losses on a log y axis with a legend; `[1]` accuracies with a legend and y limits `(0, 1)`; `[2]` bars sorted best-first with `yerr` and y limits `(0, 1)`; `[3]` `imshow` of the confusion matrix with the count written in every cell. Each panel has a title and the figure has a suptitle.
-
-@@step A 2×2 grid, titled
-Create the grid, flatten the axes array so `axes[0]..axes[3]` index the panels, give every panel a title and the figure a suptitle, and return the figure.
-@@stepcheck
-import numpy as np
-h = {"train_loss": [1.0, 0.5], "val_loss": [1.1, 0.6], "train_acc": [0.5, 0.8], "val_acc": [0.5, 0.75]}
-f = report_figure(h, {"a": (0.9, 0.01), "b": (0.8, 0.02)}, np.array([[5, 1], [2, 7]]))
-test("four titled panels and a figure title", lambda: f is not None and len(f.axes) == 4 and all(ax.get_title().strip() for ax in f.axes) and f._suptitle is not None and f._suptitle.get_text().strip() != "", "fig, axes = plt.subplots(2, 2, figsize=(10, 7)); axes = axes.flatten()")
-@@step The two curve panels
-Panel 0: both losses, `set_yscale("log")`, legend. Panel 1: both accuracies, legend, `set_ylim(0, 1)`.
-@@stepcheck
-import numpy as np
-h = {"train_loss": [1.0, 0.5, 0.2], "val_loss": [1.1, 0.6, 0.4], "train_acc": [0.5, 0.8, 0.9], "val_acc": [0.5, 0.75, 0.8]}
-f = report_figure(h, {"a": (0.9, 0.01)}, np.array([[5, 1], [2, 7]]))
-test("panel 0 shows both losses on a log scale with a legend", lambda: len(f.axes[0].get_lines()) == 2 and f.axes[0].get_yscale() == "log" and f.axes[0].get_legend() is not None and list(f.axes[0].get_lines()[1].get_ydata()) == [1.1, 0.6, 0.4])
-test("panel 1 shows both accuracies between 0 and 1 with a legend", lambda: len(f.axes[1].get_lines()) == 2 and f.axes[1].get_ylim() == (0.0, 1.0) and f.axes[1].get_legend() is not None)
-@@step The benchmark and the confusion matrix
-Panel 2: sort the benchmark by mean (best first), `ax.bar(names, means, yerr=stds, capsize=4)`, `set_ylim(0, 1)`. Panel 3: `ax.imshow(confusion)`, then loop over rows and columns and `ax.text(j, i, str(confusion[i, j]), ha="center", va="center")` for every cell.
-@@stepcheck
-import numpy as np
-h = {"train_loss": [1.0, 0.5], "val_loss": [1.1, 0.6], "train_acc": [0.5, 0.8], "val_acc": [0.5, 0.75]}
-cm = np.array([[5, 1], [2, 7]])
-f = report_figure(h, {"b": (0.8, 0.02), "a": (0.9, 0.01), "c": (0.85, 0.03)}, cm)
-heights = [p.get_height() for p in f.axes[2].patches]
-test("panel 2 ranks the benchmark with error bars", lambda: heights == [0.9, 0.85, 0.8] and any(type(c).__name__ == "ErrorbarContainer" for c in f.axes[2].containers) and f.axes[2].get_ylim() == (0.0, 1.0), "sort by mean descending, yerr=stds")
-test("panel 3 is a heatmap with every count written in", lambda: len(f.axes[3].images) == 1 and np.array_equal(f.axes[3].images[0].get_array(), cm) and sorted(t.get_text() for t in f.axes[3].texts) == ["1", "2", "5", "7"], "ax.imshow(confusion) and ax.text(j, i, str(confusion[i, j]), ha='center', va='center')")
 @@starter
 import numpy as np
 import matplotlib.pyplot as plt

@@ -21,32 +21,6 @@ minutes: 6
 `mlflow.set_experiment("name")` is the folder that groups related runs. The **MLflow Lab** on the right is a live run table, same as the MLflow UI.
 
 > **Mission:** inside the loop, log `temperature` as a **param** and a `quality` **metric** that gets worse as temperature rises (try `0.95 - 0.3 * temperature`).
-
-@@step Log the temperature as a param
-The loop opens one run per temperature. Record the setting inside the `with` block:
-
-```python
-mlflow.log_param("temperature", temperature)
-```
-
-**Do:** replace `pass` with the line above, then Run. The lab table gets a temperature column with three rows.
-@@stepcheck
-import mlflow
-df = mlflow.search_runs()
-test("three runs were logged with temperature as a param", lambda: len(df) == 3 and "params.temperature" in df.columns, "mlflow.log_param('temperature', temperature)")
-@@step Log a quality metric that falls as temperature rises
-Metrics are measured outcomes; here we fake one with a formula so the trend is visible:
-
-```python
-mlflow.log_metric("quality", 0.95 - 0.3 * temperature)
-```
-
-**Do:** add the metric, then Run. Sort the lab table by quality: the coldest run wins.
-@@stepcheck
-import mlflow
-df = mlflow.search_runs()
-test("quality is a metric", lambda: "metrics.quality" in df.columns, "use mlflow.log_metric('quality', ...)")
-test("hotter runs score lower", lambda: df.sort_values("params.temperature")["metrics.quality"].is_monotonic_decreasing)
 @@starter
 import mlflow
 

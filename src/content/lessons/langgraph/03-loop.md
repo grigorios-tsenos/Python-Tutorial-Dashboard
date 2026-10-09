@@ -23,32 +23,6 @@ graph.add_conditional_edges("review", route, {"write": "write", END: END})
 This graph writes a draft and loops until a reviewer approves (from the **third** draft on). The router is broken; LangGraph's **recursion limit** (25 steps) stops it instead of spinning forever.
 
 > **Mission:** run it, read the error, then fix `route` so the graph stops once the draft is approved. Final `attempts` must be `3`. Then add a safety budget: never write more than 5 drafts, approved or not.
-
-@@step Route on the state
-Run the starter and read the `GraphRecursionError`. The router returns `"write"` no matter what. Make it look at the state:
-
-```python
-return END if state["approved"] else "write"
-```
-
-**Do:** fix `route`, then Run. The final state should show three attempts.
-@@stepcheck
-test("loop stops after the approved draft", lambda: final["attempts"] == 3 and final["approved"] is True, 'return END if state["approved"] else "write"')
-@@step Add a budget the reviewer cannot defeat
-A reviewer that never approves would still hit the recursion limit. Make the router itself give up after five drafts:
-
-```python
-if state["approved"] or state["attempts"] >= 5:
-    return END
-return "write"
-```
-
-The error becomes a decision: a graph that stops on purpose is one you can put a fallback behind later.
-
-**Do:** add the budget, then Run. The routing function is checked directly with made-up states.
-@@stepcheck
-from langgraph.graph import END
-test("the router gives up after five attempts even without approval", lambda: route({"attempts": 5, "approved": False, "draft": ""}) == END and route({"attempts": 1, "approved": False, "draft": ""}) == "write", 'if state["approved"] or state["attempts"] >= 5: return END')
 @@starter
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END

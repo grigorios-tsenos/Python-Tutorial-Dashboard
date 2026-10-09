@@ -25,65 +25,6 @@ right[None, :, :]     # (m, d) -> (1, m, d)
 Those length-1 slots are *room for the other collection*. Subtract the two and broadcasting pairs every left point with every right point.
 
 > **Mission:** implement `pairwise_squared(left, right)` without Python loops. Return a floating-point matrix of all squared distances. Accept different row counts and empty matrices. Reject inputs that are not two-dimensional or have different feature counts with `ValueError`. Do not mutate either input.
-
-@@step Convert to float and reject bad shapes
-Inside `pairwise_squared`, start by converting both inputs and checking them:
-
-```python
-left = np.asarray(left, dtype=float)
-right = np.asarray(right, dtype=float)
-if left.ndim != 2 or right.ndim != 2 or left.shape[1] != right.shape[1]:
-    raise ValueError("expected matrices with matching feature counts")
-```
-
-`dtype=float` is not cosmetic: squaring large integers can overflow silently, while floats carry on. The guard rejects flat vectors and points with different feature counts.
-
-**Do:** add the conversion and the guard, then Run.
-@@stepcheck
-import numpy as np
-B = np.array([[0, 0], [0, 4], [3, 0]])
-def rejects(left, right):
-    try:
-        pairwise_squared(left, right)
-    except ValueError:
-        return True
-    return False
-test("incompatible input shapes are rejected", lambda: rejects([1, 2], B) and rejects(np.array([[0, 0], [3, 4]]), [[1, 2, 3]]), "compare ndim and the feature counts, raise ValueError")
-@@step Write pair_differences: one difference vector per pair
-Write a small helper **above** `pairwise_squared` that returns the `(n, m, d)` block of differences:
-
-```python
-def pair_differences(left, right):
-    """Shape (n, m, d): entry [i, j] is left[i] - right[j]."""
-    return left[:, None, :] - right[None, :, :]
-```
-
-Follow the shapes: `(n, 1, d) - (1, m, d)` broadcasts to `(n, m, d)`. Without the `None` axes, `left - right` would pair row 0 with row 0 only, and fail when `n != m`.
-
-**Do:** add the helper, then Run.
-@@stepcheck
-import numpy as np
-A = np.array([[0.0, 0.0], [3.0, 4.0]])
-B = np.array([[0.0, 0.0], [0.0, 4.0], [3.0, 0.0]])
-D = pair_differences(A, B)
-test("pair_differences has one difference vector per pair", lambda: D.shape == (2, 3, 2), "left[:, None, :] - right[None, :, :]")
-test("entry [1, 2] is left[1] - right[2]", lambda: np.allclose(D[1, 2], [0.0, 4.0]))
-@@step Square, then sum away the feature axis
-Square every coordinate difference, then sum over the **last** axis so each pair is left with one number:
-
-```python
-return np.sum(pair_differences(left, right) ** 2, axis=-1)   # (n, m, d) -> (n, m)
-```
-
-`axis=-1` means "the last axis", which is the feature axis whatever `n` and `m` are. Empty inputs work with no special case: broadcasting an axis of length 0 simply yields an empty table.
-
-**Do:** return the summed squares from `pairwise_squared`, then Run.
-@@stepcheck
-import numpy as np
-A = np.array([[0, 0], [3, 4]])
-B = np.array([[0, 0], [0, 4], [3, 0]])
-distances = pairwise_squared(A, B)
-test("every pair appears in the distance table", lambda: distances.shape == (2, 3) and np.allclose(distances, [[0, 16, 9], [25, 9, 16]]), "np.sum(differences ** 2, axis=-1)")
 @@starter
 import numpy as np
 

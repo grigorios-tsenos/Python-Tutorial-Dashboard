@@ -23,30 +23,6 @@ Three requests from one user are **three requests** but **one user**. A request 
 > **Mission:** write `service_metrics(events)` → one row per `region`, sorted by region, columns in order: `region`, `requests`, `measured`, `users`, `avg_latency_ms` (rounded to one decimal; NULL when nothing was measured). Keep the input unchanged.
 
 Use column expressions and aggregation, not Python-side collection. The checks include repeated users, missing users, unmeasured groups and an empty DataFrame.
-
-@@step Group by region and count requests
-`groupBy` followed by `agg` is Spark's aggregation shape. Every aggregate needs an `alias` to name its output column:
-
-```python
-return events.groupBy("region").agg(F.count("*").alias("requests")).orderBy("region")
-```
-
-**Do:** return the grouped counts, then Run.
-@@stepcheck
-out = service_metrics(events)
-test("one row per region with the request count", lambda: out.columns[:2] == ["region", "requests"] and [(r["region"], r["requests"]) for r in out.collect()] == [("EU", 3), ("US", 2)], 'groupBy("region").agg(F.count("*").alias("requests")).orderBy("region")')
-@@step Measured, users and the average
-Add three aggregates in order. `count(column)` skips NULLs, `countDistinct` ignores NULL users, and `round(avg, 1)` keeps one decimal (NULL when the group had no measurement):
-
-```python
-F.count("latency_ms").alias("measured"),
-F.countDistinct("user_id").alias("users"),
-F.round(F.avg("latency_ms"), 1).alias("avg_latency_ms"),
-```
-
-**Do:** extend `agg(...)`, then Run.
-@@stepcheck
-test("repeated users and missing latency use different counts", lambda: service_metrics(events).columns == ["region", "requests", "measured", "users", "avg_latency_ms"] and [tuple(r) for r in service_metrics(events).collect()] == [("EU", 3, 2, 2, 120.0), ("US", 2, 2, 1, 80.0)], "count(latency_ms), countDistinct(user_id), round(avg(latency_ms), 1)")
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

@@ -42,7 +42,11 @@ const dismissCelebration = async () => {
   try { await page.waitForSelector('.celebrate', { timeout: 2500 }); await page.keyboard.press('Escape'); await sleep(250) } catch {}
 }
 const shot = (name) => page.screenshot({ path: `${SHOTS}/${name}.png` })
-const go = async (hash) => { await page.evaluate((h) => (location.hash = h), hash); await sleep(300) }
+const fullExercise = async () => {
+  const button = page.getByRole('button', { name: 'Full exercise', exact: true })
+  if (await button.count()) await button.click()
+}
+const go = async (hash) => { await page.evaluate((h) => (location.hash = h), hash); await sleep(300); await fullExercise() }
 const backdropFrames = () => page.evaluate(async () => {
   const before = window.__backdropDraws
   for (let i = 0; i < 12; i++) await new Promise(requestAnimationFrame)
@@ -95,6 +99,7 @@ try {
   console.log('Lesson: run, hints, grading, celebration')
   await page.locator('.map-hero .btn.primary').click()
   await page.waitForSelector('.workbench .cm-editor')
+  await fullExercise()
   ok(page.url().includes('#/lesson/np-first-array'), 'CTA opens the first lesson')
   await page.locator('.btn.run').click()
   await page.waitForSelector('.out-verdict', { timeout: 90000 })
@@ -112,6 +117,8 @@ try {
 
   console.log('Persistence across reload')
   await page.reload()
+  await page.waitForSelector('.practice-modes')
+  await fullExercise()
   await page.waitForSelector('.workbench .cm-editor')
   ok(await page.locator('.done-chip').count() === 1, 'lesson still marked completed after reload')
   ok((await page.locator('.done-chip').innerText()).includes('3 hints'), 'completion chip shows how much help was used')
@@ -155,6 +162,13 @@ try {
   await shot('04-vim')
   await page.locator('.pill', { hasText: 'Vim' }).click()
   ok(await page.locator('.workbench .cm-vim-panel').count() === 0, 'Vim mode can be switched off')
+
+  console.log('Hover docs')
+  await page.locator('.workbench .cm-line span', { hasText: /^arange$/ }).hover()
+  await page.waitForSelector('.cm-doc-tip', { timeout: 60000 })
+  ok((await page.locator('.cm-doc-tip .sig').innerText()).startsWith('numpy.arange('), 'hovering a call shows its signature')
+  ok(/^numpy \d/.test(await page.locator('.cm-doc-tip .src').innerText()), 'the tooltip names the library version it was read from')
+  await page.mouse.move(5, 5)
 
   console.log('Visual labs')
   await go('#/lesson/np-broadcast')
@@ -213,8 +227,8 @@ try {
   await page.mouse.up()
   const guideAfter = await page.locator('.lesson-pane').evaluate((el) => el.getBoundingClientRect().width)
   ok(guideAfter > guideBefore + 100, `dragging the split widens the guide (${Math.round(guideBefore)} -> ${Math.round(guideAfter)})`)
-  // the layout is persisted to IndexedDB asynchronously; wait for the save before reloading
-  await page.waitForFunction(async (fraction) => {
+  const guideFraction = await page.locator('.lesson').evaluate(el => parseFloat(el.style.getPropertyValue('--guide')) / 100)
+  await page.waitForFunction(async expected => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('keyval-store')
       request.onsuccess = () => resolve(request.result)
@@ -226,12 +240,15 @@ try {
         request.onsuccess = () => resolve(request.result)
         request.onerror = () => reject(request.error)
       })
-      return stored && Math.abs(JSON.parse(stored).state.settings.layout.guide - fraction) < 0.01
+      return stored && JSON.parse(stored).state.settings.layout.guide === expected
     } finally { db.close() }
-  }, guideAfter / await page.evaluate(() => document.querySelector('.lesson').getBoundingClientRect().width))
+  }, guideFraction)
   await page.reload()
+  await page.waitForSelector('.practice-modes')
+  await fullExercise()
   await page.waitForSelector('.workbench .cm-editor')
-  ok(Math.abs((await page.locator('.lesson-pane').evaluate((el) => el.getBoundingClientRect().width)) - guideAfter) < 4, 'pane width survives a reload')
+  const guideReloaded = await page.locator('.lesson-pane').evaluate((el) => el.getBoundingClientRect().width)
+  ok(Math.abs(guideReloaded - guideAfter) < 4, `pane width survives a reload (${Math.round(guideAfter)} -> ${Math.round(guideReloaded)})`)
   await page.locator('.split-x').dblclick()
   await sleep(200)
   ok(Math.abs((await page.locator('.lesson-pane').evaluate((el) => el.getBoundingClientRect().width)) - guideBefore) < 4, 'double-click resets the split')

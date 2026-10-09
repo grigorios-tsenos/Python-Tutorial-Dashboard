@@ -25,67 +25,6 @@ logs.pivot_table(index="day", columns="endpoint", values="errors", aggfunc="sum"
 > - one column per endpoint with **any** request in the window, sorted; healthy endpoints get zeros
 > - integer counts, `0` where nothing failed; requests outside the window are ignored
 > - `end` before `start` raises `ValueError`; keep the input unchanged
-
-@@step Build the calendar first
-Start from what the answer must contain: one row per day. `pd.date_range` builds it, and an empty range means `end` came before `start`:
-
-```python
-days = pd.date_range(start, end, freq="D", tz="UTC", name="day")
-if days.empty:
-    raise ValueError("end must not be before start")
-```
-
-`tz="UTC"` makes the days comparable with timestamps from any offset; `name="day"` labels the index.
-
-**Do:** add the calendar and the guard at the top of the function, then Run.
-@@stepcheck
-import pandas as pd
-L = pd.DataFrame({"at": ["2026-03-01T09:00:00Z"], "endpoint": ["/chat"], "status": [500]})
-def rejected():
-    try:
-        daily_errors(L, "2026-03-03", "2026-03-01")
-    except ValueError:
-        return True
-    return False
-test("end before start is rejected", rejected, "an empty pd.date_range means the window is backwards")
-@@step Parse to UTC days, flag errors, pivot wide
-Three transformations, each a new column rather than a mutation of `logs`:
-
-```python
-day = pd.to_datetime(logs["at"], utc=True).dt.floor("D")        # any offset -> the UTC day
-window = logs.assign(day=day, errors=logs["status"] >= 500)[day.between(days[0], days[-1])]
-table = window.pivot_table(index="day", columns="endpoint", values="errors", aggfunc="sum", fill_value=0)
-```
-
-- `.dt.floor("D")` drops the time of day.
-- `errors` is a boolean column; summing it per cell counts the failures, and a healthy endpoint sums to 0.
-- `between(...)` keeps only the window, so out-of-range requests never become columns.
-
-**Do:** build `table` and return it, then Run. The quiet day `03-02` is still missing; that is the last step.
-@@stepcheck
-import pandas as pd
-L = pd.DataFrame({
-    "at": ["2026-03-01T09:00:00Z", "2026-03-01T09:05:00Z", "2026-03-01T17:30:00Z", "2026-03-03T08:00:00Z", "2026-03-03T08:01:00Z"],
-    "endpoint": ["/chat", "/embed", "/chat", "/chat", "/embed"],
-    "status": [500, 200, 503, 200, 502],
-})
-out = daily_errors(L, "2026-03-01", "2026-03-03")
-test("returns a wide DataFrame, one column per endpoint", lambda: isinstance(out, pd.DataFrame) and list(out.columns) == ["/chat", "/embed"], "pivot_table(index='day', columns='endpoint', values='errors', aggfunc='sum', fill_value=0)")
-test("the first day counts two /chat errors and no /embed errors", lambda: out.iloc[0].tolist() == [2, 0])
-@@step Reindex onto the calendar
-`reindex(days, fill_value=0)` returns the table with exactly the calendar's rows: existing days keep their counts, missing days are added as zeros. Summed booleans can come back as a wider type, so finish with `.astype(int)`.
-
-**Do:** return the reindexed, integer table, then Run.
-@@stepcheck
-import pandas as pd
-L = pd.DataFrame({
-    "at": ["2026-03-01T09:00:00Z", "2026-03-01T09:05:00Z", "2026-03-01T17:30:00Z", "2026-03-03T08:00:00Z", "2026-03-03T08:01:00Z"],
-    "endpoint": ["/chat", "/embed", "/chat", "/chat", "/embed"],
-    "status": [500, 200, 503, 200, 502],
-})
-out = daily_errors(L, "2026-03-01", "2026-03-03")
-test("every calendar day is a row, including the quiet one", lambda: [d.strftime("%Y-%m-%d") for d in out.index] == ["2026-03-01", "2026-03-02", "2026-03-03"] and out.index.name == "day", "table.reindex(days, fill_value=0)")
-test("counts are integers", lambda: all(pd.api.types.is_integer_dtype(t) for t in out.dtypes), ".astype(int)")
 @@starter
 import pandas as pd
 

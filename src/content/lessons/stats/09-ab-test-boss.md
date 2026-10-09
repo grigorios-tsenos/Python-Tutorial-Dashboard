@@ -24,46 +24,6 @@ A checkout redesign ran as an A/B test: each visitor is a `1` (converted) or `0`
 > | `decision` | `"ship"` if `p_value < alpha` and `lift > 0`; `"stop"` if `p_value < alpha` and `lift < 0`; else `"inconclusive"` |
 >
 > Inputs are lists or arrays of 0/1. An empty group raises `ValueError`. The same inputs and seed must give the same report.
-
-@@step Rates, lift and validation
-Convert both groups to float arrays, reject empty ones, and compute the three plain numbers. Return them in the dict (the other keys can wait).
-@@stepcheck
-import numpy as np
-r = ab_report([0, 1, 0, 0], [1, 1, 0, 1], n_boot=10, n_perm=10)
-test("rates and lift", lambda: np.isclose(r["control_rate"], 0.25) and np.isclose(r["treatment_rate"], 0.75) and np.isclose(r["lift"], 0.5), "lift = treatment_rate - control_rate")
-def rejected():
-    try:
-        ab_report([], [1, 0])
-    except ValueError:
-        return True
-    return False
-test("an empty group is rejected", rejected)
-@@step A bootstrap interval for the lift
-With one generator, resample the control group (`rng.choice(control, size=(n_boot, len(control)), replace=True)`), then the treatment group the same way, take row means of each, subtract, and read the `alpha/2` and `1 − alpha/2` percentiles.
-@@stepcheck
-import numpy as np
-rng = np.random.default_rng(1)
-c = rng.binomial(1, 0.10, 500)
-t = rng.binomial(1, 0.16, 500)
-r = ab_report(c, t, n_boot=500, n_perm=10, seed=3)
-g = np.random.default_rng(3)
-cb = g.choice(c.astype(float), size=(500, 500), replace=True).mean(axis=1)
-tb = g.choice(t.astype(float), size=(500, 500), replace=True).mean(axis=1)
-lo, hi = np.percentile(tb - cb, [2.5, 97.5])
-test("ci is the bootstrap percentile interval of the lift", lambda: np.isclose(r["ci"][0], lo) and np.isclose(r["ci"][1], hi), "resample control then treatment from one rng, subtract row means, percentiles")
-test("the interval brackets the observed lift", lambda: r["ci"][0] < r["lift"] < r["ci"][1])
-@@step A permutation p-value and the decision
-Pool, permute `n_perm` times with a fresh `default_rng(seed)`, split at `len(control)`, and count shuffled gaps with `|gap| >= |lift|`. Then apply the decision rule.
-@@stepcheck
-import numpy as np
-rng = np.random.default_rng(1)
-c = rng.binomial(1, 0.10, 500)
-t = rng.binomial(1, 0.16, 500)
-win = ab_report(c, t, n_boot=100, n_perm=500)
-tie = ab_report(c, c, n_boot=100, n_perm=200)
-test("a clear improvement ships with a small p-value", lambda: 0 < win["p_value"] < 0.05 and win["decision"] == "ship", "(count + 1) / (n_perm + 1), then the decision rule")
-test("identical groups are inconclusive", lambda: tie["lift"] == 0 and tie["p_value"] > 0.5 and tie["decision"] == "inconclusive")
-test("a clear regression says stop", lambda: ab_report(t, c, n_boot=100, n_perm=500)["decision"] == "stop")
 @@starter
 import numpy as np
 

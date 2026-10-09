@@ -21,30 +21,6 @@ df[df["temp"] > 8]         # keep only the rows where the mask is True
 No loops: describe *which rows you want*, pandas does the rest.
 
 > **Mission:** from the model benchmark table, keep only the models with accuracy **above 0.85** and store them in `strong`.
-
-@@step Build the mask
-Compare a whole column with a number and you get a Series of booleans, one per row, in row order:
-
-```python
-mask = runs["accuracy"] > 0.85     # [False, False, True, True]
-```
-
-`0.85` itself is *not* above `0.85`: the comparison is strict.
-
-**Do:** add the line above after the table, then Run.
-@@stepcheck
-import pandas as pd
-test("mask is one boolean per row", lambda: isinstance(mask, pd.Series) and mask.tolist() == [False, False, True, True], 'mask = runs["accuracy"] > 0.85')
-@@step Keep only the rows where the mask is True
-Put the mask inside square brackets on the **whole frame**. Rows whose mask is True survive, every column comes along:
-
-```python
-strong = runs[mask]
-```
-
-**Do:** replace `strong = runs` with the line above, then Run. The result shows `medium` and `large` only.
-@@stepcheck
-test("only strong models remain", lambda: list(strong["model"]) == ["medium", "large"], "strong = runs[mask]")
 @@starter
 import pandas as pd
 
