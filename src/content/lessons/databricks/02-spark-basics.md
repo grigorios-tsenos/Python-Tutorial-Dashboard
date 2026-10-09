@@ -18,13 +18,33 @@ import pyspark.sql.functions as F
 
 df.filter(F.col("fare") > 10)                       # keep rows (like a WHERE)
 df.withColumn("tax", F.col("fare") * 0.2)           # add/replace a column
-df.select("city", "fare")                           # pick columns
-df.show()                                           # print a table
 ```
 
 Every call returns a **new** DataFrame; chain them.
 
-> **Mission:** keep trips with `fare > 10`, then add `fare_per_person = fare / passengers`. Store the result in `result`.
+> **Mission:** keep trips with `fare > 10` in `kept`, then add `fare_per_person = fare / passengers` and store that in `result`.
+
+@@step Keep rows with a filter
+`F.col("fare") > 10` is not a boolean: it is a **column expression**, a description Spark evaluates later. `filter` keeps the rows where it is true:
+
+```python
+kept = trips.filter(F.col("fare") > 10)
+```
+
+**Do:** add the line, then Run. `kept` has three rows; the 9.5 trip is gone.
+@@stepcheck
+test("kept holds only the trips above 10", lambda: kept.count() == 3 and kept.columns == ["city", "fare", "passengers"], 'kept = trips.filter(F.col("fare") > 10)')
+@@step Add a column with withColumn
+`withColumn(name, expression)` returns a new DataFrame with one more column. Column expressions combine with ordinary operators:
+
+```python
+result = kept.withColumn("fare_per_person", F.col("fare") / F.col("passengers"))
+```
+
+**Do:** replace `result = trips`, then Run.
+@@stepcheck
+test("new column added", lambda: result.columns == ["city", "fare", "passengers", "fare_per_person"], 'withColumn("fare_per_person", F.col("fare") / F.col("passengers"))')
+test("values are right", lambda: [r["fare_per_person"] for r in result.collect()] == [6.25, 10.0, 18.0])
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
@@ -36,7 +56,9 @@ trips = spark.createDataFrame(
     ["city", "fare", "passengers"],
 )
 
-# TODO: keep fare > 10, then add a fare_per_person column
+# TODO 1: kept = the trips with fare > 10
+
+# TODO 2: result = kept plus a fare_per_person column
 result = trips
 
 result.show()
@@ -51,21 +73,20 @@ trips = spark.createDataFrame(
     ["city", "fare", "passengers"],
 )
 
-result = (
-    trips
-    .filter(F.col("fare") > 10)
-    .withColumn("fare_per_person", F.col("fare") / F.col("passengers"))
-)
+kept = trips.filter(F.col("fare") > 10)
+
+result = kept.withColumn("fare_per_person", F.col("fare") / F.col("passengers"))
 
 result.show()
 @@check
 test("the cheap SF trip is filtered out", lambda: result.count() == 3)
 test("new column added", lambda: result.columns == ["city", "fare", "passengers", "fare_per_person"])
 test("values are right", lambda: [r["fare_per_person"] for r in result.collect()] == [6.25, 10.0, 18.0])
+test("the original table still has four rows", lambda: trips.count() == 4)
 @@hint
-Chain two calls: `.filter(F.col("fare") > 10)` then `.withColumn("fare_per_person", ...)`.
+Two calls: `.filter(F.col("fare") > 10)` for `kept`, then `.withColumn("fare_per_person", ...)` on `kept`.
 @@hint
-`.withColumn("fare_per_person", F.col("fare") / F.col("passengers"))`
+`result = kept.withColumn("fare_per_person", F.col("fare") / F.col("passengers"))`
 @@q
 Are Spark DataFrames mutable?
 @@a

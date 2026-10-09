@@ -11,23 +11,67 @@ minutes: 7
 @@body
 # The model remembers nothing; the prompt remembers for it
 
-Every call starts from zero. A chatbot "remembers" because your code resends the earlier messages. `MessagesPlaceholder` splices a list of messages into a template:
+Every call starts from zero. A chatbot "remembers" because your code resends the earlier messages. `MessagesPlaceholder` splices a list of messages into a template.
 
-```python
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a support assistant for {product}."),
-    MessagesPlaceholder("history"),        # earlier turns go here
-    ("human", "{question}"),               # the new question goes last
-])
-```
-
-Histories grow, and so do cost and latency, so keep a **window** of recent turns. A turn starts with a human message and includes the replies after it: never cut one in half, and start the window on a human message (many APIs reject a leading assistant message). `RunnablePassthrough.assign(history=fn)` rewrites one input key before the prompt sees it.
+Histories grow, and so do cost and latency, so keep a **window** of recent turns. A turn starts with a human message and includes the replies after it: never cut one in half, and start the window on a human message (many APIs reject a leading assistant message).
 
 > **Mission:**
 >
 > 1. Add the `history` placeholder between the system message and the question.
 > 2. `trim_history(messages, max_turns)` → a new list with the last `max_turns` turns: from the `max_turns`-th last human message to the end. With fewer turns, start at the first human message. `max_turns <= 0` or no human messages gives `[]`. Don't modify the input.
 > 3. `build_chain(llm, max_turns=2)` → `trim history | prompt | llm | StrOutputParser()`, taking `{"product", "history", "question"}` and returning a string.
+
+@@step Splice the history into the prompt
+`MessagesPlaceholder("history")` is a slot that expands to however many messages the input's `history` holds:
+
+```python
+("system", "You are a support assistant for {product}."),
+MessagesPlaceholder("history"),
+("human", "{question}"),
+```
+
+**Do:** add the placeholder line, then Run. The model should report seeing 9 messages: system, seven of history, the question.
+@@stepcheck
+from langchain_core.messages import HumanMessage
+msgs = prompt.invoke({"product": "A", "history": [HumanMessage("x")], "question": "q"}).to_messages()
+test("history messages appear between the system prompt and the question", lambda: [m.type for m in msgs] == ["system", "human", "human"] and msgs[1].content == "x", 'MessagesPlaceholder("history") between the two tuples')
+@@step trim_history keeps whole turns
+Find where each turn starts, keep the last `max_turns` of those starts, and slice from the earliest one:
+
+```python
+if max_turns <= 0:
+    return []
+starts = [i for i, m in enumerate(messages) if m.type == "human"][-max_turns:]
+return list(messages[starts[0]:]) if starts else []
+```
+
+Slicing from a human index guarantees the window begins on a question, and `list(...)` returns a fresh list.
+
+**Do:** implement `trim_history`, then Run.
+@@stepcheck
+from langchain_core.messages import AIMessage, HumanMessage
+H = [AIMessage("Hi! How can I help?"), HumanMessage("invoice wrong"), AIMessage("Which month?"), HumanMessage("March"), AIMessage("Fixed."), HumanMessage("login fails"), AIMessage("Try a reset."), AIMessage("Did that work?")]
+text = lambda ms: [m.content for m in ms]
+test("two turns keep whole turns, including consecutive replies", lambda: text(trim_history(H, 2)) == ["March", "Fixed.", "login fails", "Try a reset.", "Did that work?"], "slice from the second-to-last human message")
+test("no window and no human messages give an empty history", lambda: trim_history(H, 0) == [] and trim_history([AIMessage("hello")], 3) == [])
+@@step Trim inside the chain
+`RunnablePassthrough.assign(history=fn)` passes the input dict through with one key rewritten, so the prompt only ever sees the trimmed history:
+
+```python
+RunnablePassthrough.assign(history=lambda x: trim_history(x["history"], max_turns)) | prompt | llm | StrOutputParser()
+```
+
+**Do:** build the chain, then Run. The model should now see 6 messages with `max_turns=2`.
+@@stepcheck
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables import RunnableLambda
+H = [AIMessage("Hi! How can I help?"), HumanMessage("invoice wrong"), AIMessage("Which month?"), HumanMessage("March"), AIMessage("Fixed."), HumanMessage("login fails"), AIMessage("Try a reset."), AIMessage("Did that work?")]
+log = []
+def recorder(pv):
+    log.append(pv.to_messages())
+    return AIMessage("ok")
+out = build_chain(RunnableLambda(recorder), max_turns=1).invoke({"product": "Acme", "history": H, "question": "q"})
+test("the chain trims the history before the prompt sees it", lambda: out == "ok" and [m.type for m in log[-1]] == ["system", "human", "ai", "ai", "human"], "RunnablePassthrough.assign(history=...) | prompt | llm | StrOutputParser()")
 @@starter
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder

@@ -16,6 +16,32 @@ Conditional edges can route from `START`: the router reads the input state and r
 > **Mission:** implement `build_router(threshold)` to return a compiled graph. Route priorities **greater than or equal to** the threshold to the supplied `urgent` node; route lower priorities to `standard`. Run exactly one branch, then finish at `END`. Keep the input question and priority in the final state.
 
 The graph must use the threshold passed to the builder.
+
+@@step Route from START with a conditional edge
+The router is a function of the state; because it is defined inside `build_router`, it can read `threshold` directly (a closure). The path map translates its return value into a node name:
+
+```python
+graph.add_conditional_edges(
+    START,
+    lambda state: "urgent" if state["priority"] >= threshold else "standard",
+    {"urgent": "urgent", "standard": "standard"},
+)
+```
+
+**Do:** add the conditional edge, then Run.
+@@stepcheck
+test("high-priority tickets take the urgent branch", lambda: app.invoke({"question": "Data is missing", "priority": 4})["reply"] == "URGENT: Data is missing", "add_conditional_edges(START, router, path_map)")
+test("lower-priority tickets take the standard branch", lambda: app.invoke({"question": "Add a chart", "priority": 2})["reply"] == "QUEUED: Add a chart")
+@@step Finish both branches, respect the threshold
+Each branch needs its own way out: `graph.add_edge("urgent", END)` and `graph.add_edge("standard", END)`. The threshold itself counts as urgent (`>=`), and a different builder call must use its own threshold.
+
+**Do:** add both END edges, then Run.
+@@stepcheck
+import orbit
+test("the threshold itself is urgent", lambda: app.invoke({"question": "At the threshold", "priority": 3})["reply"] == "URGENT: At the threshold")
+test("a new builder threshold changes the chosen path", lambda: build_router(5).invoke({"question": "Different team", "priority": 4})["reply"] == "QUEUED: Different team")
+edges = {(e["from"], e["to"]) for t in orbit._emits if t["kind"] == "graph_trace" for e in t["data"]["edges"]}
+test("both branches lead to END", lambda: ("urgent", "__end__") in edges and ("standard", "__end__") in edges, 'graph.add_edge("urgent", END) and graph.add_edge("standard", END)')
 @@starter
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END

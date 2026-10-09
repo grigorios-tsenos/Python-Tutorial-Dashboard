@@ -29,6 +29,9 @@ export default function App() {
     document.documentElement.dataset.motion = reduce ? 'reduced' : 'full'
     document.documentElement.dataset.accent = accent
   }, [theme, reduce, accent])
+  useEffect(() => {
+    document.documentElement.dataset.route = route.name
+  }, [route.name])
 
   useEffect(() => {
     runner.boot() // pre-warm Python while the learner reads the map

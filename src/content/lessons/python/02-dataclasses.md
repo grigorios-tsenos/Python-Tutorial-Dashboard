@@ -11,24 +11,58 @@ minutes: 6
 @@body
 # Model your data first
 
-Every LLM SDK uses the same shape: a **message** has a *role* and *content*; a **conversation** is a list of messages. `@dataclass` writes `__init__`, `__repr__` and `__eq__` for you.
+Every LLM SDK uses the same shape: a **message** has a *role* and *content*; a **conversation** is a list of messages. `@dataclass` writes `__init__`, `__repr__` and `__eq__` for you from the field list.
 
 ```python
-from dataclasses import dataclass, field
-
 @dataclass
 class Point:
     x: int
-    y: int = 0                       # a default
-
-@dataclass
-class Bag:
-    items: list = field(default_factory=list)   # mutable defaults need a factory!
+    y: int = 0                                   # a default
+    tags: list = field(default_factory=list)     # mutable defaults need a factory
 ```
 
-> The last line is the trap: `items: list = []` is rejected, because every instance would share *one* list.
+The last line is the trap: `tags: list = []` is rejected, because every instance would share *one* list.
 
 > **Mission:** finish `Conversation`. It needs a list of `Message`s (a fresh list per instance), an `add(role, content)` method, and a `word_count` property: the total number of words across all messages.
+
+@@step A fresh list for every conversation
+`messages: list = None` means every conversation starts with nothing to append to. A `default_factory` is a function called **per instance**, so each one gets its own empty list:
+
+```python
+messages: list = field(default_factory=list)
+```
+
+**Do:** replace the default, then Run.
+@@stepcheck
+test("each Conversation gets its own list", lambda: Conversation().messages == [] and Conversation().messages is not Conversation().messages, "messages: list = field(default_factory=list)")
+@@step add() builds a Message and appends it
+`Message(role, content)` is the generated constructor: positional, in field order. Append the object, not a tuple or a string:
+
+```python
+self.messages.append(Message(role, content))
+```
+
+**Do:** implement `add`, then Run.
+@@stepcheck
+c = Conversation()
+c.add("user", "hello big world")
+c.add("assistant", "hi")
+test("add() stores Message objects", lambda: len(c.messages) == 2 and c.messages[0] == Message("user", "hello big world"), "self.messages.append(Message(role, content))")
+@@step word_count sums the words of every message
+`text.split()` breaks a string on whitespace into a list of words. Count each message's words and add them up with a generator expression inside `sum`:
+
+```python
+return sum(len(m.content.split()) for m in self.messages)
+```
+
+`@property` makes it read like an attribute: `chat.word_count`, no parentheses.
+
+**Do:** implement `word_count`, then Run. The cell should print `4`.
+@@stepcheck
+c = Conversation()
+c.add("user", "hello big world")
+c.add("assistant", "hi")
+test("word_count adds up all messages", lambda: c.word_count == 4, "sum(len(m.content.split()) for m in self.messages)")
 @@starter
 from dataclasses import dataclass, field
 

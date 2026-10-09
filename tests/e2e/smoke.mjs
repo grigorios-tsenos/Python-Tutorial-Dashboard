@@ -62,9 +62,9 @@ try {
   console.log('Map')
   await page.goto(URL)
   await page.waitForSelector('.star', { timeout: 15000 })
-  ok((await page.locator('.star').count()) === 72, '72 stars rendered')
-  ok((await page.locator('.legend-item').count()) === 8, '8 tracks in legend')
-  ok(await page.locator('.map-hero h1').innerText().then((t) => /learn ai engineering/i.test(t)), 'first-visit hero shown')
+  ok((await page.locator('.star').count()) === 108, '108 stars rendered')
+  ok((await page.locator('.legend-item').count()) === 12, '12 tracks in legend')
+  ok(await page.locator('.map-hero h1').innerText().then((t) => /learn ai/i.test(t)), 'first-visit hero shown')
   ok(await page.locator('.difficulty-step').count() === 9, 'difficulty path shows nine stages')
   ok((await page.locator('.difficulty-step[aria-current="step"]').innerText()).includes('Basics'), 'new learners start at Basics difficulty')
   await page.evaluate(() => { for (let i = 0; i < 5; i++) window.dispatchEvent(new Event('resize')) })
@@ -94,7 +94,7 @@ try {
 
   console.log('Lesson: run, hints, grading, celebration')
   await page.locator('.map-hero .btn.primary').click()
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   ok(page.url().includes('#/lesson/np-first-array'), 'CTA opens the first lesson')
   await page.locator('.btn.run').click()
   await page.waitForSelector('.out-verdict', { timeout: 90000 })
@@ -112,7 +112,7 @@ try {
 
   console.log('Persistence across reload')
   await page.reload()
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   ok(await page.locator('.done-chip').count() === 1, 'lesson still marked completed after reload')
   ok((await page.locator('.done-chip').innerText()).includes('3 hints'), 'completion chip shows how much help was used')
   ok(await page.locator('.lockin textarea').count() === 1, 'takeaway box appears after completion')
@@ -136,7 +136,7 @@ try {
 
   console.log('Vim mode')
   await go('#/lesson/np-shapes')
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   await page.locator('.pill', { hasText: 'Vim' }).click()
   await page.waitForSelector('.cm-vim-panel', { timeout: 5000 })
   ok(true, 'Vim status panel appears when enabled')
@@ -158,14 +158,14 @@ try {
 
   console.log('Visual labs')
   await go('#/lesson/np-broadcast')
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   await page.locator('.btn.run').click()
   await page.waitForSelector('.bc-grids', { timeout: 30000 })
   ok(true, 'Broadcast Lab renders')
   await shot('05-broadcast-lab')
 
   await go('#/lesson/lg-first')
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   await revealSolutionAndRun()
   await page.waitForSelector('.gt-svg', { timeout: 30000 })
   ok(await page.locator('.gt-node').count() === 4, 'Graph Lab draws START, 2 nodes, END')
@@ -176,7 +176,7 @@ try {
   await shot('06-graph-lab')
 
   await go('#/lesson/ml-track')
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   await revealSolutionAndRun()
   await page.waitForSelector('.ml-table', { timeout: 30000 })
   ok(await page.locator('.ml-table tbody tr').count() === 3, 'MLflow Lab shows 3 runs')
@@ -196,7 +196,7 @@ try {
 
   console.log('Layout: page keys and resizable panes')
   await go('#/lesson/np-shapes')
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   await page.locator('.lesson-pane header h1').click()
   await page.keyboard.press('i')
   ok(await page.evaluate(() => !!document.activeElement?.closest('.workbench .cm-editor')), '"i" focuses the editor from the page')
@@ -213,8 +213,24 @@ try {
   await page.mouse.up()
   const guideAfter = await page.locator('.lesson-pane').evaluate((el) => el.getBoundingClientRect().width)
   ok(guideAfter > guideBefore + 100, `dragging the split widens the guide (${Math.round(guideBefore)} -> ${Math.round(guideAfter)})`)
+  // the layout is persisted to IndexedDB asynchronously; wait for the save before reloading
+  await page.waitForFunction(async (fraction) => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('keyval-store')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    try {
+      const stored = await new Promise((resolve, reject) => {
+        const request = db.transaction('keyval').objectStore('keyval').get('orbit-progress')
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      return stored && Math.abs(JSON.parse(stored).state.settings.layout.guide - fraction) < 0.01
+    } finally { db.close() }
+  }, guideAfter / await page.evaluate(() => document.querySelector('.lesson').getBoundingClientRect().width))
   await page.reload()
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   ok(Math.abs((await page.locator('.lesson-pane').evaluate((el) => el.getBoundingClientRect().width)) - guideAfter) < 4, 'pane width survives a reload')
   await page.locator('.split-x').dblclick()
   await sleep(200)
@@ -262,7 +278,7 @@ try {
 
   console.log('Timeout protection')
   await go('#/lesson/np-shapes')
-  await page.waitForSelector('.cm-editor')
+  await page.waitForSelector('.workbench .cm-editor')
   await page.locator('.workbench .cm-content').click()
   await page.keyboard.press('Meta+a')
   await page.keyboard.type('while True:\n    pass')

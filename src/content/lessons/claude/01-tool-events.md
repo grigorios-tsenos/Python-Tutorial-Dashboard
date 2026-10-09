@@ -28,6 +28,37 @@ Claude Code reads files, edits code and runs shell commands on a real machine. T
 > - missing `command`/`file_path` → `"?"` in their place (don't crash)
 >
 > Then print one line per event in `LOG`: your first audit trail.
+
+@@step Pull the fields out safely
+Read both fields with defaults, and return the tool name as the baseline summary:
+
+```python
+tool = event.get("tool_name", "?")
+details = event.get("tool_input", {})
+return tool
+```
+
+`details` defaults to an empty dict, so a later `.get` on it works even when `tool_input` is missing entirely.
+
+**Do:** write the two lookups and return `tool`, then Run.
+@@stepcheck
+test("other tools show just their name", lambda: describe({"tool_name": "WebSearch", "tool_input": {"query": "x"}}) == "WebSearch", 'return event.get("tool_name", "?") for tools you do not special-case')
+test("an event without tool_input does not crash", lambda: isinstance(describe({"tool_name": "Bash"}), str))
+@@step Show the interesting detail per tool
+Branch on the tool before the fallback. Each detail is read with its own default, so a missing command or path becomes `?`:
+
+```python
+if tool == "Bash":
+    return f"Bash: {details.get('command', '?')}"
+if tool in ("Edit", "Write"):
+    return f"{tool}: {details.get('file_path', '?')}"
+```
+
+**Do:** add both branches above the fallback, then Run.
+@@stepcheck
+test("a Bash event shows its command", lambda: describe({"tool_name": "Bash", "tool_input": {"command": "npm test"}}) == "Bash: npm test")
+test("Edit and Write events show their file", lambda: describe({"tool_name": "Edit", "tool_input": {"file_path": "a.py"}}) == "Edit: a.py" and describe({"tool_name": "Write", "tool_input": {"file_path": "b.md"}}) == "Write: b.md")
+test("missing details become ? instead of a crash", lambda: describe({"tool_name": "Bash"}) == "Bash: ?" and describe({"tool_name": "Edit", "tool_input": {}}) == "Edit: ?", "details.get('command', '?')")
 @@starter
 def describe(event):
     """One readable line per tool event."""

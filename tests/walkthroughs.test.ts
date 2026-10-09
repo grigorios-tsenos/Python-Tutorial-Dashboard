@@ -102,7 +102,7 @@ it('offers smaller code-free prerequisite steps and valid prediction checks for 
     for (const step of warmup.steps) {
       expect(step.code).toBe('')
       const layout = layoutWalkthrough(step, 280)
-      expect(new Set(layout.cells.map(c => c.id)).size).toBe(layout.cells.length)
+      expect(new Set(layout.cells.map(c => c.id)).size, `${id}: ${step.title}`).toBe(layout.cells.length)
       for (const cell of layout.cells) expect(cell.x + cell.width).toBeLessThanOrEqual(280)
       if (step.check) {
         expect(step.check.options[step.check.answer]).toBeTruthy()

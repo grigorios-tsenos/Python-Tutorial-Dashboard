@@ -13,12 +13,7 @@ minutes: 9
 
 Every pipeline has rules: *an order has a user*, *the amount is a number*. Failing the job blocks good rows; dropping bad rows silently hides bugs. **Quarantine** does neither: good rows flow on, bad rows land in a side table **with the reason**.
 
-`F.when` chains evaluate in order, so the **first** broken rule names the reason:
-
-```python
-reason = (F.when(rule_1_broken, "rule_1")
-           .when(rule_2_broken, "rule_2"))   # NULL when nothing is broken
-```
+`F.when` chains evaluate in order, so the **first** broken rule names the reason, and the chain is NULL when nothing is broken.
 
 Two NULL traps: `isin(...)` on a NULL country is NULL, not false, so test `isNull()` explicitly; and under ANSI mode `cast("double")` raises on `"n/a"`, so use `try_cast`.
 
@@ -29,6 +24,42 @@ Two NULL traps: `isin(...)` on a NULL country is NULL, not false, so test `isNul
 > 3. `unknown_country`: `country` is NULL or not in `countries`
 >
 > `valid`: rows passing every rule, original columns, `amount` cast to **double**. `quarantine`: every other row **unchanged** plus a `reason` column naming the first broken rule. Each input row lands in exactly one output. Keep the input unchanged; an empty input gives two empty outputs with those schemas.
+
+@@step Tag every row with its first broken rule
+Build one `reason` expression, rule by rule, and attach it as a column. Then the quarantine is simply the rows where the reason is not NULL:
+
+```python
+reason = (
+    F.when(F.col("user").isNull() | (F.trim(F.col("user")) == ""), "missing_user")
+    .when(F.col("amount").try_cast("double").isNull(), "bad_amount")
+    .when(F.col("country").isNull() | ~F.col("country").isin(countries), "unknown_country")
+)
+tagged = df.withColumn("reason", reason)
+quarantine = tagged.filter(F.col("reason").isNotNull())
+```
+
+**Do:** build `tagged` and return the real `quarantine` (keep `valid` as it is for now), then Run.
+@@stepcheck
+v, q = apply_expectations(orders, COUNTRIES)
+test("each quarantined row names its first broken rule", lambda: {r["order_id"]: r["reason"] for r in q.collect()} == {"o2": "missing_user", "o3": "bad_amount", "o5": "unknown_country", "o6": "missing_user"}, "F.when(...).when(...).when(...) in rule order, then filter reason.isNotNull()")
+test("quarantine keeps the raw values", lambda: q.columns == ["order_id", "user", "amount", "country", "reason"] and ("o3", "u3", "n/a", "DE", "bad_amount") in [tuple(r) for r in q.collect()])
+@@step Split out the valid rows, cast the amount
+Valid rows are the ones with no reason. Drop the helper column and cast the amount now that you know it parses:
+
+```python
+valid = (
+    tagged.filter(F.col("reason").isNull())
+    .drop("reason")
+    .withColumn("amount", F.col("amount").try_cast("double"))
+)
+```
+
+**Do:** replace the `dropna` line, then Run. Every input row lands in exactly one output.
+@@stepcheck
+recs = lambda df: sorted(tuple(r) for r in df.collect())
+v, q = apply_expectations(orders, COUNTRIES)
+test("valid rows pass every rule, refunds are valid, amount is a double", lambda: v.columns == ["order_id", "user", "amount", "country"] and dict(v.dtypes)["amount"] == "double" and recs(v) == [("o1", "u1", 19.99, "US"), ("o4", "u4", -4.5, "FR")], 'filter(reason.isNull()).drop("reason").withColumn("amount", try_cast double)')
+test("every input row lands in exactly one output", lambda: v.count() + q.count() == orders.count())
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

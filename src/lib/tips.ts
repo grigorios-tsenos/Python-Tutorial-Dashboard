@@ -11,6 +11,12 @@ export const TIPS = [
   'Make pipelines idempotent: running twice should be as safe as running once.',
   'Prompts are suggestions. Hooks are guarantees.',
   'In Vim, ciw changes the word under your cursor. Try it in the editor.',
+  'Report p95, not the mean: one slow request should not hide behind a hundred fast ones.',
+  'A model scoring 100% on the test set has a leak, not a breakthrough. Audit the features.',
+  'predict() hides a 0.5 cutoff. Choose the threshold from the cost of a miss.',
+  'Start bar charts at zero. A truncated axis turns half a point into a cliff.',
+  'Softmax + cross-entropy has the gradient probs - onehot. Everything else is the chain rule.',
+  'Start a Focus sprint before a lesson: a finite block of work is easier to begin.',
 ]
 
 export function tipOfTheDay(dayKey: string): string {

@@ -9,24 +9,60 @@ xp: 25
 minutes: 4
 ---
 @@body
-# AI runs on arrays
+# Everything becomes numbers first
 
-Every AI input becomes **a list of numbers** first: a sentence becomes an embedding, an image a grid of pixels, a user a row of features. Everything ahead — tables, embeddings, model scores — is arrays underneath.
+A sentence becomes an *embedding* (a list of numbers). An image becomes a grid of pixel values. A customer becomes a row of features. Models only compute with numbers, so every AI pipeline starts by turning data into **arrays**.
 
-A NumPy array is a list where **math applies to every element at once**.
+A NumPy array is a list with one superpower: **maths applies to every element at once**.
 
 ```python
-import numpy as np
-
 scores = np.array([0.2, 0.5, 0.9])
-scores + 0.1       # [0.3, 0.6, 1.0]  <- no loop
+scores + 0.1       # [0.3, 0.6, 1.0]   no loop
 scores.mean()      # 0.533...
-scores > 0.4       # [False, True, True]
 ```
 
-No `for` loops: say *what* you want and NumPy applies it to everything.
-
 > **Mission:** a search engine returned similarity scores as a plain Python list. Turn it into an array called `scores`, make `boosted` by adding `0.05` to every score at once (no loop), and print the average of the boosted scores.
+
+@@step Upgrade the list to an array
+`raw` is a plain Python list. A list can hold numbers, but it cannot do maths on all of them at once. Wrap it:
+
+```python
+scores = np.array(raw)
+```
+
+- `np` is NumPy, imported at the top of the cell.
+- `np.array(...)` copies the values into an array. The list `raw` is left exactly as it was.
+
+**Do:** replace `scores = raw` with the line above, then Run.
+@@stepcheck
+import numpy as np
+test("scores is a NumPy array, not a list", lambda: isinstance(scores, np.ndarray), "wrap the list: np.array(raw)")
+test("the original values are all there", lambda: np.allclose(np.sort(scores), [0.27, 0.31, 0.44, 0.68, 0.91]))
+@@step Add 0.05 to every score with one +
+On a list, `+ 0.05` is an error. On an array it means "add 0.05 to each element", and NumPy runs the loop for you in fast compiled code:
+
+```python
+boosted = scores + 0.05
+```
+
+Nothing is written back into `scores`: the line makes a *new* array and names it `boosted`.
+
+**Do:** replace `boosted = scores` with the line above, then Run.
+@@stepcheck
+import numpy as np
+test("boosted adds 0.05 to every score", lambda: isinstance(boosted, np.ndarray) and np.allclose(np.sort(boosted), [0.32, 0.36, 0.49, 0.73, 0.96]), "boosted = scores + 0.05")
+@@step Print the average with .mean()
+Arrays carry their own summaries. `boosted.mean()` folds all five numbers into one:
+
+```python
+print(boosted.mean())
+```
+
+The parentheses matter: `mean` is a method you *call*. Without them you would print a description of the method, not the number.
+
+**Do:** change the last line so it prints the mean, not the whole array, then Run.
+@@stepcheck
+test("the boosted average is printed", lambda: "0.572" in __stdout__, "print(boosted.mean()) should show 0.572")
 @@starter
 import numpy as np
 

@@ -198,8 +198,11 @@ export function MapView() {
             ))}
 
             {TRACKS.slice(0, -1).map((t, i) => {
-              const a = SPOTS[lessonsOf(t.id).at(-1)!.id]
-              const b = SPOTS[lessonsOf(TRACKS[i + 1].id)[0].id]
+              const last = lessonsOf(t.id).at(-1)
+              const first = lessonsOf(TRACKS[i + 1].id)[0]
+              if (!last || !first) return null
+              const a = SPOTS[last.id]
+              const b = SPOTS[first.id]
               const lit = progress[i].pct === 1
               return <path key={t.id} d={`M ${a.x} ${a.y} Q ${(a.x + b.x) / 2} ${(a.y + b.y) / 2 + (i % 2 ? -90 : 90)} ${b.x} ${b.y}`} className={`route ${lit ? 'lit' : ''}`} />
             })}
@@ -275,8 +278,8 @@ export function MapView() {
         {first ? (
           <>
             <div className="eyebrow">Welcome, pilot</div>
-            <h1>Learn AI engineering by doing</h1>
-            <p className="dim">Real Python in your browser, no setup. Light the first star.</p>
+            <h1>Learn AI and data science by doing</h1>
+            <p className="dim">Real Python in your browser, no setup. One small step at a time. Light the first star.</p>
           </>
         ) : next ? (
           <>
@@ -292,7 +295,7 @@ export function MapView() {
           </>
         )}
         {next && <a className="btn primary" href={lessonPath(next.id)}>{first ? 'Light your first star' : 'Continue'} →</a>}
-        {first && <p className="hero-feats">72 hands-on lessons · 9 steps per chapter · XP, streaks & bosses</p>}
+        {first && <p className="hero-feats">{LESSONS.length} hands-on lessons · {TRACKS.length} chapters · step-by-step checks, XP, streaks & bosses</p>}
         <div className="hero-tracks" role="list" aria-label="Jump to a chapter">
           {progress.map(({ track: t, done, total }) => (
             <button

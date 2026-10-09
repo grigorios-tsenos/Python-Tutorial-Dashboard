@@ -11,27 +11,55 @@ minutes: 6
 @@body
 # Stretching arrays without copying
 
-Add a column of 3 numbers to a row of 4 and NumPy *broadcasts*: it virtually stretches each array until the shapes agree, then does the math.
+Multiply a column of 3 prices by a row of 4 discount factors and NumPy *broadcasts*: it virtually stretches each array until the shapes agree, then does the maths for every combination.
 
-**The rule:** align shapes from the **right**. Two dimensions are compatible if they are **equal** or one is **1**. A missing dimension counts as 1. A `1` means "a single slot that can be stretched along this axis." When a result surprises you, `print(a.shape, b.shape)` first.
+**The rule:** align the shapes from the **right**. Two dimensions are compatible when they are **equal** or one of them is **1**. A missing dimension counts as 1.
 
 ```
 prices     (3, 1)
-discounts     (4,)   ->  treated as (1, 4)
+factors       (4,)   ->  treated as (1, 4)
 result     (3, 4)
 ```
 
-Run the starter to open the **Broadcast Lab**, which draws both inputs and the stretched result.
+When a result surprises you, `print(a.shape, b.shape)` first. The starter opens the **Broadcast Lab**, which draws both inputs and the stretched result.
 
 > **Mission:** build a full 3 × 4 price table where each row is a product and each column is a discount: `prices * (1 - discounts)`. Store it in `table`.
+
+@@step Turn discounts into pay-fractions
+A 25% discount means you pay 75% of the price. Subtracting from 1 does that for the whole row at once:
+
+```python
+factors = 1 - discounts     # [1.0, 0.9, 0.75, 0.5]
+```
+
+This is broadcasting too: the single number `1` is stretched to meet all four discounts.
+
+**Do:** add the line above right after `discounts`, and pass `factors` to `orbit.show_broadcast` instead of `1 - discounts`. Run and look at the lab.
+@@stepcheck
+import numpy as np
+test("factors is the row of pay-fractions", lambda: np.allclose(factors, [1.0, 0.9, 0.75, 0.5]), "factors = 1 - discounts")
+@@step Multiply the column by the row
+`prices` is `(3, 1)`: three rows, one value each. `factors` is `(4,)`. Multiplying them directly already triggers the rule:
+
+```python
+table = prices * factors    # (3, 1) * (4,) -> (3, 4)
+```
+
+Read the lab: each price is reused across the four columns, each factor down the three rows. No loop, no `np.tile`, no copies.
+
+**Do:** replace `table = prices` with the line above, then Run. The result grid should show `15` in the bottom-right corner: 30 at half price.
+@@stepcheck
+test("table is 3 x 4", lambda: table.shape == (3, 4), "table = prices * factors")
+test("30 at 50% off is 15", lambda: table[2, 3] == 15.0)
 @@starter
 import numpy as np
 import orbit
 
 prices = np.array([[10.0], [20.0], [30.0]])   # shape (3, 1)
 discounts = np.array([0.0, 0.1, 0.25, 0.5])   # shape (4,)
+# TODO 1: factors = the fraction of the price you still pay
 
-# TODO: price after each discount, for every product -> shape (3, 4)
+# TODO 2: price after each discount, for every product -> shape (3, 4)
 table = prices
 
 # Peek at how NumPy stretched the shapes:
@@ -43,19 +71,20 @@ import orbit
 
 prices = np.array([[10.0], [20.0], [30.0]])   # shape (3, 1)
 discounts = np.array([0.0, 0.1, 0.25, 0.5])   # shape (4,)
+factors = 1 - discounts
 
-table = prices * (1 - discounts)
+table = prices * factors
 
-orbit.show_broadcast(prices, 1 - discounts, "*")
+orbit.show_broadcast(prices, factors, "*")
 table
 @@check
 test("table is 3 x 4", lambda: table.shape == (3, 4), "you need one column per discount: shape (3, 4)")
 test("first column is the undiscounted price", lambda: list(table[:, 0]) == [10.0, 20.0, 30.0])
 test("30 at 50% off is 15", lambda: table[2, 3] == 15.0)
 @@hint
-`prices` is (3, 1) and `1 - discounts` is (4,). Multiplying them directly already triggers broadcasting.
+`prices` is (3, 1) and `factors` is (4,). Multiplying them directly already triggers broadcasting.
 @@hint
-`table = prices * (1 - discounts)`. No loop and no `np.tile` needed.
+`factors = 1 - discounts`, then `table = prices * factors`. No loop and no `np.tile` needed.
 @@q
 Shapes `(3, 1)` and `(4,)` broadcast to which shape?
 @@a

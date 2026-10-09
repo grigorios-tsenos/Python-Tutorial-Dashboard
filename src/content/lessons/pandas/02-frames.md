@@ -11,14 +11,9 @@ minutes: 5
 @@body
 # Rows, columns, and boolean masks
 
-A **DataFrame** is a table of named, typed columns. A **Series** is one column. The daily workhorse is the *boolean mask*:
+A **DataFrame** is a table of named, typed columns. A **Series** is one column. The daily workhorse is the *boolean mask*: a column of True/False, one per row, that says which rows you want.
 
 ```python
-import pandas as pd
-
-df = pd.DataFrame({"city": ["Oslo", "Lima", "Kyiv"], "temp": [4, 19, 9]})
-
-df["temp"]                 # one column (a Series)
 df["temp"] > 8             # a True/False mask, one entry per row
 df[df["temp"] > 8]         # keep only the rows where the mask is True
 ```
@@ -26,6 +21,30 @@ df[df["temp"] > 8]         # keep only the rows where the mask is True
 No loops: describe *which rows you want*, pandas does the rest.
 
 > **Mission:** from the model benchmark table, keep only the models with accuracy **above 0.85** and store them in `strong`.
+
+@@step Build the mask
+Compare a whole column with a number and you get a Series of booleans, one per row, in row order:
+
+```python
+mask = runs["accuracy"] > 0.85     # [False, False, True, True]
+```
+
+`0.85` itself is *not* above `0.85`: the comparison is strict.
+
+**Do:** add the line above after the table, then Run.
+@@stepcheck
+import pandas as pd
+test("mask is one boolean per row", lambda: isinstance(mask, pd.Series) and mask.tolist() == [False, False, True, True], 'mask = runs["accuracy"] > 0.85')
+@@step Keep only the rows where the mask is True
+Put the mask inside square brackets on the **whole frame**. Rows whose mask is True survive, every column comes along:
+
+```python
+strong = runs[mask]
+```
+
+**Do:** replace `strong = runs` with the line above, then Run. The result shows `medium` and `large` only.
+@@stepcheck
+test("only strong models remain", lambda: list(strong["model"]) == ["medium", "large"], "strong = runs[mask]")
 @@starter
 import pandas as pd
 
@@ -35,7 +54,9 @@ runs = pd.DataFrame({
     "cost_usd": [0.0, 0.8, 2.4, 3.1],
 })
 
-# TODO: keep only the rows with accuracy above 0.85
+# TODO 1: a True/False mask: which rows have accuracy above 0.85?
+
+# TODO 2: keep only those rows
 strong = runs
 
 strong
@@ -48,16 +69,19 @@ runs = pd.DataFrame({
     "cost_usd": [0.0, 0.8, 2.4, 3.1],
 })
 
-strong = runs[runs["accuracy"] > 0.85]
+mask = runs["accuracy"] > 0.85
+
+strong = runs[mask]
 
 strong
 @@check
 test("only strong models remain", lambda: list(strong["model"]) == ["medium", "large"], "keep rows where accuracy > 0.85")
 test("all columns kept", lambda: list(strong.columns) == ["model", "accuracy", "cost_usd"])
+test("the original table still has every row", lambda: len(runs) == 4)
 @@hint
 Build a mask with `runs["accuracy"] > 0.85`, then use it inside square brackets on the whole frame.
 @@hint
-`strong = runs[runs["accuracy"] > 0.85]`
+`mask = runs["accuracy"] > 0.85` then `strong = runs[mask]`.
 @@q
 What does `df[df["x"] > 3]` return?
 @@a

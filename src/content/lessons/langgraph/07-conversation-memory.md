@@ -11,11 +11,43 @@ minutes: 8
 @@body
 # Messages need both a reducer and a checkpointer
 
-`MessagesState` appends new messages; a `MemorySaver` keeps that state between invocations, keyed by `thread_id`. Send only the new user message each turn — resending the history would duplicate it.
+`MessagesState` appends new messages; a `MemorySaver` keeps that state between invocations, keyed by `thread_id`. Send only the new user message each turn: resending the history would duplicate it.
 
 > **Mission:** implement `make_chat()` to return a compiled `MessagesState` graph with one node named `reply` and a fresh `MemorySaver`. The node counts **human messages** in the saved conversation and appends an `AIMessage` with content `turn N: TEXT`, where `N` is that count and `TEXT` is the newest human message in uppercase. Wire `START → reply → END`.
 
 A second turn in the same thread must remember the first; a different thread, or a newly built chat, starts at turn 1.
+
+@@step Count the human turns, echo the newest
+The node sees the whole saved conversation in `state["messages"]`. Filter for the human ones:
+
+```python
+humans = [message for message in state["messages"] if message.type == "human"]
+return {"messages": [AIMessage(f"turn {len(humans)}: {humans[-1].content.upper()}")]}
+```
+
+Returning only the new message is enough: `MessagesState` appends it.
+
+**Do:** implement `reply`, then Run.
+@@stepcheck
+first = make_chat().invoke({"messages": [("user", "alpha")]}, {"configurable": {"thread_id": "t1"}})
+test("the reply numbers the turn and echoes the newest human message", lambda: first["messages"][-1].content == "turn 1: ALPHA", 'count messages whose .type == "human"')
+@@step Compile with a fresh MemorySaver
+Without a checkpointer every invoke starts from an empty conversation, so the count is always 1. Compile with a saver created **inside** `make_chat`, so each chat has its own memory:
+
+```python
+return graph.compile(checkpointer=MemorySaver())
+```
+
+**Do:** change the compile line, then Run. The cell should print `turn 2: AGAIN`.
+@@stepcheck
+chat = make_chat()
+alice = {"configurable": {"thread_id": "alice"}}
+bob = {"configurable": {"thread_id": "bob"}}
+chat.invoke({"messages": [("user", "alpha")]}, alice)
+second = chat.invoke({"messages": [("user", "beta")]}, alice)
+other = chat.invoke({"messages": [("user", "different person")]}, bob)
+test("the second turn remembers the first", lambda: second["messages"][-1].content == "turn 2: BETA", "graph.compile(checkpointer=MemorySaver())")
+test("different threads keep independent conversations", lambda: other["messages"][-1].content == "turn 1: DIFFERENT PERSON")
 @@starter
 from langchain_core.messages import AIMessage
 from langgraph.graph import StateGraph, MessagesState, START, END

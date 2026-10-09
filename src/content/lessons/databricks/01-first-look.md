@@ -11,7 +11,7 @@ minutes: 4
 @@body
 # Describe the work, let a cluster run it
 
-A real event table can be billions of rows — too big for one machine. With Spark, **you describe the result; a cluster splits the work.** Databricks is where teams run Spark. A Spark DataFrame feels like pandas. Three starter moves:
+A real event table can be billions of rows, too big for one machine. With Spark, **you describe the result; a cluster splits the work.** Databricks is where teams run Spark. A Spark DataFrame feels like pandas. Three starter moves:
 
 ```python
 df.show()                    # LOOK: print the table (first 20 rows)
@@ -19,12 +19,41 @@ df.count()                   # how many rows, across the whole cluster
 df.select("city", "fare")    # PICK columns -> a NEW DataFrame
 ```
 
-Two rules:
-
-- **Nothing prints by itself.** `df.select(...)` only *describes* a smaller table; call `.show()` to look at it.
-- **DataFrames never change.** Every operation returns a **new** DataFrame.
+Two rules: **nothing prints by itself** (`select` only *describes* a smaller table; `.show()` looks at it), and **DataFrames never change** (every operation returns a new one).
 
 > **Mission:** look at the trips table with `.show()`, store how many trips there are in `n`, and build `fares`: a new DataFrame with only the `city` and `fare` columns (then show it too).
+
+@@step Look at the table
+`show()` prints the first rows as an ASCII table. Nothing else in Spark prints on its own:
+
+```python
+trips.show()
+```
+
+**Do:** add the line under TODO 1, then Run. Two tables appear: `trips`, and `fares` (still identical to `trips` for now).
+@@stepcheck
+test("the trips table was shown", lambda: "passengers" in __stdout__ and __stdout__.count("NYC") >= 4, "trips.show() prints the table; it should appear in addition to fares.show()")
+@@step Count across the cluster
+`count()` is an **action**: Spark runs the plan and returns a plain Python number.
+
+```python
+n = trips.count()
+```
+
+**Do:** replace `n = 0`, then Run.
+@@stepcheck
+test("n counts every trip", lambda: n == 5, "n = trips.count()")
+@@step Select two columns into a new DataFrame
+`select` returns a new, narrower DataFrame and leaves `trips` exactly as it was:
+
+```python
+fares = trips.select("city", "fare")
+```
+
+**Do:** replace `fares = trips`, then Run. The second printed table has two columns.
+@@stepcheck
+test("fares keeps only city and fare", lambda: fares.columns == ["city", "fare"], 'fares = trips.select("city", "fare")')
+test("selecting did not change the original table", lambda: trips.columns == ["city", "fare", "passengers"] and fares.count() == 5)
 @@starter
 from pyspark.sql import SparkSession
 

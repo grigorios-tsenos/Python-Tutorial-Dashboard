@@ -18,12 +18,12 @@ export async function getPy() {
   return pyPromise
 }
 
-export async function run(code: string, check?: string, packages: string[] = []): Promise<RunResult> {
+export async function run(code: string, check?: string, packages: string[] = [], checks?: string[]): Promise<RunResult> {
   const py = await getPy()
   const need = packages.filter((p) => !loaded.has(p))
   if (need.length) {
     await py.loadPackage(need)
     need.forEach((p) => loaded.add(p))
   }
-  return runCell(py as any, code, check)
+  return runCell(py as any, code, check, checks)
 }

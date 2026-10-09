@@ -11,11 +11,49 @@ minutes: 8
 @@body
 # Registry versions need a promotion rule
 
-Move the `champion` alias only when the candidate measurably beats the serving model. A model version exposes its `run_id`; read its score with `mlflow.get_run(version.run_id).data.metrics["quality"]`. The helper registers offline models with quality metrics.
+Move the `champion` alias only when the candidate measurably beats the serving model. A model version exposes its `run_id`; the run that produced it holds the quality metric. The helper registers offline models with quality metrics.
 
-> **Mission:** implement `promote_if_better(name, candidate_version)`. Look up the named model's candidate version and existing `champion` alias with `MlflowClient`. Promote the candidate only if its quality is **strictly greater** than the champion's; return `True` when promoted, otherwise `False`. Ties keep the existing champion. Use stored scores, not version order, and leave other models' aliases untouched. Let an invalid model/version error propagate.
+> **Mission:** implement `quality_of(name, version)` → the `quality` metric of that model version's run, and `promote_if_better(name, candidate_version)`. Look up the named model's candidate version and existing `champion` alias with `MlflowClient`. Promote the candidate only if its quality is **strictly greater** than the champion's; return `True` when promoted, otherwise `False`. Ties keep the existing champion. Use stored scores, not version order, and leave other models' aliases untouched. Let an invalid model/version error propagate.
 
 Inputs always name a model with an existing champion, and both versions have a quality metric.
+
+@@step Read a version's score from its run
+A registered version remembers which tracking run logged it. Follow that link to the metric:
+
+```python
+def quality_of(name, version):
+    mv = mlflow.MlflowClient().get_model_version(name, version)
+    return mlflow.get_run(mv.run_id).data.metrics["quality"]
+```
+
+**Do:** add `quality_of` above `promote_if_better`, then Run.
+@@stepcheck
+import mlflow
+base = register_candidate("probe-model", 0.42)
+test("quality_of follows the version to its run's metric", lambda: quality_of("probe-model", base.version) == 0.42, "get_model_version(name, version).run_id, then get_run(...).data.metrics['quality']")
+@@step Promote only on a strict win
+Compare the candidate against whatever currently holds the alias (`get_model_version_by_alias(name, "champion")`), and move the alias only when the candidate is strictly better:
+
+```python
+client = mlflow.MlflowClient()
+champion = client.get_model_version_by_alias(name, "champion")
+if quality_of(name, candidate_version) <= quality_of(name, champion.version):
+    return False
+client.set_registered_model_alias(name, "champion", candidate_version)
+return True
+```
+
+**Do:** implement `promote_if_better`, then Run.
+@@stepcheck
+import mlflow
+client = mlflow.MlflowClient()
+base = register_candidate("scorer-step", 0.75)
+client.set_registered_model_alias("scorer-step", "champion", base.version)
+lower = register_candidate("scorer-step", 0.6)
+tied = register_candidate("scorer-step", 0.75)
+better = register_candidate("scorer-step", 0.95)
+test("worse and tied candidates keep the existing champion", lambda: promote_if_better("scorer-step", lower.version) is False and promote_if_better("scorer-step", tied.version) is False and client.get_model_version_by_alias("scorer-step", "champion").version == base.version, "compare with <=, return False")
+test("higher quality moves the alias to the candidate", lambda: promote_if_better("scorer-step", better.version) is True and client.get_model_version_by_alias("scorer-step", "champion").version == better.version, 'set_registered_model_alias(name, "champion", candidate_version)')
 @@starter
 import mlflow
 
@@ -29,8 +67,10 @@ def register_candidate(name, quality):
         info = mlflow.pyfunc.log_model(name="model", python_model=Echo())
     return mlflow.register_model(info.model_uri, name)
 
+# TODO 1: quality_of(name, version) -> the quality metric logged by that version's run
+
 def promote_if_better(name, candidate_version):
-    # TODO: compare stored quality scores before moving the alias
+    # TODO 2: compare stored quality scores before moving the alias
     return False
 
 champion = register_candidate("demo-model", 0.8)
@@ -50,15 +90,16 @@ def register_candidate(name, quality):
         info = mlflow.pyfunc.log_model(name="model", python_model=Echo())
     return mlflow.register_model(info.model_uri, name)
 
+def quality_of(name, version):
+    mv = mlflow.MlflowClient().get_model_version(name, version)
+    return mlflow.get_run(mv.run_id).data.metrics["quality"]
+
 def promote_if_better(name, candidate_version):
     client = mlflow.MlflowClient()
-    candidate = client.get_model_version(name, candidate_version)
     champion = client.get_model_version_by_alias(name, "champion")
-    candidate_score = mlflow.get_run(candidate.run_id).data.metrics["quality"]
-    champion_score = mlflow.get_run(champion.run_id).data.metrics["quality"]
-    if candidate_score <= champion_score:
+    if quality_of(name, candidate_version) <= quality_of(name, champion.version):
         return False
-    client.set_registered_model_alias(name, "champion", candidate.version)
+    client.set_registered_model_alias(name, "champion", candidate_version)
     return True
 
 champion = register_candidate("demo-model", 0.8)
@@ -69,6 +110,7 @@ print(promote_if_better("demo-model", candidate.version))
 client = mlflow.MlflowClient()
 base = register_candidate("scorer", 0.75)
 client.set_registered_model_alias("scorer", "champion", base.version)
+test("quality_of reads the stored score", lambda: quality_of("scorer", base.version) == 0.75)
 lower = register_candidate("scorer", 0.6)
 test("a newer but worse model does not become champion", lambda: promote_if_better("scorer", lower.version) is False and client.get_model_version_by_alias("scorer", "champion").version == base.version)
 tied = register_candidate("scorer", 0.75)

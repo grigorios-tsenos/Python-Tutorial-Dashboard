@@ -16,6 +16,41 @@ A retriever can return more text than a prompt can hold, so pack complete passag
 > **Mission:** implement `pack_context(documents, max_chars)`. Strip surrounding whitespace from each passage, skip blank passages, and join included passages with exactly two newlines. Include a whole passage only if it fits, counting those separators too. Skip an oversized passage and keep trying later passages. Return `""` for an empty collection or a non-positive budget. Keep the input list unchanged.
 
 Do not truncate or reorder passages; the supplied chain inserts your packed context beside the question.
+
+@@step Guard the budget, clean the passages
+Start with the easy rules: a non-positive budget packs nothing, blank passages never count, and every included passage is stripped:
+
+```python
+if max_chars <= 0:
+    return ""
+passages = []
+for document in documents:
+    passage = document.strip()
+    if not passage:
+        continue
+    passages.append(passage)
+return "\n\n".join(passages)
+```
+
+**Do:** rewrite `pack_context` this way (no budget accounting yet), then Run.
+@@stepcheck
+test("empty collections and non-positive budgets give empty context", lambda: pack_context([], 20) == "" and pack_context(["text"], 0) == "" and pack_context(["text"], -2) == "", "if max_chars <= 0: return ''")
+test("blank passages are ignored and included passages are stripped", lambda: pack_context(["  ", "  first  ", "\t", "second"], 100) == "first\n\nsecond", "strip each passage and skip empty ones")
+@@step Count every character, separators included
+Track how many characters are already used. A passage after the first costs its own length **plus two** for the separator. Append only when the total still fits, and keep going after a passage that does not fit:
+
+```python
+size = len(passage) + (2 if passages else 0)
+if used + size <= max_chars:
+    passages.append(passage)
+    used += size
+```
+
+**Do:** add the accounting, then Run.
+@@stepcheck
+test("separators count toward an exact-fit budget", lambda: pack_context(["alpha", "beta", "c"], 11) == "alpha\n\nbeta", "a later passage costs len(passage) + 2")
+test("oversized passages are skipped so later passages can fit", lambda: pack_context(["this passage is too long", "ok", "go"], 6) == "ok\n\ngo")
+test("one fewer character excludes a whole passage", lambda: pack_context(["ok", "go"], 5) == "ok")
 @@starter
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate

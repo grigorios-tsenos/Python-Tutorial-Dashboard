@@ -9,7 +9,7 @@ xp: 25
 minutes: 4
 ---
 @@body
-# The big picture: experiments need a lab notebook
+# Experiments need a lab notebook
 
 By attempt twelve, nobody remembers what attempt three used. MLflow is the lab notebook: each attempt is a **run** that records two kinds of values:
 
@@ -20,12 +20,39 @@ By attempt twelve, nobody remembers what attempt three used. MLflow is the lab n
 
 ```python
 with mlflow.start_run(run_name="attempt-1"):   # open the notebook page
-    mlflow.log_param("model", "tiny")          # what I chose
-    mlflow.log_metric("accuracy", 0.72)        # what I measured
+    ...                                        # log things here
 # leaving the block closes the run, even if the code crashes
 ```
 
 > **Mission:** record a run named `baseline` that logs param `model = "tiny"` and metric `accuracy = 0.72`. The last line then finds it again.
+
+@@step Log what you chose: a param
+Inside the `with` block, replace `pass` with a param. A param is a setting you picked before running:
+
+```python
+mlflow.log_param("model", "tiny")
+```
+
+**Do:** add the line (indented inside the block), then Run. The printed table gains a `params.model` column.
+@@stepcheck
+import mlflow
+df = mlflow.search_runs()
+test("the chosen model is a param", lambda: "params.model" in df.columns and df["params.model"].tolist() == ["tiny"], 'mlflow.log_param("model", "tiny") inside the with block')
+@@step Log what you measured: a metric
+A metric is a number that came *out* of the attempt:
+
+```python
+mlflow.log_metric("accuracy", 0.72)
+```
+
+Params are stored as strings, metrics as floats; that is why the table has separate `params.` and `metrics.` columns.
+
+**Do:** add the metric, then Run.
+@@stepcheck
+import mlflow
+df = mlflow.search_runs()
+test("the measured accuracy is a metric", lambda: "metrics.accuracy" in df.columns and df["metrics.accuracy"].tolist() == [0.72], 'mlflow.log_metric("accuracy", 0.72)')
+test("the run is closed after the with block", lambda: mlflow.active_run() is None)
 @@starter
 import mlflow
 

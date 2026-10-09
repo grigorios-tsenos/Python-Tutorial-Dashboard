@@ -26,10 +26,12 @@ interface UiState {
   settingsOpen: boolean
   cheatOpen: boolean
   storageWarning: boolean
+  /** focus sprint end time (ms), or null when none is running */
+  sprintEnd: number | null
   push: (text: string, kind?: Toast['kind'], icon?: string) => void
   dismiss: (id: number) => void
   setCelebration: (c: Celebration | null) => void
-  set: (patch: Partial<Pick<UiState, 'paletteOpen' | 'settingsOpen' | 'cheatOpen' | 'storageWarning'>>) => void
+  set: (patch: Partial<Pick<UiState, 'paletteOpen' | 'settingsOpen' | 'cheatOpen' | 'storageWarning' | 'sprintEnd'>>) => void
 }
 
 let nextId = 1
@@ -41,6 +43,7 @@ export const useUi = create<UiState>((set, get) => ({
   settingsOpen: false,
   cheatOpen: false,
   storageWarning: false,
+  sprintEnd: null,
   push: (text, kind = 'info', icon) => {
     const id = nextId++
     set({ toasts: [...get().toasts, { id, text, kind, icon }].slice(-4) })

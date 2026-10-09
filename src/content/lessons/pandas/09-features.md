@@ -24,6 +24,28 @@ Models don't read logs; they read **feature tables**: one row per entity, one co
 > | `conversion` | purchases ÷ views, or `0.0` with no views |
 
 Don't mutate the input. The boss checks new users, shuffled events, a purchaser with no views, and an empty frame (which still returns the five columns).
+
+@@step Flag the actions, then count per user
+Make boolean helper columns with `assign` (`events["action"].eq("view")`, likewise for purchases), then `groupby("user")` with named aggregation. `size` counts rows; summing a boolean column counts its Trues. Finish with `reset_index()` so `user` is a column.
+@@stepcheck
+import numpy as np, pandas as pd
+E = pd.DataFrame({"user": ["a", "a", "a", "b", "b", "c"], "action": ["view", "view", "purchase", "view", "click", "click"], "value": [np.nan, np.nan, 30.0, np.nan, np.nan, np.nan]})
+out = build_user_features(E)
+test("one row per user, sorted, with event and purchase counts", lambda: out["user"].tolist() == ["a", "b", "c"] and out["n_events"].tolist() == [3, 2, 1] and out["n_purchases"].tolist() == [1, 0, 0], 'groupby("user").agg(n_events=("action", "size"), n_purchases=("is_purchase", "sum"))')
+@@step Revenue, with 0.0 when nothing was bought
+Add `revenue=("value", "sum")` to the aggregation. `sum` skips `NaN`, and a group with only `NaN` sums to `0.0`, which is exactly the required default.
+@@stepcheck
+import numpy as np, pandas as pd
+E = pd.DataFrame({"user": ["a", "a", "a", "b", "b", "c"], "action": ["view", "view", "purchase", "view", "click", "click"], "value": [np.nan, np.nan, 30.0, np.nan, np.nan, np.nan]})
+test("revenue is 0.0 when there are no purchases", lambda: build_user_features(E)["revenue"].tolist() == [30.0, 0.0, 0.0], 'revenue=("value", "sum")')
+@@step Conversion without dividing by zero
+You need a view count to divide by, but it must not appear in the output: aggregate it, use it, drop it. `(purchases / views).where(views > 0, 0.0)` patches the zero-view rows. Then make sure the columns are exactly the five, in order.
+@@stepcheck
+import numpy as np, pandas as pd
+E = pd.DataFrame({"user": ["a", "a", "a", "b", "b", "c"], "action": ["view", "view", "purchase", "view", "click", "click"], "value": [np.nan, np.nan, 30.0, np.nan, np.nan, np.nan]})
+out = build_user_features(E)
+test("conversion = purchases / views, 0.0 without views", lambda: out["conversion"].tolist() == [0.5, 0.0, 0.0], "(n_purchases / n_views).where(n_views > 0, 0.0)")
+test("exact columns", lambda: list(out.columns) == ["user", "n_events", "n_purchases", "revenue", "conversion"], "drop the helper view count")
 @@starter
 import numpy as np
 import pandas as pd

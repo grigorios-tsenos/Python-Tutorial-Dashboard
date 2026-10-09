@@ -25,6 +25,71 @@ Embedding APIs charge per token, and real corpora repeat themselves. The same mo
 > - raise `ValueError` if `embed_batch` returns the wrong number of vectors, caching nothing from that call; if it raises, propagate with nothing cached
 >
 > Each instance is independent.
+
+@@step Send only the unseen texts, once, in order
+Materialize the input once (`texts = list(texts)`, because a generator can only be read once). Then find what the cache lacks, in first-seen order, without duplicates:
+
+```python
+unseen = [text for text in dict.fromkeys(texts) if text not in self.store]
+if unseen:
+    vectors = self.embed_batch(unseen)
+    self.store.update(zip(unseen, vectors))
+return [self.store[text] for text in texts]
+```
+
+`dict.fromkeys(texts)` keeps one key per distinct text in insertion order. `zip` pairs each sent text with its vector. The final line answers every position, repeats included, from the cache.
+
+**Do:** implement the four moves, then Run. The printed API calls should list each text once.
+@@stepcheck
+sent = []
+def api(texts):
+    sent.append(list(texts))
+    return [[len(t), t.count("a")] for t in texts]
+c = EmbeddingCache(api)
+first = c.embed(["alpha", "beta", "alpha"])
+test("vectors come back in input order, duplicates included", lambda: first == [[5, 2], [4, 1], [5, 2]], "[self.store[text] for text in texts]")
+test("duplicates inside one request are sent once", lambda: sent == [["alpha", "beta"]], "unseen = [t for t in dict.fromkeys(texts) if t not in self.store]")
+second = c.embed(["beta", "gamma", "delta", "gamma"])
+test("only unseen texts are sent, together, in first-seen order", lambda: sent == [["alpha", "beta"], ["gamma", "delta"]])
+@@step Count hits and misses
+A miss is a text that went to the API; everything else requested, repeats included, is a hit:
+
+```python
+self.misses += len(unseen)
+self.hits += len(texts) - len(unseen)
+```
+
+**Do:** add the counters after the API call, then Run.
+@@stepcheck
+sent = []
+def api(texts):
+    sent.append(list(texts))
+    return [[len(t), t.count("a")] for t in texts]
+c = EmbeddingCache(api)
+c.embed(["alpha", "beta", "alpha"])
+c.embed(["beta", "gamma", "delta", "gamma"])
+test("hits and misses are counted per requested text", lambda: (c.hits, c.misses) == (3, 4), "misses += len(unseen); hits += len(texts) - len(unseen)")
+@@step Trust nothing from a broken reply
+If the API returns the wrong number of vectors, `zip` would silently pair them up wrong. Check the length **before** storing anything:
+
+```python
+if len(vectors) != len(unseen):
+    raise ValueError(f"expected {len(unseen)} vectors, got {len(vectors)}")
+```
+
+Because the `store.update` and the counters come after the call, an exception from the API leaves the cache untouched and the texts will be retried next time.
+
+**Do:** add the length check, then Run.
+@@stepcheck
+def short_api(texts):
+    return [[0.0]]
+broken = EmbeddingCache(short_api)
+try:
+    broken.embed(["x", "y"])
+    rejected = False
+except ValueError:
+    rejected = True
+test("a wrong-length reply is rejected and nothing is cached", lambda: rejected and broken.store == {} and broken.misses == 0, "compare len(vectors) with len(unseen) before store.update")
 @@starter
 class EmbeddingCache:
     def __init__(self, embed_batch):

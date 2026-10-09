@@ -16,22 +16,47 @@ An LLM only emits text. **Tool calling**: you describe functions to the model, i
 `@tool` packages a typed, documented function:
 
 ```python
-from langchain_core.tools import tool
-
 @tool
 def shout(text: str) -> str:
     """Return the text in capitals."""      # the model reads this docstring!
     return text.upper()
 
-shout.name          # 'shout'
-shout.description   # 'Return the text in capitals.'
-shout.args          # parameter schema the model sees
-shout.invoke({"text": "hi"})   # 'HI'
+shout.name, shout.description, shout.args   # metadata the model sees
+shout.invoke({"text": "hi"})                # 'HI'
 ```
 
 Requests arrive as `ai_message.tool_calls`: a list of `{"name": ..., "args": {...}, "id": ...}`.
 
-> **Mission:** implement `word_count` so it counts words separated by whitespace (empty text has **0** words), then write `run_tool_calls(ai_message, tools)` that executes *every* requested call by **name**, in order, and returns each result as a **string**. Tool-list order must not matter, repeated calls must all run, and a message with no calls must return `[]`. The supplied `shout` tool lets you test mixed batches.
+> **Mission:** implement `word_count` so it counts words separated by whitespace (empty text has **0** words), then write `run_tool_calls(ai_message, tools)` that executes *every* requested call by **name**, in order, and returns each result as a **string**. Tool-list order must not matter, repeated calls must all run, and a message with no calls must return `[]`.
+
+@@step Count the words
+`text.split()` with no argument splits on any run of whitespace and drops empty pieces, so `""` and `"  \t "` both give `[]`:
+
+```python
+return len(text.split())
+```
+
+**Do:** implement `word_count`, then Run.
+@@stepcheck
+test("word_count counts words", lambda: word_count.invoke({"text": "a b c"}) == 3 and word_count.invoke({"text": "  one\ttwo\nthree  "}) == 3, "len(text.split())")
+test("empty and whitespace-only text have no words", lambda: word_count.invoke({"text": ""}) == 0 and word_count.invoke({"text": " \t\n "}) == 0)
+@@step Run every call by name
+The model names tools; it knows nothing about your list's order. Index the tools by name, then execute the calls in the order they were requested:
+
+```python
+by_name = {t.name: t for t in tools}
+return [str(by_name[call["name"]].invoke(call["args"])) for call in ai_message.tool_calls]
+```
+
+`str(...)` matters: tool results go back to the model as text.
+
+**Do:** implement `run_tool_calls`, then Run. The cell should print `['4', 'ORBIT']`.
+@@stepcheck
+from langchain_core.messages import AIMessage
+m = AIMessage("", tool_calls=[{"name": "word_count", "args": {"text": "a b c d e"}, "id": "1"}, {"name": "shout", "args": {"text": "go"}, "id": "2"}, {"name": "word_count", "args": {"text": "one two"}, "id": "3"}])
+test("mixed calls use names, not the tool-list order", lambda: run_tool_calls(msg, [shout, word_count]) == ["4", "ORBIT"], "by_name = {t.name: t for t in tools}")
+test("repeated tools preserve call order and return strings", lambda: run_tool_calls(m, [word_count, shout]) == ["5", "GO", "2"])
+test("no tool calls -> empty list", lambda: run_tool_calls(AIMessage("hi"), [word_count]) == [])
 @@starter
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage

@@ -25,6 +25,23 @@ question ─┬─> retrieve ──> context ─┐
 > 2. `rag_chain` → a runnable: question in, string out, with retrieved context in the prompt. Fan the question out with a dict of runnables (`RunnablePassthrough` keeps it as-is).
 
 The retriever must work on other collections. Return `[]` for a blank question, no documents or `k <= 0`; oversized `k` returns everything; ties keep document order. A blank question puts no invented context in the prompt.
+
+@@step Retrieve by cosine similarity
+Embed the question, score every row of `DOC_VECS` at once (dot products divided by both lengths, zero where a length is zero), and return the documents for the top `k` indices. Stable argsort keeps ties in document order. Until the chain exists, replace the last two lines with a direct `print(retrieve(...))` to test.
+@@stepcheck
+test("MLflow question finds the MLflow doc", lambda: retrieve("How does MLflow track experiments and metrics?")[0] == DOCS[0], "cosine = (DOC_VECS @ q) / (row norms * query norm)")
+test("Delta question finds the Delta doc, and k documents come back", lambda: retrieve("What is time travel in Delta Lake?")[0] == DOCS[2] and len(retrieve("MLflow", k=2)) == 2)
+@@step Handle the edges of retrieval
+A blank question, an empty collection or `k <= 0` return `[]` before any maths; an oversized `k` simply returns everything the slice can reach.
+@@stepcheck
+test("blank questions and non-positive k retrieve nothing", lambda: retrieve("  ") == [] and retrieve("MLflow", 0) == [] and retrieve("MLflow", -1) == [])
+test("oversized k is limited by the collection", lambda: len(retrieve("MLflow", 20)) == len(DOCS), "slice the sorted indices with [:k]")
+@@step Fan the question out into the chain
+A dict of runnables runs each value on the same input: `{"context": RunnableLambda(lambda q: "\n".join(retrieve(q))), "question": RunnablePassthrough()}`. Pipe that into `prompt | llm | StrOutputParser()`.
+@@stepcheck
+out = rag_chain.invoke("How do agents use state machines with nodes?")
+test("the chain returns a string with the retrieved context and the question", lambda: isinstance(out, str) and out.startswith("ANSWER USING") and "LangGraph models agents" in out and "How do agents use state machines with nodes?" in out, '{"context": ..., "question": RunnablePassthrough()} | prompt | llm | StrOutputParser()')
+test("irrelevant docs stay out of the prompt", lambda: "Delta Lake" not in out and "MLflow" not in out)
 @@starter
 import zlib
 import numpy as np

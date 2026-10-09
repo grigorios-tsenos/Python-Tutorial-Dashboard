@@ -1,10 +1,19 @@
-export type TrackId = 'numpy' | 'pandas' | 'python' | 'langchain' | 'langgraph' | 'mlflow' | 'databricks' | 'claude'
+export type TrackId = 'numpy' | 'pandas' | 'stats' | 'viz' | 'ml' | 'nn' | 'python' | 'langchain' | 'langgraph' | 'mlflow' | 'databricks' | 'claude'
 
 export type LessonKind = 'run' | 'lab' | 'predict' | 'bug' | 'parsons' | 'build' | 'boss'
 
 export interface Flashcard {
   q: string
   a: string
+}
+
+/** One small move in a lesson: a short explanation and the check that proves it was made. */
+export interface Step {
+  title: string
+  /** markdown: one idea, the line(s) to write, what to do */
+  body: string
+  /** python run after the learner's code; uses test(label, fn) like @@check */
+  check: string
 }
 
 export interface Lesson {
@@ -24,6 +33,8 @@ export interface Lesson {
   solution: string
   /** python run after the learner's code; uses test(label, fn) */
   check: string
+  /** ordered steps toward the mission; the final @@check is the completion gate */
+  steps: Step[]
   /** exactly two text hints; the third tier is the solution */
   hints: string[]
   /** predict: options (each is a literal expected output) and the correct index */

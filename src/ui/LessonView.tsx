@@ -7,6 +7,7 @@ import { allPassed } from '../engine/outputText'
 import { runner, useRunnerStatus } from '../engine/runner'
 import type { RunResult } from '../engine/types'
 import { debugMove } from '../lib/learning'
+import { firstOpenStep } from '../lib/steps'
 import { go, lessonPath } from '../lib/router'
 import { seededShuffle } from '../lib/shuffle'
 import { useStore } from '../store/useStore'
@@ -18,6 +19,7 @@ import { Markdown } from './Markdown'
 import { OutputPanel } from './OutputPanel'
 import { Parsons, restoreOrder } from './Parsons'
 import { SplitHandle } from './Split'
+import { NowBar, Steps } from './Steps'
 import { DEFAULT_LAYOUT, type Layout } from '../store/model'
 
 export function LessonView({ id }: { id: string }) {
@@ -49,7 +51,8 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
 
   const isParsons = lesson.kind === 'parsons'
   const isPredict = lesson.kind === 'predict'
-  const graded = !!lesson.check
+  const steps = lesson.steps
+  const graded = !!lesson.check || steps.length > 0
 
   const [code, setCodeState] = useState(savedCode ?? lesson.starter)
   const [order, setOrder] = useState<string[]>(() => restoreOrder(savedCode, lesson.lines) ?? seededShuffle(lesson.lines, lesson.id))
@@ -57,6 +60,8 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   const [running, setRunning] = useState(false)
   const [picked, setPicked] = useState<number[]>([])
   const [solved, setSolved] = useState(!!done)
+  // the step to work on; steps.length means every step passes and only the final checks remain
+  const [current, setCurrent] = useState(done ? steps.length : 0)
   const [resetArmed, setResetArmed] = useState(false)
   const attempts = useRef(0)
   const token = useRef(0)
@@ -134,15 +139,22 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   )
 
   const execute = useCallback(
-    async (source: string, opts: { check: boolean; complete: boolean; tries?: number }) => {
+    async (source: string, opts: { check: boolean; complete: boolean; tries?: number; silent?: boolean }) => {
       const mine = ++token.current
       setRunning(true)
-      recordRun(opts.check ? id : undefined, useStore.getState().settings.vim)
-      const res = await runner.run({ code: source, check: opts.check && lesson.check ? lesson.check : undefined, packages: lesson.packages })
+      if (!opts.silent) recordRun(opts.check ? id : undefined, useStore.getState().settings.vim)
+      const res = await runner.run({
+        code: source,
+        check: opts.check && lesson.check ? lesson.check : undefined,
+        checks: opts.check && steps.length ? steps.map((st) => st.check) : undefined,
+        packages: lesson.packages,
+      })
       if (mine !== token.current) return
       setRunning(false)
       setResult(res)
-      attempts.current += 1
+      if (!opts.silent) attempts.current += 1
+      const open = firstOpenStep(res, steps)
+      if (open !== null) setCurrent(open)
       if (opts.complete) {
         const pass = opts.check && lesson.check ? allPassed(res) : res.ok && !res.infra
         if (pass) finish(opts.tries ?? attempts.current)
@@ -160,6 +172,10 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
   // already-completed predict lessons show their real output straight away
   useEffect(() => {
     if (isPredict && done) void execute(lesson.starter, { check: false, complete: false })
+  }, [])
+  // coming back to work in progress: a silent run puts the step ladder where you left it
+  useEffect(() => {
+    if (!isPredict && !isParsons && steps.length && !done && savedCode && savedCode !== lesson.starter) void execute(savedCode, { check: true, complete: true, silent: true })
   }, [])
 
   const runRef = useRef(run)
@@ -216,6 +232,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
     setResult(null)
     setPicked([])
     setSolved(false)
+    setCurrent(0)
     if (isParsons) setOrder(seededShuffle(lesson.lines, lesson.id))
     else setCodeState(lesson.starter)
   }
@@ -265,6 +282,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
         </header>
         <LessonWalkthrough lessonId={id} solutionRevealed={hintsUsed >= 3} />
         <Markdown src={lesson.body} />
+        {steps.length > 0 && <Steps steps={steps} current={current} result={result} done={!!done} hasFinal={!!lesson.check} />}
         <Hints
           lesson={lesson}
           used={hintsUsed}
@@ -372,6 +390,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           )}
         </div>
 
+        {steps.length > 0 && <NowBar steps={steps} current={current} done={!!done} hasFinal={!!lesson.check} />}
         <div className="panes" ref={panesEl}>
         {isParsons ? (
           <div className="parsons-wrap">
@@ -431,7 +450,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           </div>
         )}
 
-        <OutputPanel key={attempts.current} result={result} running={running} graded={graded} completed={!!done} visualFirst={lesson.kind === 'lab'} />
+        <OutputPanel key={attempts.current} result={result} running={running} graded={graded} completed={!!done} visualFirst={lesson.kind === 'lab' || lesson.track === 'viz'} steps={steps} current={current} />
         {verdict === false && !running && result && (
           <p className="nudge"><strong>Not yet.</strong> {debugMove(attempts.current)}</p>
         )}
