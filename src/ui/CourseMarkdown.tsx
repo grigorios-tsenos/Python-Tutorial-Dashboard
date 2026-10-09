@@ -69,7 +69,8 @@ export function CourseMarkdown({ src, lessonKey }: { src: string; lessonKey: str
         if (cancelled) return
         const mermaid = m.default ?? m
         mermaid.initialize({ startOnLoad: false, theme: theme === 'dark' ? 'dark' : 'default', securityLevel: 'strict', fontFamily: 'inherit' })
-        return mermaid.run({ nodes: [...nodes], suppressErrors: true })
+        const live = [...nodes].filter((n) => n.isConnected)
+        return live.length ? mermaid.run({ nodes: live, suppressErrors: true }) : undefined
       })
       .catch(() => {}) // diagrams stay as text when the CDN is unreachable
     return () => {

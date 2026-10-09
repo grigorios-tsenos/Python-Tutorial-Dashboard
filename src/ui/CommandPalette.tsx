@@ -13,6 +13,8 @@ interface Item {
   keywords?: string
   run: () => void
   icon: string
+  /** multiplies the match score: the 108 hand-built lessons outrank the 523 course lessons on a similar match */
+  weight?: number
 }
 
 function score(q: string, text: string): number {
@@ -65,6 +67,7 @@ export function CommandPalette() {
       hint: `Course · Phase ${e.phase.n}${courseDone[e.key] ? ' · ✓' : ''}`,
       icon: '📚',
       keywords: `${e.phase.title} ${e.lesson.tagline} ${e.lesson.type}`,
+      weight: 0.6,
       run: () => go(coursePath(e.key)),
     }))
     return [...actions, ...lessons, ...course]
@@ -73,7 +76,7 @@ export function CommandPalette() {
   const results = useMemo(
     () =>
       items
-        .map((it) => ({ it, s: Math.max(score(q, it.label), score(q, it.hint) * 0.6, score(q, it.keywords ?? '') * 0.7) }))
+        .map((it) => ({ it, s: Math.max(score(q, it.label), score(q, it.hint) * 0.6, score(q, it.keywords ?? '') * 0.7) * (it.weight ?? 1) }))
         .filter((r) => r.s > 0)
         .sort((a, b) => b.s - a.s)
         .slice(0, 9)

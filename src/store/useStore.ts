@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { LESSON_BY_ID } from '../content'
-import { COURSE_BY_KEY, courseXp } from '../content/course'
+import { COURSE_BY_KEY, courseXp, type CoursePlan, type PhaseStatus } from '../content/course'
 import { ACHIEVEMENTS, type Achievement } from '../lib/achievements'
 import { dayKey } from '../lib/dates'
 import { QUEST_BONUS, QUEST_TARGET, levelFromXp, newCard, schedule, xpAward, type Grade } from '../lib/gamification'
@@ -31,8 +31,12 @@ interface Actions {
   setCode: (id: string, code: string) => void
   setCourseCode: (key: string, code: string) => void
   setCourseLast: (key: string) => void
-  /** a course lesson passes with ≥ 70 % of its quiz; a lesson without a quiz passes when marked as read (total 0) */
+  /** a course lesson passes with ≥ 70 % of its quiz; a lesson without a quiz passes when marked as read (total 0). A fail queues the lesson for review. */
   completeCourseLesson: (key: string, score: number, total: number) => CourseSummary | null
+  setCoursePlan: (plan: CoursePlan | null) => void
+  setPhaseStatus: (dir: string, status: PhaseStatus) => void
+  setPhaseCheck: (dir: string, score: number, total: number) => void
+  setCoursePath: (id: string | null) => void
   setGuided: (id: string, progress: GuidedProgress) => void
   /** every run counts for stats; a graded run on `id` also counts toward that lesson's hint gate */
   recordRun: (id: string | undefined, vim: boolean) => void
@@ -71,10 +75,31 @@ export const useStore = create<Store>()(
       setCourseCode: (key, code) => set((s) => ({ courseCode: { ...s.courseCode, [key]: code } })),
       setCourseLast: (key) => set({ courseLast: key }),
 
+      setCoursePlan: (plan) => set({ coursePlan: plan }),
+      setPhaseStatus: (dir, status) =>
+        set((s) => {
+          const plan = s.coursePlan ?? { at: Date.now(), score: null, areas: [], entry: 0, status: {} }
+          return { coursePlan: { ...plan, status: { ...plan.status, [dir]: status } } }
+        }),
+      setPhaseCheck: (dir, score, total) =>
+        set((s) => {
+          const prev = s.coursePhaseCheck[dir]
+          return prev && prev.score / prev.total >= score / total ? {} : { coursePhaseCheck: { ...s.coursePhaseCheck, [dir]: { at: Date.now(), score, total } } }
+        }),
+      setCoursePath: (id) => set({ coursePathActive: id }),
+
       completeCourseLesson: (key, score, total) => {
         const s = get()
         const entry = COURSE_BY_KEY[key]
-        if (!entry || (total > 0 && score / total < 0.7)) return null
+        if (!entry) return null
+        if (total > 0 && score / total < 0.7) {
+          if (!s.course[key]) set({ courseReview: { ...s.courseReview, [key]: Date.now() } })
+          return null
+        }
+        if (s.courseReview[key]) {
+          const { [key]: _, ...courseReview } = s.courseReview
+          set({ courseReview })
+        }
         const gained = total > 0 ? Math.round(courseXp(entry.lesson.minutes) * (score / total)) : courseXp(entry.lesson.minutes)
         const prev = s.course[key]
         if (prev && gained <= prev.xp) return null

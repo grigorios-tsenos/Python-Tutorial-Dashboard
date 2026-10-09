@@ -7,6 +7,7 @@
    "n": 0,
    "title": "Setup & Tooling",
    "blurb": "Get your environment ready for everything that follows.",
+   "hours": 14,
    "lessons": [
     {
      "dir": "01-dev-environment",
@@ -184,6 +185,7 @@
    "n": 1,
    "title": "Math Foundations",
    "blurb": "The intuition behind every AI algorithm, through code, not textbooks.",
+   "hours": 23,
    "lessons": [
     {
      "dir": "01-linear-algebra-intuition",
@@ -492,6 +494,7 @@
    "n": 2,
    "title": "ML Fundamentals",
    "blurb": "Classical machine learning is still the backbone of most production AI.",
+   "hours": 21,
    "lessons": [
     {
      "dir": "01-what-is-machine-learning",
@@ -744,6 +747,7 @@
    "n": 3,
    "title": "Deep Learning Core",
    "blurb": "Neural networks from first principles. No frameworks until you build one yourself.",
+   "hours": 15,
    "lessons": [
     {
      "dir": "01-the-perceptron",
@@ -931,6 +935,7 @@
    "n": 4,
    "title": "Computer Vision",
    "blurb": "From pixels to understanding across image, video, and 3D.",
+   "hours": 27,
    "lessons": [
     {
      "dir": "01-image-fundamentals",
@@ -1359,6 +1364,7 @@
    "n": 5,
    "title": "NLP, Foundations to Advanced",
    "blurb": "Language is the interface to intelligence. Master every layer.",
+   "hours": 30,
    "lessons": [
     {
      "dir": "01-text-processing",
@@ -1744,6 +1750,7 @@
    "n": 6,
    "title": "Speech & Audio",
    "blurb": "The other half of human communication. Hear, understand, speak.",
+   "hours": 18,
    "lessons": [
     {
      "dir": "01-audio-fundamentals",
@@ -1973,6 +1980,7 @@
    "n": 7,
    "title": "Transformers Deep Dive",
    "blurb": "The architecture that changed everything. Understand every layer.",
+   "hours": 14,
    "lessons": [
     {
      "dir": "01-why-transformers",
@@ -2191,6 +2199,7 @@
    "n": 8,
    "title": "Generative AI",
    "blurb": "Create images, video, audio, 3D, and more.",
+   "hours": 14,
    "lessons": [
     {
      "dir": "01-generative-models-taxonomy-history",
@@ -2394,6 +2403,7 @@
    "n": 9,
    "title": "Reinforcement Learning",
    "blurb": "Agents that learn by doing. The foundation of RLHF.",
+   "hours": 13,
    "lessons": [
     {
      "dir": "01-mdps-states-actions-rewards",
@@ -2558,6 +2568,7 @@
    "n": 10,
    "title": "LLMs from Scratch",
    "blurb": "Build, train, and understand large language models.",
+   "hours": 26,
    "lessons": [
     {
      "dir": "01-tokenizers",
@@ -2889,6 +2900,7 @@
    "n": 11,
    "title": "LLM Engineering",
    "blurb": "Put LLMs to work in production applications.",
+   "hours": 19,
    "lessons": [
     {
      "dir": "01-prompt-engineering",
@@ -3126,6 +3138,7 @@
    "n": 12,
    "title": "Multimodal AI",
    "blurb": "Models that see, hear, read, and reason across modalities.",
+   "hours": 65,
    "lessons": [
     {
      "dir": "01-vision-transformer-patch-tokens",
@@ -3459,6 +3472,7 @@
    "n": 13,
    "title": "Tools & Protocols",
    "blurb": "The interfaces between AI and the real world.",
+   "hours": 43,
    "lessons": [
     {
      "dir": "01-the-tool-interface",
@@ -3895,6 +3909,7 @@
    "n": 14,
    "title": "Agent Engineering",
    "blurb": "The core of modern AI engineering. Build agents from first principles.",
+   "hours": 55,
    "lessons": [
     {
      "dir": "01-the-agent-loop",
@@ -4613,6 +4628,7 @@
    "n": 15,
    "title": "Autonomous Systems",
    "blurb": "Agents that run without human intervention, safely.",
+   "hours": 20,
    "lessons": [
     {
      "dir": "01-long-horizon-agents",
@@ -4907,6 +4923,7 @@
    "n": 16,
    "title": "Multi-Agent & Swarms",
    "blurb": "Coordination, emergence, and collective intelligence.",
+   "hours": 28,
    "lessons": [
     {
      "dir": "01-why-multi-agent",
@@ -5255,6 +5272,7 @@
    "n": 17,
    "title": "Infrastructure & Production",
    "blurb": "Ship AI to the real world. Scale, monitor, optimize.",
+   "hours": 32,
    "lessons": [
     {
      "dir": "01-managed-llm-platforms",
@@ -5627,6 +5645,7 @@
    "n": 18,
    "title": "Ethics, Safety & Alignment",
    "blurb": "Build AI that helps humanity. Not optional.",
+   "hours": 31,
    "lessons": [
     {
      "dir": "01-instruction-following-alignment-signal",
@@ -6025,6 +6044,7 @@
    "n": 19,
    "title": "Capstone Projects",
    "blurb": "Prove everything you learned. Build portfolio-grade systems.",
+   "hours": 620,
    "lessons": [
     {
      "dir": "01-terminal-native-coding-agent",

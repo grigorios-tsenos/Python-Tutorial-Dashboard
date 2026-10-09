@@ -7,17 +7,23 @@ export const PASS_MARK = 0.7
 
 interface Props {
   questions: QuizQuestion[]
-  /** the best previous result, if any */
+  /** the best previous result, if any (graded quizzes only) */
   done?: CourseProgress
-  onFinish: (score: number, total: number) => void
+  /** no pass mark, no stakes: a prediction or recall exercise that ends with "read on" */
+  formative?: boolean
+  /** a label per question, e.g. the lesson a phase-check question comes from */
+  tags?: string[]
+  /** `missed` = indices of the questions answered wrong */
+  onFinish: (score: number, total: number, missed: number[]) => void
 }
 
 /** One question at a time, explanation after each answer, a score at the end. */
-export function Quiz({ questions, done, onFinish }: Props) {
+export function Quiz({ questions, done, formative, tags, onFinish }: Props) {
   const [i, setI] = useState(0)
   const [picked, setPicked] = useState<number | null>(null)
   const [score, setScore] = useState(0)
-  const [state, setState] = useState<'idle' | 'live' | 'finished'>(done ? 'idle' : 'live')
+  const [missed, setMissed] = useState<number[]>([])
+  const [state, setState] = useState<'idle' | 'live' | 'finished'>(done && !formative ? 'idle' : 'live')
   const total = questions.length
   const q = questions[i]
 
@@ -25,12 +31,14 @@ export function Quiz({ questions, done, onFinish }: Props) {
     setI(0)
     setPicked(null)
     setScore(0)
+    setMissed([])
     setState('live')
   }
   const pick = (k: number) => {
     if (picked !== null) return
     setPicked(k)
     if (k === q.correct) setScore((s) => s + 1)
+    else setMissed((m) => [...m, i])
   }
   const next = () => {
     if (i + 1 < total) {
@@ -38,7 +46,7 @@ export function Quiz({ questions, done, onFinish }: Props) {
       setPicked(null)
     } else {
       setState('finished')
-      onFinish(score, total)
+      onFinish(score, total, missed)
     }
   }
 
@@ -48,8 +56,12 @@ export function Quiz({ questions, done, onFinish }: Props) {
     return (
       <div className="quiz-summary" role="status">
         <div className="quiz-score">{shown.score} / {shown.total}</div>
-        <p>{passed ? (state === 'finished' ? 'Passed. This lesson is complete.' : 'You already passed this quiz.') : 'Not yet: 70 % passes. Skim the sections you missed and try again.'}</p>
-        <button className="btn ghost" onClick={start}>{state === 'finished' ? 'Try again' : 'Retake the quiz'}</button>
+        {formative ? (
+          <p className="dim">{shown.score === shown.total ? 'All of it already. Read on and see if the lesson agrees with you.' : 'No stakes here: the lesson explains what you missed. Read on.'}</p>
+        ) : (
+          <p>{passed ? (state === 'finished' ? 'Passed. This lesson is complete.' : 'You already passed this quiz.') : 'Not yet: 70 % passes. Skim the sections you missed and try again.'}</p>
+        )}
+        <button className="btn ghost small" onClick={start}>{state === 'finished' ? 'Try again' : 'Retake the quiz'}</button>
       </div>
     )
   }
@@ -57,8 +69,8 @@ export function Quiz({ questions, done, onFinish }: Props) {
   return (
     <div className="quiz" aria-live="polite">
       <div className="quiz-head">
-        <span className="chip">{STAGE_LABEL[q.stage]}</span>
-        <span className="dim small">Question {i + 1} of {total} · {score} correct</span>
+        <span className="chip">{tags?.[i] ?? STAGE_LABEL[q.stage]}</span>
+        <span className="dim small">Question {i + 1} of {total}{formative ? '' : ` · ${score} correct`}</span>
       </div>
       <p className="quiz-q">{q.question}</p>
       <div className="choices quiz-choices" role="group" aria-label="Answers">
@@ -79,7 +91,7 @@ export function Quiz({ questions, done, onFinish }: Props) {
         <div className={`quiz-explain ${picked === q.correct ? 'ok' : 'miss'}`}>
           <strong>{picked === q.correct ? 'Correct.' : 'Not this one.'}</strong> {q.explanation}
           <div className="row" style={{ marginTop: 10 }}>
-            <button className="btn primary small" onClick={next} autoFocus>{i + 1 < total ? 'Next question →' : 'See my score'}</button>
+            <button className="btn primary small" onClick={next} autoFocus>{i + 1 < total ? 'Next question →' : formative ? 'Done' : 'See my score'}</button>
           </div>
         </div>
       )}

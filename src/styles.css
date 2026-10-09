@@ -870,7 +870,7 @@ td.ml-metric { min-width: 96px; }
 .course-body { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
 .course-body.single { grid-template-columns: minmax(0, 1fr); }
 .phase-rail { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; position: sticky; top: 12px; }
-.phase-link { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; grid-template-areas: "n t c" "n m m"; gap: 3px 8px; align-items: center; padding: 7px 10px; border-radius: 10px; border: 1px solid transparent; color: var(--text-dim); }
+.phase-link { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto; grid-template-areas: "n t s c" "n m m m"; gap: 3px 8px; align-items: center; padding: 7px 10px; border-radius: 10px; border: 1px solid transparent; color: var(--text-dim); }
 .phase-link:hover { background: color-mix(in srgb, var(--tc) 8%, transparent); color: var(--text); }
 .phase-link.active { border-color: color-mix(in srgb, var(--tc) 50%, transparent); background: color-mix(in srgb, var(--tc) 12%, transparent); color: var(--text); }
 .phase-n { grid-area: n; font-family: var(--mono); font-size: 0.72rem; color: var(--tc); font-weight: 700; }
@@ -919,3 +919,44 @@ td.ml-metric { min-width: 96px; }
   .course-facts { grid-column: 2; }
   .lesson.reading .lesson-pane { max-width: none; }
 }
+
+/* course: plan, placement, phase check, lesson flow */
+.phase-status { grid-area: s; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); }
+.phase-status.skip { opacity: 0.6; }
+.phase-status.review { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.phase-status.do { color: var(--tc); border-color: color-mix(in srgb, var(--tc) 45%, transparent); }
+.phase-status.done { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.phase-link.skip { opacity: 0.55; }
+.link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; }
+.plan-cta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.plan-cta select, .phase-tools select { font: inherit; font-size: 0.82rem; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--text); max-width: 100%; }
+.phase-tools { gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.placement { margin-bottom: 20px; }
+.placement h2 { margin: 6px 0 12px; }
+.placement-areas { border-collapse: collapse; margin: 0 0 12px; font-size: 0.9rem; }
+.placement-areas td { padding: 3px 14px 3px 0; }
+.placement-areas .num { font-family: var(--mono); }
+.placement-areas .total td { border-top: 1px solid var(--line); font-weight: 700; }
+.placement-key { margin: 8px 0 0 18px; display: grid; gap: 6px; font-size: 0.86rem; }
+.placement-key li.miss > span { color: var(--warn); }
+.review-queue { margin-bottom: 18px; }
+.review-queue h2 { font-size: 1.05rem; margin-bottom: 8px; }
+.course-row.review { border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+.phase-check { margin-bottom: 18px; }
+.phase-missed { margin: 8px 0 12px 18px; }
+.phase-result .quiz-score { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+.flow { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+.flow button { font: inherit; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; color: var(--text-dim); cursor: pointer; }
+.flow button:hover { color: var(--text); border-color: var(--tc); }
+.flow button i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 0.68rem; font-weight: 700; background: var(--bg-2); border: 1px solid var(--line-strong); }
+.flow button.done { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.flow button.done i { background: var(--accent); color: var(--bg); border-color: transparent; }
+.stage { margin: 18px 0; }
+.stage summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.stage summary::-webkit-details-marker { display: none; }
+.stage summary::before { content: '▸'; color: var(--text-dim); }
+.stage[open] summary::before { content: '▾'; }
+.stage summary h2 { margin: 0; font-size: 1.05rem; }
+.stage > p { margin: 6px 0 0; }
+.stage .quiz, .stage .quiz-summary { margin-top: 12px; }
+.runtime-local i { background: var(--accent); }

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { COURSE, COURSE_BY_KEY, COURSE_LESSONS, courseXp, nextCourseKey, prevCourseKey, stripHeader, typeKind } from '../src/content/course'
+import { COURSE, COURSE_BY_KEY, COURSE_LESSONS, PATH_BY_ID, continueKey, courseXp, nextCourseKey, phaseGrade, pickSpread, prevCourseKey, splitArticle, stripHeader, typeKind } from '../src/content/course'
+import { AREAS, PLACEMENT, entryPhase, planFromPhase, planFromPlacement, planHours } from '../src/content/placement'
 import { sanitize } from '../src/store/model'
 import { useStore } from '../src/store/useStore'
 import { renderCourseMarkdown, resolveCourseHref } from '../src/ui/CourseMarkdown'
@@ -46,6 +47,63 @@ describe('course index', () => {
     expect(courseXp(1800)).toBe(60)
     expect(typeKind('Learn + Build')).toBe('Learn')
     expect(typeKind('Build (Capstone)')).toBe('Capstone')
+    expect(COURSE.phases.map((p) => p.hours)).toEqual([14, 23, 21, 15, 27, 30, 18, 14, 14, 13, 26, 19, 65, 43, 55, 20, 28, 32, 31, 620])
+  })
+})
+
+describe('study plan (the curriculum\'s placement and tutor loop)', () => {
+  it('placement maps a score to an entry phase and marks 1/2 areas for review', () => {
+    expect(PLACEMENT.length).toBe(10)
+    for (let a = 0; a < AREAS.length; a++) expect(PLACEMENT.filter((q) => q.area === a).length).toBe(2)
+    expect([0, 3, 4, 5, 6, 7, 8, 9, 10].map(entryPhase)).toEqual([1, 1, 3, 3, 7, 7, 11, 11, 14])
+    const plan = planFromPlacement([2, 1, 2, 1, 2], COURSE.phases, 1)
+    expect(plan).toMatchObject({ at: 1, score: 8, entry: 11 })
+    expect(plan.status['00-setup-and-tooling']).toBe('skip')
+    expect(plan.status['01-math-foundations']).toBe('skip')
+    expect(plan.status['02-ml-fundamentals']).toBe('review')
+    expect(plan.status['05-nlp-foundations-to-advanced']).toBe('review')
+    expect(plan.status['07-transformers-deep-dive']).toBe('review')
+    expect(plan.status['10-llms-from-scratch']).toBe('skip')
+    expect(plan.status['11-llm-engineering']).toBe('do')
+    expect(plan.status['19-capstone-projects']).toBe('do')
+    expect(planHours(plan, COURSE.phases)).toBe(21 + 30 + 14 + 19 + 65 + 43 + 55 + 20 + 28 + 32 + 31 + 620)
+    const self = planFromPhase(7, COURSE.phases)
+    expect(self.score).toBeNull()
+    expect(self.status['06-speech-and-audio']).toBe('skip')
+    expect(self.status['07-transformers-deep-dive']).toBe('do')
+  })
+  it('continueKey follows the open lesson, then the active path, then the plan', () => {
+    const plan = planFromPhase(3, COURSE.phases)
+    const first3 = COURSE_LESSONS.find((e) => e.phase.n === 3)!.key
+    expect(continueKey({}, null, null, null)).toBe(COURSE_LESSONS[0].key)
+    expect(continueKey({}, null, plan, null)).toBe(first3)
+    expect(continueKey({ [first3]: true }, null, plan, null)).toBe(nextCourseKey(first3))
+    const open = COURSE_LESSONS[5].key
+    expect(continueKey({}, open, plan, null)).toBe(open)
+    expect(continueKey({ [open]: true }, open, plan, null)).toBe(first3) // the next lesson is in a skipped phase
+    expect(continueKey({ [open]: true }, open, null, null)).toBe(COURSE_LESSONS[6].key) // no plan: carry on after the last one
+    expect(continueKey({ [first3]: true }, first3, plan, null)).toBe(nextCourseKey(first3))
+    const mcp = PATH_BY_ID['model-context-protocol']
+    expect(continueKey({}, null, plan, mcp.id)).toBe(mcp.lessons[0])
+    expect(continueKey({ [mcp.lessons[0]]: true }, null, plan, mcp.id)).toBe(mcp.lessons[1])
+    expect(continueKey({}, open, plan, mcp.id)).toBe(mcp.lessons[0])
+    expect(nextCourseKey(mcp.lessons[0], mcp.id)).toBe(mcp.lessons[1])
+    expect(prevCourseKey(mcp.lessons[1], mcp.id)).toBe(mcp.lessons[0])
+    expect(nextCourseKey(mcp.lessons.at(-1)!, mcp.id)).toBeNull()
+    expect(nextCourseKey(COURSE_LESSONS[0].key, mcp.id)).toBe(COURSE_LESSONS[1].key)
+  })
+  it('splits the article before Use It, spreads phase-check picks, grades like check-understanding', () => {
+    expect(splitArticle('## The Problem\na\n## Build It\nb\n## Use It\nc\n## Ship It\nd')).toEqual(['## The Problem\na\n## Build It\nb\n', '## Use It\nc\n## Ship It\nd'])
+    expect(splitArticle('## Only\nx')).toEqual(['## Only\nx', ''])
+    const [head, tail] = splitArticle(stripHeader(readFileSync(`${PUBLIC}/02-ml-fundamentals/02-linear-regression/en.md`, 'utf8')))
+    expect(head).toContain('## Build It')
+    expect(tail.startsWith('## Use It')).toBe(true)
+    const twenty = Array.from({ length: 20 }, (_, i) => i)
+    expect(pickSpread([1, 2, 3], 8)).toEqual([1, 2, 3])
+    expect(pickSpread(twenty, 4, 0)).toEqual([0, 5, 10, 15])
+    expect(pickSpread(twenty, 4, 1)).toEqual([1, 6, 11, 16])
+    expect(pickSpread(twenty, 4, 5)).toEqual([0, 5, 10, 15])
+    expect([8, 7, 6, 4, 2].map((n) => phaseGrade(n, 8).label)).toEqual(['Mastered', 'Mastered', 'Almost', 'Developing', 'Start over'])
   })
 })
 
@@ -97,6 +155,33 @@ describe('course progress', () => {
     expect(useStore.getState().course[key]).toMatchObject({ score: 5, total: 5, xp: 45 })
     expect(st.completeCourseLesson('14-agent-engineering/01-the-agent-loop', 0, 0)?.xp).toBe(courseXp(COURSE_BY_KEY['14-agent-engineering/01-the-agent-loop'].lesson.minutes))
     expect(st.completeCourseLesson('nope/nope', 1, 1)).toBeNull()
+  })
+  it('a failed quiz queues the lesson for review and a pass clears it; phase checks keep the best; the plan is validated', () => {
+    useStore.getState().resetAll()
+    const st = useStore.getState()
+    const key = '02-ml-fundamentals/03-logistic-regression'
+    expect(st.completeCourseLesson(key, 1, 5)).toBeNull()
+    expect(useStore.getState().courseReview[key]).toBeGreaterThan(0)
+    expect(st.completeCourseLesson(key, 5, 5)).not.toBeNull()
+    expect(useStore.getState().courseReview[key]).toBeUndefined()
+    st.setPhaseCheck('01-math-foundations', 5, 8)
+    st.setPhaseCheck('01-math-foundations', 3, 8)
+    expect(useStore.getState().coursePhaseCheck['01-math-foundations'].score).toBe(5)
+    st.setPhaseStatus('03-deep-learning-core', 'skip')
+    expect(useStore.getState().coursePlan?.status['03-deep-learning-core']).toBe('skip')
+    st.setCoursePath('agent-skills')
+    expect(useStore.getState().coursePathActive).toBe('agent-skills')
+    const s = sanitize({
+      coursePlan: { at: 1, score: 7, areas: [2, 2, 2, 1, 0], entry: 7, status: { '01-math-foundations': 'skip', nope: 'do', '02-ml-fundamentals': 'maybe' } },
+      courseReview: { 'nope/x': 1, '02-ml-fundamentals/02-linear-regression': 5 },
+      coursePhaseCheck: { '01-math-foundations': { at: 1, score: 9, total: 8 }, nope: { at: 1, score: 1, total: 8 } },
+      coursePathActive: 'model-context-protocol',
+    })
+    expect(s.coursePlan).toEqual({ at: 1, score: 7, areas: [2, 2, 2, 1, 0], entry: 7, status: { '01-math-foundations': 'skip' } })
+    expect(s.courseReview).toEqual({ '02-ml-fundamentals/02-linear-regression': 5 })
+    expect(s.coursePhaseCheck).toEqual({ '01-math-foundations': { at: 1, score: 8, total: 8 } })
+    expect(s.coursePathActive).toBe('model-context-protocol')
+    expect(sanitize({ coursePathActive: 'nope', coursePlan: 'x' })).toMatchObject({ coursePathActive: null, coursePlan: null })
   })
 })
 
