@@ -20,50 +20,6 @@ ax.set_aspect("equal")
 ```
 
 > **Mission:** implement `plot_embedding(ax, X, y)` for a 2-D array `X` and integer labels `y`: scatter the points coloured by label with `alpha=0.6` and `s=25`, label the axes `dim 1` and `dim 2`, set an equal aspect ratio, and return the scatter collection.
-
-@@step One point per row, coloured by label
-`c=y` maps each label to a colour from the default colormap. Column 0 goes on x, column 1 on y:
-
-```python
-sc = ax.scatter(X[:, 0], X[:, 1], c=y)
-return sc
-```
-
-**Do:** draw and return the scatter, then Run.
-@@stepcheck
-import numpy as np, matplotlib.pyplot as plt
-f, a = plt.subplots()
-X = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 0.5]])
-sc = plot_embedding(a, X, np.array([0, 1, 1]))
-test("one scatter collection with one point per row, coloured by label", lambda: len(a.collections) == 1 and len(sc.get_offsets()) == 3 and list(sc.get_array()) == [0, 1, 1], "ax.scatter(X[:, 0], X[:, 1], c=y)")
-@@step Transparency and size
-Overlapping opaque points hide their density. `alpha=0.6` lets overlaps show as darker spots; `s=25` keeps the dots small enough to see structure:
-
-```python
-sc = ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.6, s=25)
-```
-
-**Do:** add both arguments, then Run.
-@@stepcheck
-import numpy as np, matplotlib.pyplot as plt
-f, a = plt.subplots()
-sc = plot_embedding(a, np.array([[0.0, 0.0], [1.0, 1.0]]), np.array([0, 1]))
-test("points are semi-transparent and small", lambda: sc.get_alpha() == 0.6 and list(sc.get_sizes()) == [25], "alpha=0.6, s=25")
-@@step Labels and an honest aspect ratio
-Name the dimensions and make one unit on x the same length as one unit on y, so a cluster that is round in the data is round on the page:
-
-```python
-ax.set_xlabel("dim 1")
-ax.set_ylabel("dim 2")
-ax.set_aspect("equal")
-```
-
-**Do:** add the three lines, then Run.
-@@stepcheck
-import numpy as np, matplotlib.pyplot as plt
-f, a = plt.subplots()
-plot_embedding(a, np.array([[0.0, 0.0], [1.0, 1.0]]), np.array([0, 1]))
-test("axes are labelled and the aspect is equal", lambda: a.get_xlabel() == "dim 1" and a.get_ylabel() == "dim 2" and a.get_aspect() == 1.0, 'ax.set_aspect("equal")')
 @@starter
 import numpy as np
 import matplotlib.pyplot as plt

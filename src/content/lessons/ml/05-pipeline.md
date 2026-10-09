@@ -21,42 +21,6 @@ model.named_steps["scale"].mean_ # the means it learned, from X_train only
 ```
 
 > **Mission:** implement `make_model()` → that two-step pipeline, and `fit_and_score(model, X, y, seed=0)` → the test accuracy after a 75/25 split with `random_state=seed`, fitting the pipeline on the training part only.
-
-@@step Build the pipeline
-A list of `(name, estimator)` pairs. Every step but the last must transform data; the last one predicts:
-
-```python
-return Pipeline([("scale", StandardScaler()), ("clf", LogisticRegression())])
-```
-
-**Do:** implement `make_model`, then Run.
-@@stepcheck
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-m = make_model()
-test("a two-step pipeline: scale, then classify", lambda: isinstance(m, Pipeline) and list(m.named_steps) == ["scale", "clf"] and isinstance(m.named_steps["scale"], StandardScaler) and isinstance(m.named_steps["clf"], LogisticRegression), 'Pipeline([("scale", StandardScaler()), ("clf", LogisticRegression())])')
-@@step Fit on the training part, score on the test part
-Split, fit the whole pipeline on the training arrays, score on the test arrays. The scaler never sees `X_test` during fitting:
-
-```python
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=seed)
-model.fit(X_train, y_train)
-return model.score(X_test, y_test)
-```
-
-**Do:** implement `fit_and_score`, then Run. The step check confirms the scaler's means come from the training rows only.
-@@stepcheck
-import numpy as np
-from sklearn.model_selection import train_test_split
-rng = np.random.default_rng(1)
-Xs = np.column_stack([rng.normal(0, 1, 300), rng.normal(0, 1000, 300)])
-ys = (Xs[:, 0] + Xs[:, 1] / 1000 > 0).astype(int)
-m = make_model()
-acc = fit_and_score(m, Xs, ys, seed=7)
-Xtr, Xte, ytr, yte = train_test_split(Xs, ys, test_size=0.25, random_state=7)
-test("the scaler learned its means from the training rows only", lambda: np.allclose(m.named_steps["scale"].mean_, Xtr.mean(axis=0)), "model.fit(X_train, y_train) after the split")
-test("the returned number is the test accuracy", lambda: np.isclose(acc, m.score(Xte, yte)) and acc > 0.8)
 @@starter
 import numpy as np
 from sklearn.linear_model import LogisticRegression

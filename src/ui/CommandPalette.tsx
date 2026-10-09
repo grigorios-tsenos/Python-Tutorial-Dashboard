@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LESSONS } from '../content'
+import { COURSE_LESSONS, coursePath } from '../content/course'
 import { TRACK_BY_ID } from '../content/tracks'
 import { go, lessonPath } from '../lib/router'
 import { useStore } from '../store/useStore'
@@ -28,6 +29,7 @@ function score(q: string, text: string): number {
 export function CommandPalette() {
   const open = useUi((s) => s.paletteOpen)
   const completed = useStore((s) => s.completed)
+  const courseDone = useStore((s) => s.course)
   const settings = useStore((s) => s.settings)
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
@@ -42,6 +44,7 @@ export function CommandPalette() {
     const st = useStore.getState()
     const actions: Item[] = [
       { id: 'a-map', label: 'Go to the map', hint: 'page', icon: '✦', run: () => go('#/') },
+      { id: 'a-course', label: 'Open the Course (AI Engineering from Scratch)', hint: 'page', icon: '📚', run: () => go('#/course') },
       { id: 'a-review', label: 'Open Review', hint: 'page', icon: '🧠', run: () => go('#/review') },
       { id: 'a-stats', label: 'Open Dashboard', hint: 'page', icon: '◔', run: () => go('#/stats') },
       { id: 'a-vim', label: `Turn Vim mode ${settings.vim ? 'off' : 'on'}`, hint: 'setting', icon: '⌨', run: () => st.setSetting('vim', !settings.vim) },
@@ -56,8 +59,16 @@ export function CommandPalette() {
       keywords: `${l.id.replace(/-/g, ' ')} ${l.tagline} ${TRACK_BY_ID[l.track].name} ${l.kind}`,
       run: () => go(lessonPath(l.id)),
     }))
-    return [...actions, ...lessons]
-  }, [completed, settings])
+    const course: Item[] = COURSE_LESSONS.map((e) => ({
+      id: `course-${e.key}`,
+      label: e.lesson.title,
+      hint: `Course · Phase ${e.phase.n}${courseDone[e.key] ? ' · ✓' : ''}`,
+      icon: '📚',
+      keywords: `${e.phase.title} ${e.lesson.tagline} ${e.lesson.type}`,
+      run: () => go(coursePath(e.key)),
+    }))
+    return [...actions, ...lessons, ...course]
+  }, [completed, courseDone, settings])
 
   const results = useMemo(
     () =>

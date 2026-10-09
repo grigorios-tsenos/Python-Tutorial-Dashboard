@@ -20,48 +20,6 @@ scores = cross_val_score(model, X, y, cv=cv)                          # one scor
 ```
 
 > **Mission:** implement `cv_report(model, X, y, k=5, seed=0)` → `(mean, std)` of the `k` fold accuracies using a shuffled, seeded `StratifiedKFold`, and `compare(models, X, y)` → the name of the model with the highest mean (ties keep the first), for a dict `name -> model`.
-
-@@step k scores, one mean, one spread
-Build the splitter, hand it to `cross_val_score`, summarise:
-
-```python
-cv = StratifiedKFold(n_splits=k, shuffle=True, random_state=seed)
-scores = cross_val_score(model, X, y, cv=cv)
-return float(scores.mean()), float(scores.std())
-```
-
-**Do:** implement `cv_report`, then Run.
-@@stepcheck
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-rng = np.random.default_rng(0)
-Xs = rng.normal(size=(200, 2))
-ys = (Xs[:, 0] + Xs[:, 1] > 0).astype(int)
-mean, std = cv_report(LogisticRegression(), Xs, ys, k=4, seed=3)
-ref = cross_val_score(LogisticRegression(), Xs, ys, cv=StratifiedKFold(n_splits=4, shuffle=True, random_state=3))
-test("mean and std of the k fold scores", lambda: np.isclose(mean, ref.mean()) and np.isclose(std, ref.std()), "StratifiedKFold(n_splits=k, shuffle=True, random_state=seed) with cross_val_score")
-@@step Compare models by their mean score
-Loop over the dict, keep the best mean, and only replace it on a strictly higher score so ties keep the first entry:
-
-```python
-best_name, best_mean = None, -1.0
-for name, model in models.items():
-    mean, _ = cv_report(model, X, y)
-    if mean > best_mean:
-        best_name, best_mean = name, mean
-return best_name
-```
-
-**Do:** implement `compare`, then Run.
-@@stepcheck
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.dummy import DummyClassifier
-rng = np.random.default_rng(0)
-Xs = rng.normal(size=(200, 2))
-ys = (Xs[:, 0] + Xs[:, 1] > 0).astype(int)
-test("the better model wins and ties keep the first", lambda: compare({"dummy": DummyClassifier(), "logistic": LogisticRegression()}, Xs, ys) == "logistic" and compare({"a": DummyClassifier(), "b": DummyClassifier()}, Xs, ys) == "a", "update only when mean > best_mean")
 @@starter
 import numpy as np
 from sklearn.linear_model import LogisticRegression

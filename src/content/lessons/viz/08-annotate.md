@@ -21,49 +21,6 @@ ax.annotate("best: epoch 6", xy=(6, 0.28),            # the point the arrow touc
 ```
 
 > **Mission:** implement `annotate_best(ax, epochs, val_loss)`: plot the validation loss with markers, annotate the minimum with the text `best: epoch N` and an arrow, draw a dashed vertical line at that epoch, and return `N`.
-
-@@step Plot and find the minimum
-Draw the curve, then locate the lowest value with `np.argmin` and translate the position into an epoch:
-
-```python
-ax.plot(epochs, val_loss, marker="o")
-i = int(np.argmin(val_loss))
-best = epochs[i]
-return best
-```
-
-**Do:** plot and return the best epoch, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-best = annotate_best(a, [1, 2, 3, 4], [0.9, 0.5, 0.6, 0.8])
-test("the curve is drawn and the best epoch returned", lambda: best == 2 and len(a.get_lines()) >= 1 and list(a.get_lines()[0].get_ydata()) == [0.9, 0.5, 0.6, 0.8], "ax.plot(epochs, val_loss, marker='o'); epochs[int(np.argmin(val_loss))]")
-@@step Annotate the point with an arrow
-`xy` is the data point; `xytext` is where the words go, offset so they do not cover the curve:
-
-```python
-ax.annotate(f"best: epoch {best}", xy=(best, val_loss[i]), xytext=(best + 1, val_loss[i] + 0.2), arrowprops=dict(arrowstyle="->"))
-```
-
-**Do:** add the annotation, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-annotate_best(a, [1, 2, 3, 4], [0.9, 0.5, 0.6, 0.8])
-test("an annotation with an arrow points at the minimum", lambda: len(a.texts) == 1 and tuple(a.texts[0].xy) == (2, 0.5) and "epoch 2" in a.texts[0].get_text() and a.texts[0].arrow_patch is not None, 'ax.annotate(f"best: epoch {best}", xy=(best, val_loss[i]), xytext=..., arrowprops=dict(arrowstyle="->"))')
-@@step A dashed reference line
-A vertical line turns the epoch into something the eye can compare other curves against:
-
-```python
-ax.axvline(best, linestyle="--", color="gray")
-```
-
-**Do:** add the line, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-annotate_best(a, [1, 2, 3, 4], [0.9, 0.5, 0.6, 0.8])
-test("a dashed vertical line sits at the best epoch", lambda: any(len(set(l.get_xdata())) == 1 and list(l.get_xdata())[0] == 2 and l.get_linestyle() == "--" for l in a.get_lines()), 'ax.axvline(best, linestyle="--")')
 @@starter
 import numpy as np
 import matplotlib.pyplot as plt

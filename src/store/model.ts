@@ -1,4 +1,5 @@
 import { LESSON_BY_ID } from '../content'
+import { COURSE_BY_KEY } from '../content/course'
 import type { Card } from '../lib/gamification'
 
 export const STORE_VERSION = 1
@@ -8,6 +9,14 @@ export interface Completion {
   xp: number
   hints: number
   attempts: number
+}
+
+/** a finished course lesson: quiz score (total 0 = reading lesson marked as read) and the XP it earned */
+export interface CourseProgress {
+  at: number
+  score: number
+  total: number
+  xp: number
 }
 
 export type MapLabels = 'all' | 'focus' | 'off'
@@ -61,9 +70,15 @@ export interface Note {
   takeaway?: string
 }
 
+export interface GuidedProgress {
+  step: number
+  drafts: string[]
+}
+
 export interface Persisted {
   completed: Record<string, Completion>
   code: Record<string, string>
+  guided: Record<string, GuidedProgress>
   hints: Record<string, number>
   xp: number
   activity: Record<string, number>
@@ -78,12 +93,17 @@ export interface Persisted {
   quest: { date: string; done: number; claimed: boolean }
   stats: { runs: number; vimRuns: number; reviews: number; predictMisses: number }
   lastLesson: string | null
+  /** AI Engineering from Scratch course, keyed by `<phase>/<lesson>` */
+  course: Record<string, CourseProgress>
+  courseCode: Record<string, string>
+  courseLast: string | null
 }
 
 export function defaults(): Persisted {
   return {
     completed: {},
     code: {},
+    guided: {},
     hints: {},
     xp: 0,
     activity: {},
@@ -96,6 +116,9 @@ export function defaults(): Persisted {
     quest: { date: '', done: 0, claimed: false },
     stats: { runs: 0, vimRuns: 0, reviews: 0, predictMisses: 0 },
     lastLesson: null,
+    course: {},
+    courseCode: {},
+    courseLast: null,
   }
 }
 
@@ -118,6 +141,13 @@ export function sanitize(raw: unknown): Persisted {
   }
   if (isObj(raw.code)) {
     for (const [id, v] of Object.entries(raw.code)) if (LESSON_BY_ID[id] && typeof v === 'string' && v.length < 100_000) d.code[id] = v
+  }
+  if (isObj(raw.guided)) {
+    for (const [id, v] of Object.entries(raw.guided)) {
+      if (!LESSON_BY_ID[id] || !isObj(v) || !Array.isArray(v.drafts) || v.drafts.length > 100) continue
+      if (!v.drafts.every((draft) => typeof draft === 'string' && draft.length < 100_000)) continue
+      d.guided[id] = { step: Math.min(v.drafts.length, Math.max(0, Math.floor(num(v.step)))), drafts: v.drafts }
+    }
   }
   if (isObj(raw.hints)) {
     for (const [id, v] of Object.entries(raw.hints)) if (LESSON_BY_ID[id]) d.hints[id] = Math.min(3, Math.max(0, Math.floor(num(v))))
@@ -176,5 +206,16 @@ export function sanitize(raw: unknown): Persisted {
     for (const k of ['runs', 'vimRuns', 'reviews', 'predictMisses'] as const) d.stats[k] = Math.max(0, Math.floor(num(raw.stats[k])))
   }
   d.lastLesson = typeof raw.lastLesson === 'string' && LESSON_BY_ID[raw.lastLesson] ? raw.lastLesson : null
+  if (isObj(raw.course)) {
+    for (const [key, v] of Object.entries(raw.course)) {
+      if (!COURSE_BY_KEY[key] || !isObj(v)) continue
+      const total = Math.max(0, Math.floor(num(v.total)))
+      d.course[key] = { at: num(v.at), score: Math.min(total, Math.max(0, Math.floor(num(v.score)))), total, xp: Math.max(0, Math.floor(num(v.xp))) }
+    }
+  }
+  if (isObj(raw.courseCode)) {
+    for (const [key, v] of Object.entries(raw.courseCode)) if (COURSE_BY_KEY[key] && typeof v === 'string' && v.length < 200_000) d.courseCode[key] = v
+  }
+  d.courseLast = typeof raw.courseLast === 'string' && COURSE_BY_KEY[raw.courseLast] ? raw.courseLast : null
   return d
 }

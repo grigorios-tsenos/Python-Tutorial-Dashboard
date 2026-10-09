@@ -22,61 +22,6 @@ output  = weights @ V              a weighted mix of the values           (n, d_
 The `sqrt(d)` keeps the scores in a range where softmax is not saturated. A **causal** mask sets every score "in the future" (`j > i`) to `−inf` before the softmax, so position `i` can only look backwards: that is what makes a language model unable to peek at the next token.
 
 > **Mission:** implement `scores(Q, K)`, `attention_weights(Q, K, causal=False)` and `attention(Q, K, V, causal=False)`.
-
-@@step Scaled scores
-One matrix product, one division:
-
-```python
-return Q @ K.T / np.sqrt(K.shape[1])
-```
-
-**Do:** implement `scores`, then Run.
-@@stepcheck
-import numpy as np
-Q = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
-K = np.array([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])
-test("scores are Q @ K.T scaled by sqrt(d)", lambda: np.allclose(scores(Q, K), Q @ K.T / np.sqrt(2)) and scores(Q, K).shape == (3, 3), "Q @ K.T / np.sqrt(K.shape[1])")
-@@step Softmax over each row
-Each query's scores become a distribution over the keys. Reuse the stable softmax pattern:
-
-```python
-s = scores(Q, K)
-s = s - s.max(axis=1, keepdims=True)
-e = np.exp(s)
-return e / e.sum(axis=1, keepdims=True)
-```
-
-**Do:** implement `attention_weights` without the mask, then Run.
-@@stepcheck
-import numpy as np
-Q = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
-K = np.array([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])
-s = Q @ K.T / np.sqrt(2)
-e = np.exp(s - s.max(axis=1, keepdims=True))
-w = attention_weights(Q, K)
-test("each row of weights is a softmax over the keys", lambda: np.allclose(w, e / e.sum(axis=1, keepdims=True)) and np.allclose(w.sum(axis=1), 1), "softmax per row, after subtracting the row max")
-@@step The causal mask, and the mix
-Before the softmax, hide the future: `np.triu(np.ones((n, n)), k=1)` is 1 above the diagonal. Set those scores to `-np.inf`, and `exp(-inf) = 0` removes them. Then `attention` is the weighted mix:
-
-```python
-if causal:
-    mask = np.triu(np.ones_like(s, dtype=bool), k=1)
-    s = np.where(mask, -np.inf, s)
-...
-def attention(Q, K, V, causal=False):
-    return attention_weights(Q, K, causal) @ V
-```
-
-**Do:** add the mask and implement `attention`, then Run.
-@@stepcheck
-import numpy as np
-Q = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
-K = np.array([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])
-V = np.array([[10.0, 0.0], [0.0, 10.0], [5.0, 5.0]])
-w = attention_weights(Q, K, causal=True)
-test("causal weights are zero above the diagonal and rows still sum to 1", lambda: np.allclose(np.triu(w, k=1), 0) and np.allclose(w.sum(axis=1), 1) and bool(np.isfinite(w).all()), "np.where(np.triu(ones, k=1), -np.inf, s) before the softmax")
-test("the first position can only see itself", lambda: np.allclose(attention(Q, K, V, causal=True)[0], V[0]))
-test("attention mixes the values with the weights", lambda: np.allclose(attention(Q, K, V), attention_weights(Q, K) @ V) and attention(Q, K, V).shape == (3, 2))
 @@starter
 import numpy as np
 

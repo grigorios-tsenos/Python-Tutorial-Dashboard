@@ -21,36 +21,6 @@ Real tables mix numbers and categories, and production sends categories training
 > 3. `predict_churn(model, df)` → a 1-D array of churn probabilities for the rows of `df`, which may lack the `churned` column and may contain unseen plans
 >
 > The boss scores your model with ROC AUC on fresh data and must beat `0.7`.
-
-@@step Route columns to their preprocessing
-Each transformer gets a name, an estimator and the columns it owns. The encoder must tolerate unknown categories.
-@@stepcheck
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-p = make_preprocessor()
-names = {name: (est, cols) for name, est, cols in p.transformers}
-test("a ColumnTransformer with num and cat routes", lambda: isinstance(p, ColumnTransformer) and set(names) == {"num", "cat"} and isinstance(names["num"][0], StandardScaler) and list(names["num"][1]) == NUMERIC and isinstance(names["cat"][0], OneHotEncoder) and list(names["cat"][1]) == ["plan"], 'ColumnTransformer([("num", StandardScaler(), NUMERIC), ("cat", OneHotEncoder(handle_unknown="ignore"), ["plan"])])')
-test("unknown categories are ignored, not fatal", lambda: names["cat"][0].handle_unknown == "ignore")
-@@step Train the pipeline on features only
-Build the pipeline, fit it on `df[FEATURES]` and `df["churned"]`, and return it. The label must never be inside `FEATURES`.
-@@stepcheck
-from sklearn.pipeline import Pipeline
-m = train_churn_model(make_churn(400, seed=1))
-test("a fitted prep + clf pipeline trained on the feature columns", lambda: isinstance(m, Pipeline) and list(m.named_steps) == ["prep", "clf"] and hasattr(m.named_steps["clf"], "coef_") and "churned" not in FEATURES and list(m.feature_names_in_) == FEATURES, 'Pipeline([("prep", make_preprocessor()), ("clf", LogisticRegression(max_iter=500))]).fit(df[FEATURES], df["churned"])')
-@@step Probabilities for any batch
-Select `FEATURES` from the incoming frame and return `predict_proba(...)[:, 1]`. A frame without the label column and a never-seen plan must both work.
-@@stepcheck
-import numpy as np
-import pandas as pd
-from sklearn.metrics import roc_auc_score
-m = train_churn_model(make_churn(600, seed=1))
-fresh = make_churn(300, seed=2)
-p = predict_churn(m, fresh.drop(columns="churned"))
-test("one probability in [0, 1] per row, without the label column", lambda: p.shape == (300,) and bool((p >= 0).all() and (p <= 1).all()), "model.predict_proba(df[FEATURES])[:, 1]")
-test("the model beats 0.7 AUC on fresh data", lambda: roc_auc_score(fresh["churned"], p) > 0.7)
-weird = fresh.head(5).copy()
-weird["plan"] = "enterprise"
-test("an unseen plan does not crash and still yields probabilities", lambda: predict_churn(m, weird).shape == (5,))
 @@starter
 import numpy as np
 import pandas as pd

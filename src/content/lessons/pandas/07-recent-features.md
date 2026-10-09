@@ -16,60 +16,6 @@ A lifetime total and a last-week total answer different questions. Time-bounded 
 Parse times with `pd.to_datetime(..., errors="coerce", utc=True)`: bad timestamps become `NaT` and belong to no window, and UTC makes different offsets comparable.
 
 > **Mission:** implement `recent_features(events, as_of, days=7)`. Inputs have `user`, `at` and `amount`. Keep events where `as_of - days < at <= as_of` (lower bound exclusive, upper inclusive), then return `user`, `n_events` and `revenue` per user, sorted by user, only for users with an event in the window. Invalid amounts count as `0`; invalid times are excluded. Keep the input unchanged; empty results keep the output columns; `days < 1` raises `ValueError`.
-
-@@step Reject a window that makes no sense
-A zero- or negative-day window would silently return nothing. Fail loudly at the top of the function:
-
-```python
-if days < 1:
-    raise ValueError("days must be positive")
-```
-
-**Do:** add the guard, then Run.
-@@stepcheck
-import pandas as pd
-E = pd.DataFrame({"user": ["a"], "at": ["2026-01-08"], "amount": ["5"]})
-def rejected():
-    try:
-        recent_features(E, "2026-01-08", days=0)
-    except ValueError:
-        return True
-    return False
-test("non-positive window lengths are rejected", rejected, "if days < 1: raise ValueError(...)")
-@@step Parse, bound, count
-Clean into a **new** frame with `assign`, then keep the window and count events per user:
-
-```python
-cutoff = pd.to_datetime(as_of, utc=True)
-clean = events.assign(at=pd.to_datetime(events["at"], errors="coerce", utc=True, format="mixed"))
-window = clean[(clean["at"] > cutoff - pd.Timedelta(days=days)) & (clean["at"] <= cutoff)]
-```
-
-Then `window.groupby("user", sort=True).agg(n_events=("at", "size")).reset_index()`. Named aggregation (`new_column=("source", "function")`) names outputs explicitly; `size` counts rows; `reset_index` turns `user` back into a column.
-
-**Do:** return the per-user event counts, then Run.
-@@stepcheck
-import pandas as pd
-E = pd.DataFrame({
-    "user": ["b", "a", "a", "a", "b", "c", "d"],
-    "at": ["2026-01-07T12:00:00Z", "2026-01-01T12:00:00Z", "2026-01-01T12:00:01Z", "2026-01-08T12:00:00Z", "2026-01-09T00:00:00Z", "broken", "2026-01-08T14:00:00+02:00"],
-    "amount": ["bad", "100", "2", "5", "200", "99", "3"],
-})
-out = recent_features(E, "2026-01-08T12:00:00Z")
-test("window boundaries exclude old and future events", lambda: out["user"].tolist() == ["a", "b", "d"] and out["n_events"].tolist() == [2, 1, 1], "lower bound exclusive, upper inclusive, parsed with utc=True")
-@@step Sum revenue, treating junk as zero
-Add the cleaned amount to the same `assign`: `amount=pd.to_numeric(events["amount"], errors="coerce").fillna(0)`. Then extend the aggregation with `revenue=("amount", "sum")`.
-
-**Do:** add the revenue column, then Run.
-@@stepcheck
-import pandas as pd
-E = pd.DataFrame({
-    "user": ["b", "a", "a", "a", "b", "c", "d"],
-    "at": ["2026-01-07T12:00:00Z", "2026-01-01T12:00:00Z", "2026-01-01T12:00:01Z", "2026-01-08T12:00:00Z", "2026-01-09T00:00:00Z", "broken", "2026-01-08T14:00:00+02:00"],
-    "amount": ["bad", "100", "2", "5", "200", "99", "3"],
-})
-out = recent_features(E, "2026-01-08T12:00:00Z")
-test("invalid amounts become zero and UTC offsets agree", lambda: list(out.columns) == ["user", "n_events", "revenue"] and out["revenue"].tolist() == [7, 0, 3], 'pd.to_numeric(..., errors="coerce").fillna(0), then revenue=("amount", "sum")')
 @@starter
 import pandas as pd
 

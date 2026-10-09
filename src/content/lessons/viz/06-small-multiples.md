@@ -21,55 +21,6 @@ fig.suptitle("Training run 42")
 ```
 
 > **Mission:** implement `plot_training(history)`, where `history` has lists `train_loss`, `val_loss`, `train_acc`, `val_acc`. Return a figure with two axes: the left shows both losses on a log y axis, the right shows both accuracies; each panel has a legend and a title, and the figure has a suptitle.
-
-@@step Two axes in one figure
-Ask for a 1×2 grid. `figsize` is in inches; wide and short suits two panels:
-
-```python
-fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))
-return fig
-```
-
-**Do:** create and return the figure, then Run.
-@@stepcheck
-h = {"train_loss": [1.0, 0.5], "val_loss": [1.1, 0.6], "train_acc": [0.5, 0.8], "val_acc": [0.5, 0.75]}
-f = plot_training(h)
-test("the figure holds two axes", lambda: f is not None and len(f.axes) == 2, "fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))")
-@@step Curves on each panel
-Index the array of axes. Each panel gets its own two lines, labels and legend:
-
-```python
-epochs = range(1, len(history["train_loss"]) + 1)
-axes[0].plot(epochs, history["train_loss"], label="train")
-axes[0].plot(epochs, history["val_loss"], label="val")
-axes[1].plot(epochs, history["train_acc"], label="train")
-axes[1].plot(epochs, history["val_acc"], label="val")
-for ax in axes:
-    ax.set_xlabel("epoch")
-    ax.legend()
-```
-
-**Do:** draw the four curves, then Run.
-@@stepcheck
-h = {"train_loss": [1.0, 0.5, 0.2], "val_loss": [1.1, 0.6, 0.4], "train_acc": [0.5, 0.8, 0.9], "val_acc": [0.5, 0.75, 0.8]}
-f = plot_training(h)
-test("each panel has two labelled curves and a legend", lambda: all(len(ax.get_lines()) == 2 and ax.get_legend() is not None for ax in f.axes) and list(f.axes[1].get_lines()[1].get_ydata()) == [0.5, 0.75, 0.8], "axes[0] for losses, axes[1] for accuracies")
-@@step Log scale, titles, suptitle
-A log y axis on the loss panel; a title per panel so each stands on its own; one suptitle for the figure:
-
-```python
-axes[0].set_yscale("log")
-axes[0].set_title("loss")
-axes[1].set_title("accuracy")
-fig.suptitle("Training history")
-```
-
-**Do:** add the scale and titles, then Run.
-@@stepcheck
-h = {"train_loss": [1.0, 0.5], "val_loss": [1.1, 0.6], "train_acc": [0.5, 0.8], "val_acc": [0.5, 0.75]}
-f = plot_training(h)
-test("the loss panel uses a log scale and every panel is titled", lambda: f.axes[0].get_yscale() == "log" and all(ax.get_title().strip() for ax in f.axes), 'axes[0].set_yscale("log")')
-test("the figure has a suptitle", lambda: f._suptitle is not None and f._suptitle.get_text().strip() != "", "fig.suptitle(...)")
 @@starter
 import matplotlib.pyplot as plt
 

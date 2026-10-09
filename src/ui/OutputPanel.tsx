@@ -1,7 +1,5 @@
-import type { Step } from '../content/types'
 import type { Emit, RunResult, TestResult } from '../engine/types'
 import { useRunnerStatus, runner } from '../engine/runner'
-import { finalTests, stepTests } from '../lib/steps'
 import { BroadcastGrid } from '../labs/BroadcastGrid'
 import { GraphTrace } from '../labs/GraphTrace'
 import { MlflowRuns } from '../labs/MlflowRuns'
@@ -16,54 +14,16 @@ function Visual({ emit }: { emit: Emit }) {
 
 const VISUAL_KINDS = ['graph_trace', 'mlflow_runs', 'broadcast', 'figure']
 
-function TestList({ tests }: { tests: TestResult[] }) {
+function TestList({ tests, showMessages }: { tests: TestResult[]; showMessages: boolean }) {
   return (
     <ul>
       {tests.map((t, i) => (
         <li key={i} className={t.ok ? 'ok' : 'bad'}>
           <span aria-hidden>{t.ok ? '✓' : '✗'}</span> {t.label}
-          {!t.ok && t.msg && <div className="test-msg">{t.msg}</div>}
+          {showMessages && !t.ok && t.msg && <div className="test-msg">{t.msg}</div>}
         </li>
       ))}
     </ul>
-  )
-}
-
-/**
- * Checks grouped by step: only the step being worked on is spelled out, so a run never shows a
- * wall of red for work that has not started yet.
- */
-function StepVerdict({ result, steps, current, completed }: { result: RunResult; steps: Step[]; current: number; completed: boolean }) {
-  const all = result.tests
-  const passed = all.length > 0 && all.every((t) => t.ok)
-  if (passed) {
-    return (
-      <div className="out-verdict pass">
-        <div className="verdict-head">✓ All checks pass{completed ? '' : ' · lesson complete'}</div>
-        <details><summary className="dim">{all.length} checks</summary><TestList tests={all} /></details>
-      </div>
-    )
-  }
-  if (current < steps.length) {
-    const mine = stepTests(result, current)
-    const fails = mine.filter((t) => !t.ok).length
-    return (
-      <div className={`out-verdict ${fails ? 'fail' : 'pass'}`}>
-        <div className="verdict-head">
-          {current > 0 && <span className="verdict-done">✓ {current} step{current === 1 ? '' : 's'} done · </span>}
-          Step {current + 1}: {steps[current].title}
-        </div>
-        {mine.length ? <TestList tests={mine} /> : <p className="dim">This step's check produced no result yet.</p>}
-      </div>
-    )
-  }
-  const final = finalTests(result)
-  const fails = final.filter((t) => !t.ok).length
-  return (
-    <div className="out-verdict fail">
-      <div className="verdict-head">✓ Every step done · final checks: {fails} of {final.length} failing</div>
-      <TestList tests={final} />
-    </div>
   )
 }
 
@@ -74,11 +34,11 @@ interface Props {
   completed: boolean
   /** Visual Labs put their visualisation above the checks and console */
   visualFirst?: boolean
-  steps?: Step[]
-  current?: number
+  emptyMessage?: string
+  showTestMessages?: boolean
 }
 
-export function OutputPanel({ result, running, graded, completed, visualFirst, steps = [], current = 0 }: Props) {
+export function OutputPanel({ result, running, graded, completed, visualFirst, emptyMessage, showTestMessages = true }: Props) {
   const status = useRunnerStatus()
   const booting = status.phase === 'booting'
 
@@ -104,7 +64,7 @@ export function OutputPanel({ result, running, graded, completed, visualFirst, s
               <span>{status.detail || (running ? 'Running…' : 'Starting Python…')}</span>
             </>
           ) : (
-            <span>Press <kbd>Run</kbd> or <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run your code. Output appears here.</span>
+            <span>{emptyMessage ?? <>Press <kbd>Run</kbd> or <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run your code. Output appears here.</>}</span>
           )}
         </div>
       </div>
@@ -130,11 +90,10 @@ export function OutputPanel({ result, running, graded, completed, visualFirst, s
         </div>
       )}
       {visualFirst && visualBlock}
-      {graded && result.tests.length > 0 && steps.length > 0 && <StepVerdict result={result} steps={steps} current={current} completed={completed} />}
-      {graded && result.tests.length > 0 && steps.length === 0 && (
+      {graded && result.tests.length > 0 && (
         <div className={`out-verdict ${passed ? 'pass' : 'fail'}`}>
-          <div className="verdict-head">{passed ? '✓ All checks pass' : `✗ ${result.tests.filter((t) => !t.ok).length} of ${result.tests.length} checks failing`}</div>
-          <TestList tests={result.tests} />
+          <div className="verdict-head">{passed ? (completed ? '✓ All checks pass' : '✓ All checks pass') : `✗ ${result.tests.filter((t) => !t.ok).length} of ${result.tests.length} checks failing`}</div>
+          <TestList tests={result.tests} showMessages={showTestMessages} />
         </div>
       )}
       {graded && !result.error && result.tests.length === 0 && !result.infra && <div className="out-note">Your code ran, but no checks produced results.</div>}

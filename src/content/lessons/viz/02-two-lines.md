@@ -17,54 +17,6 @@ One curve says "loss went down". Two curves on the same axes say "training loss 
 Each `ax.plot` call adds a line; give each a `label` and call `ax.legend()` so the reader knows which is which. A vertical marker (`ax.axvline`) pins the epoch worth talking about.
 
 > **Mission:** implement `plot_curves(ax, epochs, train, val)`: draw both curves labelled `train` and `val`, add a legend and axis labels (`epoch`, `loss`), mark the epoch with the lowest validation loss with a dashed vertical line, and **return that epoch**.
-
-@@step Two labelled lines
-Two calls, two labels. Labels do nothing visible until a legend uses them:
-
-```python
-ax.plot(epochs, train, label="train")
-ax.plot(epochs, val, label="val")
-```
-
-**Do:** draw both lines, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-plot_curves(a, [1, 2, 3], [1.0, 0.5, 0.2], [1.1, 0.7, 0.8])
-test("two lines, labelled train and val", lambda: [l.get_label() for l in a.get_lines()[:2]] == ["train", "val"] and list(a.get_lines()[1].get_ydata()) == [1.1, 0.7, 0.8], 'ax.plot(..., label="train") and ax.plot(..., label="val")')
-@@step Legend and axis labels
-`ax.legend()` reads the labels you set. Axis labels say what the numbers mean:
-
-```python
-ax.set_xlabel("epoch")
-ax.set_ylabel("loss")
-ax.legend()
-```
-
-**Do:** add the legend and labels, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-plot_curves(a, [1, 2, 3], [1.0, 0.5, 0.2], [1.1, 0.7, 0.8])
-test("the axes carry a legend and labels", lambda: a.get_legend() is not None and [t.get_text() for t in a.get_legend().get_texts()] == ["train", "val"] and a.get_xlabel() == "epoch" and a.get_ylabel() == "loss", "ax.legend() after setting the labels")
-@@step Mark the best epoch and return it
-`np.argmin` finds the position of the smallest validation loss; the epoch at that position is the one to report:
-
-```python
-i = int(np.argmin(val))
-best = epochs[i]
-ax.axvline(best, linestyle="--", color="gray")
-return best
-```
-
-**Do:** add the marker and return the epoch, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-best = plot_curves(a, [1, 2, 3, 4], [1.0, 0.5, 0.3, 0.2], [1.1, 0.7, 0.6, 0.8])
-vlines = [l for l in a.get_lines() if len(set(l.get_xdata())) == 1]
-test("the best validation epoch is returned", lambda: best == 3, "epochs[int(np.argmin(val))]")
-test("a dashed vertical line marks it", lambda: any(list(l.get_xdata())[0] == 3 and l.get_linestyle() == "--" for l in vlines), 'ax.axvline(best, linestyle="--")')
 @@starter
 import numpy as np
 import matplotlib.pyplot as plt

@@ -21,60 +21,6 @@ P(flagged) = sens · prior + fpr · (1 − prior)
 The denominator is the key: a tiny prior means most flags come from the huge pile of good mail. Each new piece of evidence turns the posterior into the next prior.
 
 > **Mission:** implement `posterior(prior, sens, fpr, positive=True)` → the probability of the condition after one test result, and `posterior_after(prior, sens, fpr, results)` → the probability after a sequence of boolean results, applied in order. All probabilities must be in `[0, 1]`, else `ValueError`.
-
-@@step A positive result
-Translate the formula literally. The probability of a positive result is the sum over both worlds (condition true, condition false):
-
-```python
-p_positive = sens * prior + fpr * (1 - prior)
-return sens * prior / p_positive
-```
-
-**Do:** implement the positive case, then Run. With the spam numbers you should see about `0.167`.
-@@stepcheck
-import numpy as np
-test("a positive test on a rare condition is mostly false alarms", lambda: np.isclose(posterior(0.01, 0.99, 0.05), 0.99 * 0.01 / (0.99 * 0.01 + 0.05 * 0.99)), "sens * prior / (sens * prior + fpr * (1 - prior))")
-test("a common condition makes a positive test convincing", lambda: posterior(0.5, 0.99, 0.05) > 0.9)
-@@step A negative result, and a sequence
-A negative result also carries information. Swap each likelihood for its complement:
-
-```python
-if positive:
-    ...
-p_negative = (1 - sens) * prior + (1 - fpr) * (1 - prior)
-return (1 - sens) * prior / p_negative
-```
-
-Then fold a list of results, feeding each posterior back in as the next prior:
-
-```python
-for result in results:
-    prior = posterior(prior, sens, fpr, result)
-return prior
-```
-
-**Do:** add the negative branch and `posterior_after`, then Run.
-@@stepcheck
-import numpy as np
-test("a negative result lowers the belief", lambda: posterior(0.3, 0.9, 0.1, positive=False) < 0.3 and np.isclose(posterior(0.3, 0.9, 0.1, positive=False), 0.1 * 0.3 / (0.1 * 0.3 + 0.9 * 0.7)), "(1 - sens) * prior / ((1 - sens) * prior + (1 - fpr) * (1 - prior))")
-test("evidence accumulates in order", lambda: posterior_after(0.01, 0.99, 0.05, [True, True]) > posterior_after(0.01, 0.99, 0.05, [True]) and np.isclose(posterior_after(0.2, 0.9, 0.1, [True, False]), posterior(posterior(0.2, 0.9, 0.1, True), 0.9, 0.1, False)))
-@@step Refuse impossible probabilities
-A probability of 1.2 or −0.1 produces a quietly wrong answer instead of a crash. Guard all three inputs in `posterior`:
-
-```python
-if not all(0 <= p <= 1 for p in (prior, sens, fpr)):
-    raise ValueError("probabilities must be between 0 and 1")
-```
-
-**Do:** add the guard, then Run.
-@@stepcheck
-def rejects(*args):
-    try:
-        posterior(*args)
-    except ValueError:
-        return True
-    return False
-test("probabilities outside [0, 1] are rejected", lambda: rejects(1.2, 0.9, 0.1) and rejects(0.5, -0.1, 0.1) and rejects(0.5, 0.9, 1.5), "raise ValueError")
 @@starter
 def posterior(prior, sens, fpr, positive=True):
     """P(condition | one test result) via Bayes' rule."""

@@ -20,27 +20,6 @@ minutes: 12
 > - an empty dataset raises `ValueError` before any run is logged
 
 The boss uses new names and a different dataset: the winner must come from measured results.
-
-@@step Score every candidate in its own run
-Reject an empty dataset first. Then, per candidate, open a run named after it and log the version as a param and the accuracy (correct answers divided by dataset size) as a metric.
-@@stepcheck
-import mlflow
-evaluate_prompts({"v1": v1, "v2": v2, "v3": v3}, DATASET)
-df = mlflow.search_runs(max_results=3)
-scores = dict(zip(df["params.prompt_version"], df["metrics.accuracy"]))
-test("accuracy logged per candidate, in a run named after it", lambda: scores == {"v1": 0.5, "v2": 0.75, "v3": 0.25} and sorted(df["tags.mlflow.runName"]) == ["v1", "v2", "v3"], "got " + str(scores))
-def rejected():
-    try:
-        evaluate_prompts({"unused": v1}, [])
-    except ValueError:
-        return True
-    return False
-test("empty datasets are rejected", rejected)
-@@step Return the measured winner
-Track the best name and score as you go, updating only on a *strictly* higher score so ties keep the first candidate. With no candidates the loop never runs and `None` comes back.
-@@stepcheck
-test("returns the most accurate candidate", lambda: evaluate_prompts({"v1": v1, "v2": v2, "v3": v3}, DATASET) == "v2", "update best only when acc > best_acc")
-test("ties keep the first candidate and no candidates gives None", lambda: evaluate_prompts({"first": lambda q: "A", "second": lambda q: "A"}, [("a", "A")]) == "first" and evaluate_prompts({}, DATASET) is None)
 @@starter
 import mlflow
 

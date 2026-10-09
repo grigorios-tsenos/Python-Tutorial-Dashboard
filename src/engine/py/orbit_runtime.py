@@ -8,6 +8,8 @@ os.environ.setdefault("MPLBACKEND", "Agg")
 warnings.filterwarnings("ignore", message=".*non-interactive.*cannot be shown.*")
 USER_FILES = ("<cell>", "<check>")
 FLAGS = ast.PyCF_ALLOW_TOP_LEVEL_AWAIT
+# what the last cell left behind, so the editor's hover docs can ask live objects (orbit_hover)
+last_run = {"code": "", "ns": {}}
 
 
 def _purge_modules():
@@ -65,7 +67,7 @@ async def _exec(code, ns, filename):
     return None
 
 
-def _make_test(results, step=None):
+def _make_test(results):
     def test(label, fn, hint=None):
         try:
             ok = fn() if callable(fn) else fn
@@ -75,10 +77,7 @@ def _make_test(results, step=None):
             msg = "" if ok else (hint or "returned a falsy value")
         except Exception as e:  # noqa: BLE001
             ok, msg = False, f"{type(e).__name__}: {e}"
-        r = {"label": label, "ok": ok, "msg": msg}
-        if step is not None:
-            r["step"] = step
-        results.append(r)
+        results.append({"label": label, "ok": ok, "msg": msg})
 
     return test
 
@@ -99,21 +98,8 @@ def _capture_figures():
     plt.close("all")
 
 
-async def _run_check(check, ns, tests, step=None):
-    ns["test"] = _make_test(tests, step)
-    try:
-        await _exec(check, ns, "<check>")
-    except BaseException as e:  # noqa: BLE001
-        r = {"label": "check script", "ok": False, "msg": _format_error(e, "<check>")}
-        if step is not None:
-            r["step"] = step
-        tests.append(r)
-
-
-async def orbit_run(code, check=None, checks_json=None):
-    """Run the learner's cell, then each step check (tagged by index) and the final check."""
+async def orbit_run(code, check=None):
     t0 = time.time()
-    checks = json.loads(checks_json) if checks_json else []
     _purge_modules()
     orbit._reset()
     plt = sys.modules.get("matplotlib.pyplot")
@@ -152,13 +138,15 @@ async def orbit_run(code, check=None, checks_json=None):
             if isinstance(e, (KeyboardInterrupt, SystemExit)) and not isinstance(e, SystemExit):
                 raise
             error = _format_error(e, "<cell>")
-        if error is None and (check or checks):
+        if error is None and check:
+            ns["test"] = _make_test(tests)
             ns["__stdout__"] = out.getvalue()
             ns["__source__"] = code
-            for i, c in enumerate(checks):
-                await _run_check(c, ns, tests, i)
-            if check:
-                await _run_check(check, ns, tests)
+            try:
+                await _exec(check, ns, "<check>")
+            except BaseException as e:  # noqa: BLE001
+                tests.append({"label": "check script", "ok": False, "msg": _format_error(e, "<check>")})
+    last_run.update(code=code, ns=ns)
     return json.dumps(
         {
             "ok": error is None,

@@ -23,47 +23,6 @@ a.reshape(2, 3).sum(axis=0)   # [3 5 7]  one total per column
 The rule to remember: **the axis you name is the one that disappears.** `axis=0` collapses the rows, leaving one number per column. `axis=1` collapses the columns, leaving one number per row.
 
 > **Mission:** turn the 12 numbers into a 3 × 4 grid called `grid`, then print one total per column and one total per row.
-
-@@step Give the 12 numbers rows and columns
-`a` is flat: shape `(12,)`. `reshape` lays the same numbers out as a grid without copying them:
-
-```python
-grid = a.reshape(3, 4)
-```
-
-- `3, 4` means 3 rows and 4 columns. The counts must multiply to 12, or NumPy refuses.
-- Reading order is unchanged: row 0 is `0 1 2 3`, row 1 is `4 5 6 7`, and so on.
-
-**Do:** replace `grid = a` with the line above and Run. Watch `grid.shape` change from `(12,)` to `(3, 4)`.
-@@stepcheck
-test("grid is 3 rows x 4 columns", lambda: grid.shape == (3, 4), "grid = a.reshape(3, 4)")
-test("no numbers were lost", lambda: int(grid.sum()) == 66)
-@@step Read the column totals
-The cell already prints `grid.sum(axis=0)`. With a real grid it shows **four** numbers, one per column, because axis 0 (the rows) collapsed:
-
-```
-0 1 2 3
-4 5 6 7       sum(axis=0)  ->  [12 15 18 21]
-8 9 10 11
-```
-
-Column 0 is `0 + 4 + 8 = 12`. Check the printed output matches before moving on.
-
-**Do:** confirm the output shows `[12 15 18 21]`. If it still shows `66`, `grid` is not a grid yet.
-@@stepcheck
-test("column sums printed", lambda: "[12 15 18 21]" in __stdout__, "print(grid.sum(axis=0)) should show [12 15 18 21]")
-@@step Print one total per row
-Now collapse the other axis. Naming `axis=1` removes the columns, so three numbers remain, one per row:
-
-```python
-print(grid.sum(axis=1))   # [ 6 22 38]
-```
-
-Row 0 is `0 + 1 + 2 + 3 = 6`. Same grid, different axis, different question answered.
-
-**Do:** add the line above at the end of the cell, then Run.
-@@stepcheck
-test("row sums printed", lambda: "[ 6 22 38]" in __stdout__, "print(grid.sum(axis=1)) should show [ 6 22 38]")
 @@starter
 import numpy as np
 

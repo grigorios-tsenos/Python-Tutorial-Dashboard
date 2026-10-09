@@ -22,38 +22,6 @@ best["params.lr"]            # note: params come back as STRINGS ('0.1')
 `evaluate(lr, depth)` fakes training: accuracy peaks at `lr=0.1`, `depth=4`.
 
 > **Mission:** finish `sweep(lrs, depths)`: one run per combination, logging `lr` and `depth` as params and `accuracy` as a metric. Return the best run's params as a dict of **strings**, e.g. `{"lr": "0.1", "depth": "4"}`.
-
-@@step One run per combination
-Two nested loops, a run inside. `log_params` takes a dict and logs several params at once:
-
-```python
-mlflow.set_experiment("sweep")
-for lr in lrs:
-    for depth in depths:
-        with mlflow.start_run():
-            mlflow.log_params({"lr": lr, "depth": depth})
-            mlflow.log_metric("accuracy", evaluate(lr, depth))
-```
-
-**Do:** log the nine runs, then Run. (The function still returns `{}` for now.)
-@@stepcheck
-import mlflow
-before = len(mlflow.search_runs(search_all_experiments=True))
-sweep([0.01, 0.1], [2, 4])
-df = mlflow.search_runs(search_all_experiments=True)
-test("one run per (lr, depth) combination, with params and a metric", lambda: len(df) - before == 4 and "params.lr" in df.columns and "params.depth" in df.columns and "metrics.accuracy" in df.columns, "nested loops, mlflow.start_run() inside, log_params + log_metric")
-@@step Ask the table for the winner
-Let the tracking store do the comparing: sort by the metric, take the first row, and read the params back (as strings):
-
-```python
-best = mlflow.search_runs(order_by=["metrics.accuracy DESC"]).iloc[0]
-return {"lr": best["params.lr"], "depth": best["params.depth"]}
-```
-
-**Do:** return the best params, then Run. The cell should print `{'lr': '0.1', 'depth': '4'}`.
-@@stepcheck
-best = sweep([0.01, 0.1, 0.5], [2, 4, 8])
-test("finds the best settings, as strings", lambda: best == {"lr": "0.1", "depth": "4"}, 'search_runs(order_by=["metrics.accuracy DESC"]).iloc[0]')
 @@starter
 import mlflow
 

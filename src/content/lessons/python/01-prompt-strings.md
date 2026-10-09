@@ -31,30 +31,6 @@ Use a function, not copy-pasted strings: one template, many fillings, one place 
 > ```
 >
 > Strip surrounding whitespace from both inputs first, so `"  SQL tutor "` still produces a clean prompt.
-
-@@step Make the braces live
-Run the starter: it prints `{role}` literally, because without the `f` the braces are just characters. Add it:
-
-```python
-return f"You are a helpful {role}.\nQuestion: {question}"
-```
-
-`\n` inside the string is a line break, so the result is two lines.
-
-**Do:** add the `f`, then Run.
-@@stepcheck
-out = build_prompt("data engineer", "What is a partition?")
-test("the template is filled, not returned literally", lambda: out == "You are a helpful data engineer.\nQuestion: What is a partition?", "with an f-string, {role} becomes the variable's value")
-@@step Clean the inputs first
-User input arrives with stray spaces and newlines. `.strip()` removes whitespace from both ends of a string, and you can call it right inside the braces:
-
-```python
-f"You are a helpful {role.strip()}.\nQuestion: {question.strip()}"
-```
-
-**Do:** strip both values, then Run.
-@@stepcheck
-test("stray spaces around the inputs are cleaned", lambda: build_prompt("  SQL tutor ", " Explain JOINs.  ") == "You are a helpful SQL tutor.\nQuestion: Explain JOINs.", "call .strip() on role and question inside the braces")
 @@starter
 def build_prompt(role, question):
     """Two lines: who the model should be, then the user's question."""

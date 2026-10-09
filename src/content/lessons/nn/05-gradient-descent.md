@@ -20,59 +20,6 @@ w  <-  w − lr · grad(w)
 Repeat. On the bowl `loss(w) = (w − 3)²` the gradient is `2(w − 3)`, and the walk converges to `w = 3` if the learning rate is small enough. Too large and each step overshoots further than the last: divergence.
 
 > **Mission:** implement `descend(grad, w0, lr, steps)` → a NumPy array with the starting point and every later position (`steps + 1` values), and `find_lr(grad, w0, lrs, steps)` → the learning rate from `lrs` whose final position has the smallest `|grad|`, ignoring learning rates that produced a non-finite value.
-
-@@step The update loop
-Keep a list of positions, append after every step:
-
-```python
-w = float(w0)
-history = [w]
-for _ in range(steps):
-    w = w - lr * grad(w)
-    history.append(w)
-return np.array(history)
-```
-
-**Do:** implement `descend`, then Run. With `lr=0.1` the walk should approach 3.
-@@stepcheck
-import numpy as np
-g = lambda w: 2 * (w - 3)
-h = descend(g, 0.0, 0.1, 50)
-test("steps + 1 positions, starting at w0, converging on the minimum", lambda: h.shape == (51,) and h[0] == 0.0 and abs(h[-1] - 3) < 1e-3, "w = w - lr * grad(w), appended each step")
-@@step Watch it diverge
-With `lr = 1.1` the factor `|1 − 2·lr| = 1.2` multiplies the distance to the minimum every step. Nothing to code here except a print; the check confirms your loop is faithful to that maths:
-
-```python
-print("lr 1.1 after 20 steps:", descend(grad, 0.0, 1.1, 20)[-1])
-```
-
-**Do:** add the print, then Run and look at the number.
-@@stepcheck
-import numpy as np
-g = lambda w: 2 * (w - 3)
-test("a too-large learning rate makes the distance grow by 1.2x per step", lambda: np.isclose(descend(g, 0.0, 1.1, 20)[-1] - 3, -3 * (1.2 ** 20)), "the loop must not clip or damp the update")
-test("lr = 0.5 lands exactly on the minimum in one step", lambda: np.isclose(descend(g, 10.0, 0.5, 1)[-1], 3.0))
-@@step Pick the learning rate that gets closest
-Run the descent for each candidate, measure `|grad|` at the end (zero means you are at the bottom), skip anything that blew up to `inf` or `nan`, keep the best:
-
-```python
-best_lr, best_score = None, np.inf
-for lr in lrs:
-    final = descend(grad, w0, lr, steps)[-1]
-    if not np.isfinite(final):
-        continue
-    score = abs(grad(final))
-    if score < best_score:
-        best_lr, best_score = lr, score
-return best_lr
-```
-
-**Do:** implement `find_lr`, then Run.
-@@stepcheck
-import numpy as np
-g = lambda w: 2 * (w - 3)
-test("find_lr prefers the rate that ends closest to the minimum", lambda: find_lr(g, 0.0, [0.01, 0.1, 0.5, 1.1], 30) == 0.5, "score = abs(grad(final)); skip non-finite finals")
-test("diverging rates are skipped even when they are the only option besides a slow one", lambda: find_lr(g, 0.0, [1.5, 0.01], 400) == 0.01)
 @@starter
 import numpy as np
 

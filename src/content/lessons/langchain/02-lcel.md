@@ -25,31 +25,6 @@ prompt  ->  model  ->  output parser
 | `StrOutputParser` | pulls the text out of the `AIMessage` |
 
 > **Mission:** connect the three pieces into `chain` with `|`, so `chain.invoke(...)` returns a plain string.
-
-@@step Pipe the prompt into the model
-`a | b` builds a new Runnable: run `a`, feed its output to `b`. The prompt turns the dict into messages, the model turns messages into a reply:
-
-```python
-chain = prompt | llm
-```
-
-**Do:** replace `chain = prompt`, then Run. The print shows an `AIMessage(...)` for now.
-@@stepcheck
-out = chain.invoke({"topic": "a vector", "audience": "child"})
-test("the model's reply comes through the chain", lambda: getattr(out, "content", out) == "A vector is an arrow with a length and a direction.", "chain = prompt | llm")
-@@step Add the parser so a plain string comes out
-Most code wants text, not a message object. `StrOutputParser()` is a Runnable that returns `.content`:
-
-```python
-chain = prompt | llm | StrOutputParser()
-```
-
-Note the parentheses: you add an *instance* of the parser to the chain.
-
-**Do:** extend the chain, then Run.
-@@stepcheck
-out = chain.invoke({"topic": "a vector", "audience": "child"})
-test("chain returns a plain string", lambda: isinstance(out, str) and out == "A vector is an arrow with a length and a direction.", "without StrOutputParser you get an AIMessage object")
 @@starter
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser

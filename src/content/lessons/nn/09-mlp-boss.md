@@ -20,33 +20,6 @@ Two interleaved crescents cannot be separated by a straight line; a two-layer ne
 > 3. `predict(params, X)` → the most probable class per row
 >
 > The boss requires at least 93% training accuracy on the moons and a final loss below half the first one.
-
-@@step Initialise the parameters
-One generator, four arrays, the He scaling that keeps activations from shrinking layer by layer.
-@@stepcheck
-import numpy as np
-P = init_params(2, 5, 3, seed=4)
-rng = np.random.default_rng(4)
-W1 = rng.normal(0, 1, (2, 5)) * np.sqrt(2 / 2)
-W2 = rng.normal(0, 1, (5, 3)) * np.sqrt(2 / 5)
-test("shapes, scaling and seed all match", lambda: set(P) == {"W1", "b1", "W2", "b2"} and np.allclose(P["W1"], W1) and np.allclose(P["W2"], W2) and np.array_equal(P["b1"], np.zeros(5)) and np.array_equal(P["b2"], np.zeros(3)), "rng.normal(0, 1, (d, hidden)) * np.sqrt(2 / d), then W2 from the same rng")
-@@step The training loop
-Per epoch: forward, compute the gradients with `backward`, subtract `lr` times each gradient from its parameter, then record the loss of a fresh forward pass. Return the parameters and the list of losses.
-@@stepcheck
-import numpy as np
-Xm, ym = make_moons(200, noise=0.1, seed=1)
-params, losses = train_mlp(Xm, ym, hidden_size=16, lr=1.0, epochs=200, seed=0)
-test("one loss per epoch, decreasing to below half the start", lambda: len(losses) == 200 and losses[-1] < losses[0] / 2 and bool(np.isfinite(losses).all()), "params[name] -= lr * grads['d' + name], then losses.append(loss(...))")
-test("training is reproducible from the seed", lambda: np.allclose(train_mlp(Xm, ym, hidden_size=16, lr=1.0, epochs=50, seed=0)[1], train_mlp(Xm, ym, hidden_size=16, lr=1.0, epochs=50, seed=0)[1]))
-@@step Predict, and beat the moons
-`predict` is `argmax` over the forward probabilities. Then run the demo: with the defaults, accuracy on the training moons must reach 0.93.
-@@stepcheck
-import numpy as np
-Xm, ym = make_moons(300, noise=0.1, seed=2)
-params, losses = train_mlp(Xm, ym, hidden_size=16, lr=1.0, epochs=500, seed=0)
-pred = predict(params, Xm)
-test("predict returns one integer class per row", lambda: pred.shape == (300,) and set(np.unique(pred)).issubset({0, 1}), "forward(X, params)[0].argmax(axis=1)")
-test("the network learns the curve: at least 93% accuracy", lambda: (pred == ym).mean() >= 0.93)
 @@starter
 import numpy as np
 

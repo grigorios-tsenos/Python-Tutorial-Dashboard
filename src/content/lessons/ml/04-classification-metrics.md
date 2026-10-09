@@ -21,58 +21,6 @@ f1        = 2 · precision · recall / (precision + recall)
 ```
 
 > **Mission:** implement `confusion(y_true, y_pred)` → `(tp, fp, fn, tn)` as plain ints for 0/1 arrays, and `evaluate(y_true, y_pred)` → a dict with `accuracy`, `precision`, `recall` and `f1`. Any division by zero gives `0.0`. The starter trains a logistic regression for you to evaluate.
-
-@@step Count the four cells
-Boolean masks make this a one-liner per cell. `&` combines two conditions element by element:
-
-```python
-y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
-tp = int(((y_true == 1) & (y_pred == 1)).sum())
-fp = int(((y_true == 0) & (y_pred == 1)).sum())
-fn = int(((y_true == 1) & (y_pred == 0)).sum())
-tn = int(((y_true == 0) & (y_pred == 0)).sum())
-return tp, fp, fn, tn
-```
-
-**Do:** implement `confusion`, then Run.
-@@stepcheck
-test("the four cells are counted", lambda: confusion([1, 1, 0, 0, 1, 0], [1, 0, 1, 0, 1, 0]) == (2, 1, 1, 2), "tp: true 1 and predicted 1; fp: true 0 and predicted 1; fn: true 1 and predicted 0")
-@@step Accuracy, precision and recall
-Accuracy is the share of correct predictions, precision and recall come straight from the formulas. Use a tiny helper so a zero denominator gives `0.0` instead of a crash:
-
-```python
-def ratio(a, b):
-    return a / b if b else 0.0
-
-tp, fp, fn, tn = confusion(y_true, y_pred)
-accuracy = ratio(tp + tn, tp + fp + fn + tn)
-precision = ratio(tp, tp + fp)
-recall = ratio(tp, tp + fn)
-```
-
-**Do:** compute the three and return them in the dict (with `"f1": 0.0` for now), then Run.
-@@stepcheck
-import numpy as np
-from sklearn.metrics import precision_score, recall_score, accuracy_score
-yt = np.array([1, 1, 0, 0, 1, 0, 1, 0, 0, 1])
-yp = np.array([1, 0, 1, 0, 1, 0, 1, 1, 0, 0])
-out = evaluate(yt, yp)
-test("accuracy, precision and recall match scikit-learn", lambda: np.isclose(out["accuracy"], accuracy_score(yt, yp)) and np.isclose(out["precision"], precision_score(yt, yp)) and np.isclose(out["recall"], recall_score(yt, yp)), "tp / (tp + fp) and tp / (tp + fn)")
-test("no positives predicted gives precision 0.0, not a crash", lambda: evaluate([1, 0, 1], [0, 0, 0])["precision"] == 0.0)
-@@step F1: the harmonic mean
-F1 punishes imbalance: a model with precision 1.0 and recall 0.1 gets F1 0.18, not 0.55:
-
-```python
-f1 = ratio(2 * precision * recall, precision + recall)
-```
-
-**Do:** add `f1`, then Run.
-@@stepcheck
-import numpy as np
-from sklearn.metrics import f1_score
-yt = np.array([1, 1, 0, 0, 1, 0, 1, 0, 0, 1])
-yp = np.array([1, 0, 1, 0, 1, 0, 1, 1, 0, 0])
-test("f1 matches scikit-learn and is 0.0 when nothing is caught", lambda: np.isclose(evaluate(yt, yp)["f1"], f1_score(yt, yp)) and evaluate([1, 1], [0, 0])["f1"] == 0.0, "2 * precision * recall / (precision + recall), guarded")
 @@starter
 import numpy as np
 from sklearn.linear_model import LogisticRegression

@@ -15,65 +15,6 @@ packages: scikit-learn
 A classifier really outputs a **probability** (`predict_proba`); `predict` just compares it with 0.5. Lower the cutoff and you catch more positives (higher recall) at the price of more false alarms (lower precision). The cutoff is a business decision: for fraud or disease you often demand a minimum recall and then take the best precision you can get.
 
 > **Mission:** implement `pr_at(probs, y, t)` → `(precision, recall)` when predicting positive for `probs >= t` (precision is `0.0` when nothing is predicted positive), and `pick_threshold(probs, y, min_recall=0.8)` → `(threshold, precision, recall)` for the threshold among the unique probability values with the **highest precision** subject to `recall >= min_recall`; ties go to the higher threshold. No positive labels, or `min_recall` outside `(0, 1]`, raise `ValueError`.
-
-@@step Precision and recall at one cutoff
-Turn probabilities into predictions with a comparison, then count:
-
-```python
-probs, y = np.asarray(probs), np.asarray(y)
-pred = probs >= t
-tp = int((pred & (y == 1)).sum())
-fp = int((pred & (y == 0)).sum())
-fn = int((~pred & (y == 1)).sum())
-precision = tp / (tp + fp) if tp + fp else 0.0
-recall = tp / (tp + fn) if tp + fn else 0.0
-return precision, recall
-```
-
-**Do:** implement `pr_at`, then Run.
-@@stepcheck
-import numpy as np
-P = np.array([0.9, 0.8, 0.7, 0.6, 0.4, 0.3, 0.2, 0.1])
-Y = np.array([1, 1, 0, 1, 1, 0, 0, 0])
-test("precision and recall at a cutoff", lambda: np.allclose(pr_at(P, Y, 0.6), (0.75, 0.75)) and np.allclose(pr_at(P, Y, 0.4), (0.8, 1.0)), "pred = probs >= t, then tp / (tp + fp) and tp / (tp + fn)")
-test("a cutoff above every probability gives precision 0.0", lambda: pr_at(P, Y, 0.95) == (0.0, 0.0))
-@@step Sweep the candidate thresholds
-Every distinct probability is a candidate cutoff. Walk them from high to low, keep the ones that reach the required recall, and remember the best precision; walking high-to-low means the first best you see is also the highest threshold:
-
-```python
-best = None
-for t in sorted(np.unique(probs), reverse=True):
-    precision, recall = pr_at(probs, y, t)
-    if recall >= min_recall and (best is None or precision > best[1]):
-        best = (float(t), precision, recall)
-return best
-```
-
-**Do:** implement the sweep, then Run.
-@@stepcheck
-import numpy as np
-P = np.array([0.9, 0.8, 0.7, 0.6, 0.4, 0.3, 0.2, 0.1])
-Y = np.array([1, 1, 0, 1, 1, 0, 0, 0])
-test("the best precision with enough recall, highest threshold on ties", lambda: pick_threshold(P, Y, 0.8) == (0.4, 0.8, 1.0) and pick_threshold(P, Y, 0.5) == (0.8, 1.0, 0.5), "sorted(np.unique(probs), reverse=True), replace best only on strictly higher precision")
-@@step Refuse impossible requests
-With no positive labels recall is undefined; a `min_recall` of 0 or above 1 makes no sense:
-
-```python
-if not 0 < min_recall <= 1:
-    raise ValueError("min_recall must be in (0, 1]")
-if np.asarray(y).sum() == 0:
-    raise ValueError("no positive labels to recall")
-```
-
-**Do:** add both guards at the top of `pick_threshold`, then Run.
-@@stepcheck
-def rejects(fn):
-    try:
-        fn()
-    except ValueError:
-        return True
-    return False
-test("bad min_recall and label-free data are rejected", lambda: rejects(lambda: pick_threshold([0.5], [1], min_recall=0)) and rejects(lambda: pick_threshold([0.5], [1], min_recall=1.5)) and rejects(lambda: pick_threshold([0.5, 0.2], [0, 0])), "raise ValueError")
 @@starter
 import numpy as np
 from sklearn.linear_model import LogisticRegression

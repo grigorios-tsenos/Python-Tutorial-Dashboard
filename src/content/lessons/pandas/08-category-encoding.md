@@ -24,57 +24,6 @@ A model trained on three columns now receives one: a crash, or silently wrong in
 >
 > 1. `fit_vocabulary(values, min_count=1)` → a **sorted** list of categories seen at least `min_count` times, ignoring missing values.
 > 2. `encode(frame, column, vocabulary)` → a new frame with `column` replaced by integer indicator columns named `column=value`, one per vocabulary entry **in vocabulary order**, then `column=other` for anything unseen or missing. Every row has exactly one `1` among them. Other columns keep their order and come first; the index is preserved; the input is unchanged; an empty frame still gets every indicator column.
-
-@@step fit_vocabulary: count, filter, sort
-`value_counts()` counts each category; `dropna()` first so missing values never become a category:
-
-```python
-counts = pd.Series(values).dropna().value_counts()
-return sorted(counts[counts >= min_count].index.tolist())
-```
-
-`pd.Series(values)` accepts a column or a plain list. `counts >= min_count` is a mask over the counts; indexing with it keeps the frequent categories, and `.index` holds their names.
-
-**Do:** implement `fit_vocabulary`, then Run.
-@@stepcheck
-import pandas as pd
-T = pd.Series(["pro", "free", "team", "free", "pro", None])
-test("vocabulary is sorted and ignores missing values", lambda: fit_vocabulary(T) == ["free", "pro", "team"], "value_counts() after dropna(), then sorted(...)")
-test("min_count leaves rare categories out", lambda: fit_vocabulary(T, min_count=2) == ["free", "pro"] and fit_vocabulary(["b", "a", "b"]) == ["a", "b"])
-@@step Encode against the frozen names
-Build the full column list from the vocabulary, map everything outside it (including missing) to `"other"`, then force those exact columns:
-
-```python
-names = [f"{column}={value}" for value in vocabulary] + [f"{column}=other"]
-known = frame[column].where(frame[column].isin(vocabulary), "other")
-indicators = pd.get_dummies(known, prefix=column, prefix_sep="=", dtype=int).reindex(columns=names, fill_value=0)
-```
-
-`where(cond, other)` keeps values where `cond` is True and substitutes elsewhere; `NaN` fails `isin`, so it becomes `"other"` too. `reindex(columns=names, fill_value=0)` adds any column the batch lacked, as zeros, in training order.
-
-**Do:** build `indicators` and return it for now, then Run. A one-row request should come back with all four `plan=` columns.
-@@stepcheck
-import pandas as pd
-V = ["free", "pro", "team"]
-one = encode(pd.DataFrame({"user": ["z"], "plan": ["pro"], "sessions": [4]}), "plan", V)
-test("a one-row request still gets every training column", lambda: [c for c in one.columns if c.startswith("plan=")] == ["plan=free", "plan=pro", "plan=team", "plan=other"] and one["plan=pro"].tolist() == [1], "get_dummies(known, ...).reindex(columns=names, fill_value=0)")
-odd = encode(pd.DataFrame({"plan": ["enterprise", None, "team"]}), "plan", V)
-test("unseen and missing categories become other", lambda: odd["plan=other"].tolist() == [1, 1, 0] and odd["plan=team"].tolist() == [0, 0, 1], 'frame[column].where(frame[column].isin(vocabulary), "other")')
-@@step Keep the other columns first, the index intact
-Drop the original column and glue the indicators to the right of what remains. `concat` with `axis=1` aligns on the index, so row labels survive:
-
-```python
-return pd.concat([frame.drop(columns=column), indicators], axis=1)
-```
-
-**Do:** return the assembled frame, then Run.
-@@stepcheck
-import pandas as pd
-V = ["free", "pro", "team"]
-odd = pd.DataFrame({"plan": ["enterprise", None, "team"], "user": ["x", "y", "w"]}, index=[10, 11, 12])
-o = encode(odd, "plan", V)
-test("other columns keep their order and the index is preserved", lambda: list(o.columns) == ["user", "plan=free", "plan=pro", "plan=team", "plan=other"] and list(o.index) == [10, 11, 12], "pd.concat([frame.drop(columns=column), indicators], axis=1)")
-test("every row has exactly one 1", lambda: o[[c for c in o.columns if c.startswith("plan=")]].sum(axis=1).tolist() == [1, 1, 1])
 @@starter
 import pandas as pd
 

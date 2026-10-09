@@ -1,3 +1,4 @@
+import { COURSE_LESSONS } from '../content/course'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LESSONS, LESSON_BY_ID } from '../content'
 import { TRACK_BY_ID } from '../content/tracks'
@@ -225,6 +226,7 @@ export function StatsView() {
         <Kpi label="Day streak" value={String(streak)} sub={`best ${bestStreak(days)} day${bestStreak(days) === 1 ? '' : 's'}`} />
         <Kpi label="First-try rate" value={pct(acc.firstTry)} sub={acc.hintFree === null ? 'no lessons finished yet' : `${pct(acc.hintFree)} without hints`} />
         <Kpi label="Time invested" value={formatMinutes(minutes)} sub={`${s.stats.runs} run${s.stats.runs === 1 ? '' : 's'} · ${s.stats.reviews} review${s.stats.reviews === 1 ? '' : 's'}`} />
+        <Kpi label="Course lessons" value={`${Object.keys(s.course).length} / ${COURSE_LESSONS.length}`} sub={`${Object.values(s.course).reduce((a, c) => a + c.xp, 0)} XP · AI Engineering from Scratch`} />
       </div>
 
       <div className="dash-grid">

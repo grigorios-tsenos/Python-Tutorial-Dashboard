@@ -17,38 +17,6 @@ A single neuron (logistic regression) is trained on two clearly separable cluste
 2. The update **adds** the gradient (`w += lr · dw`), climbing the loss instead of descending it.
 
 > **Mission:** fix `gradient` so it returns the **mean** gradient over the batch, and fix `train` so it steps against the gradient. Afterwards the loss must fall below half its starting value and the accuracy must exceed 0.9.
-
-@@step Average the gradient over the batch
-The loss is a mean over examples, so its gradient is too. Divide both parts by the batch size:
-
-```python
-n = len(y)
-return X.T @ (p - y) / n, (p - y).sum() / n
-```
-
-**Do:** fix `gradient`, then Run. (The loss still climbs; that is the next bug.)
-@@stepcheck
-import numpy as np
-Xs = np.array([[1.0, 2.0], [-1.0, 0.5], [0.3, -0.7]])
-ys = np.array([1, 0, 1])
-w0, b0 = np.array([0.2, -0.1]), 0.05
-p = sigmoid(Xs @ w0 + b0)
-dw, db = gradient(w0, b0, Xs, ys)
-test("the gradient is averaged over the batch", lambda: np.allclose(dw, Xs.T @ (p - ys) / 3) and np.isclose(db, (p - ys).sum() / 3), "divide both by len(y)")
-@@step Step downhill
-The update rule is `w ← w − lr · dw`. Flip the sign on both lines:
-
-```python
-w -= lr * dw
-b -= lr * db
-```
-
-**Do:** fix the update, then Run. The loss should drop quickly and the accuracy reach 1.0.
-@@stepcheck
-import numpy as np
-w, b, losses = train(X, y, lr=0.5, epochs=200)
-test("the loss falls below half its starting value", lambda: losses[-1] < losses[0] / 2 and losses[-1] < losses[len(losses) // 2], "w -= lr * dw; b -= lr * db")
-test("the trained neuron classifies the clusters", lambda: ((sigmoid(X @ w + b) > 0.5).astype(int) == y).mean() > 0.9)
 @@starter
 import numpy as np
 

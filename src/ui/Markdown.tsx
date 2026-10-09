@@ -3,7 +3,7 @@ import { highlightCode, tagHighlighter, tags as t } from '@lezer/highlight'
 import { marked } from 'marked'
 import { useMemo } from 'react'
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 // the editor's parser, mapped to the .tok-* classes in styles.css
 const parser = python().language.parser
@@ -16,7 +16,7 @@ const classes = tagHighlighter([
   { tag: [t.className, t.typeName], class: 'tok-t' },
 ])
 
-function highlightPython(code: string): string {
+export function highlightPython(code: string): string {
   let out = ''
   highlightCode(code, parser.parse(code), classes, (text, cls) => { out += cls ? `<span class="${cls}">${esc(text)}</span>` : esc(text) }, () => { out += '\n' })
   return out

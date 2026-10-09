@@ -20,53 +20,6 @@ ax.set_ylim(0, 1)
 ```
 
 > **Mission:** implement `plot_benchmark(ax, names, means, stds)`: draw one bar per model sorted from best to worst mean, with `yerr` error bars and caps, a `accuracy` y label and the y axis fixed to `[0, 1]`. Return the sorted list of names.
-
-@@step Sort, then draw the bars
-`np.argsort` gives the order that sorts ascending; reverse it for best-first. Index all three lists with that order:
-
-```python
-order = np.argsort(means)[::-1]
-names = [names[i] for i in order]
-means = [means[i] for i in order]
-stds = [stds[i] for i in order]
-ax.bar(names, means)
-return names
-```
-
-**Do:** sort and draw, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-out = plot_benchmark(a, ["b", "a", "c"], [0.7, 0.9, 0.8], [0.02, 0.01, 0.03])
-heights = [p.get_height() for p in a.patches]
-test("one bar per model, best first", lambda: out == ["a", "c", "b"] and len(a.patches) == 3 and heights == sorted(heights, reverse=True), "order = np.argsort(means)[::-1]")
-@@step Attach the error bars
-`yerr` draws a line of ± one value above and below each bar; `capsize` adds the little horizontal caps that make the ends readable:
-
-```python
-ax.bar(names, means, yerr=stds, capsize=4)
-```
-
-**Do:** add the error bars, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-plot_benchmark(a, ["b", "a"], [0.7, 0.9], [0.02, 0.01])
-test("the bars carry error bars", lambda: any(type(c).__name__ == "ErrorbarContainer" for c in a.containers), "ax.bar(..., yerr=stds, capsize=4)")
-@@step A zero-based axis with a name
-Accuracy is a fraction, so the honest axis runs from 0 to 1. Name it:
-
-```python
-ax.set_ylim(0, 1)
-ax.set_ylabel("accuracy")
-```
-
-**Do:** add both, then Run.
-@@stepcheck
-import matplotlib.pyplot as plt
-f, a = plt.subplots()
-plot_benchmark(a, ["b", "a"], [0.7, 0.9], [0.02, 0.01])
-test("the y axis starts at zero, ends at one, and is labelled", lambda: a.get_ylim() == (0.0, 1.0) and a.get_ylabel() == "accuracy", "ax.set_ylim(0, 1); ax.set_ylabel('accuracy')")
 @@starter
 import numpy as np
 import matplotlib.pyplot as plt

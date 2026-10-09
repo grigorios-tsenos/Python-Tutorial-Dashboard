@@ -19,41 +19,6 @@ The schema accepts labels `"spam"` and `"ham"`, a numeric confidence from `0` to
 > **Mission:** implement `validate_predictions(payloads)` for an iterable of JSON strings. Return `(accepted, rejected)`: `accepted` contains validated `Prediction` objects in input order; `rejected` contains the zero-based indices of bad replies in input order. Keep processing after a validation error. Support a one-shot generator and empty input, and keep each call independent.
 
 Do not invent predictions for bad replies; the original indices let the caller retry only those requests.
-
-@@step Validate each reply into a Prediction
-Create the two result lists **inside** the function (a list created at module level would leak between calls), then walk the payloads with their positions:
-
-```python
-accepted, rejected = [], []
-for index, text in enumerate(payloads):
-    accepted.append(Prediction.model_validate_json(text))
-return accepted, rejected
-```
-
-`enumerate` yields `(index, item)` pairs, so every reply knows where it came from.
-
-**Do:** implement the loop, then Run. It will crash on `'not json'`; that is the next step.
-@@stepcheck
-good = validate_predictions(['{"label": "ham", "confidence": 0.9}', '{"label": "spam", "confidence": 0.7}'])
-test("valid replies become typed Prediction objects, in order", lambda: [p.label for p in good[0]] == ["ham", "spam"] and all(isinstance(p, Prediction) for p in good[0]), "Prediction.model_validate_json(text)")
-@@step Catch the failure, keep the index, keep going
-Wrap the validation in `try`/`except ValidationError`. On failure, record the index and continue with the next reply:
-
-```python
-try:
-    accepted.append(Prediction.model_validate_json(text))
-except ValidationError:
-    rejected.append(index)
-```
-
-One bad reply no longer erases the good ones beside it.
-
-**Do:** add the `try`/`except`, then Run.
-@@stepcheck
-payloads = ['{"label": "ham", "confidence": 0.9}', 'not json', '{"label": "other", "confidence": 0.5}', '{"label": "spam", "confidence": 1.2}', '{"label": "ham"}', '{"label": "spam", "confidence": 0.7}']
-accepted, rejected = validate_predictions(iter(payloads))
-test("valid replies survive later failures in original order", lambda: [p.label for p in accepted] == ["ham", "spam"], "except ValidationError: rejected.append(index)")
-test("bad JSON and invalid fields retain their original indices", lambda: rejected == [1, 2, 3, 4])
 @@starter
 from typing import Literal
 from pydantic import BaseModel, Field, ValidationError

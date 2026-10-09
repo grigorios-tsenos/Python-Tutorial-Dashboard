@@ -23,28 +23,6 @@ df.withColumn("tax", F.col("fare") * 0.2)           # add/replace a column
 Every call returns a **new** DataFrame; chain them.
 
 > **Mission:** keep trips with `fare > 10` in `kept`, then add `fare_per_person = fare / passengers` and store that in `result`.
-
-@@step Keep rows with a filter
-`F.col("fare") > 10` is not a boolean: it is a **column expression**, a description Spark evaluates later. `filter` keeps the rows where it is true:
-
-```python
-kept = trips.filter(F.col("fare") > 10)
-```
-
-**Do:** add the line, then Run. `kept` has three rows; the 9.5 trip is gone.
-@@stepcheck
-test("kept holds only the trips above 10", lambda: kept.count() == 3 and kept.columns == ["city", "fare", "passengers"], 'kept = trips.filter(F.col("fare") > 10)')
-@@step Add a column with withColumn
-`withColumn(name, expression)` returns a new DataFrame with one more column. Column expressions combine with ordinary operators:
-
-```python
-result = kept.withColumn("fare_per_person", F.col("fare") / F.col("passengers"))
-```
-
-**Do:** replace `result = trips`, then Run.
-@@stepcheck
-test("new column added", lambda: result.columns == ["city", "fare", "passengers", "fare_per_person"], 'withColumn("fare_per_person", F.col("fare") / F.col("passengers"))')
-test("values are right", lambda: [r["fare_per_person"] for r in result.collect()] == [6.25, 10.0, 18.0])
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

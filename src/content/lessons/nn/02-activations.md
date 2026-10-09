@@ -21,60 +21,6 @@ sigmoid(x) = 1 / (1 + e^-x)         squashes to (0, 1): outputs and gates
 Training needs each function's **slope** (derivative): `relu'(x)` is 1 where `x > 0` and 0 elsewhere; `sigmoid'(x) = s(x)(1 − s(x))`. And one numerical detail: `np.exp(-x)` overflows for `x = -1000`, so the stable sigmoid is written through `tanh`.
 
 > **Mission:** implement `relu(x)`, `relu_grad(x)`, `sigmoid(x)` (stable for huge inputs) and `sigmoid_grad(x)`, all vectorised, all leaving the input unchanged.
-
-@@step relu and its slope
-`np.maximum` compares element by element with 0. The slope is a boolean mask turned into floats:
-
-```python
-def relu(x):
-    return np.maximum(0, x)
-
-def relu_grad(x):
-    return (x > 0).astype(float)
-```
-
-**Do:** implement both, then Run.
-@@stepcheck
-import numpy as np
-x = np.array([-2.0, 0.0, 3.0])
-test("relu zeroes negatives and keeps positives", lambda: np.array_equal(relu(x), [0.0, 0.0, 3.0]) and relu(np.array([[-1.0, 2.0]])).shape == (1, 2), "np.maximum(0, x)")
-test("relu_grad is 1 where x > 0, else 0", lambda: np.array_equal(relu_grad(x), [0.0, 0.0, 1.0]) and relu_grad(x).dtype == float, "(x > 0).astype(float)")
-@@step A sigmoid that never overflows
-`1 / (1 + np.exp(-x))` warns and returns 0 for `x = -1000` because `exp(1000)` overflows. The identity `sigmoid(x) = (1 + tanh(x / 2)) / 2` gives the same values with no overflow:
-
-```python
-def sigmoid(x):
-    return 0.5 * (1 + np.tanh(x / 2))
-```
-
-**Do:** implement `sigmoid`, then Run. The check feeds ±1000 and expects no warning.
-@@stepcheck
-import numpy as np, warnings
-def quiet():
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        out = sigmoid(np.array([-1000.0, 0.0, 1000.0]))
-    return np.allclose(out, [0.0, 0.5, 1.0])
-test("sigmoid is exact at 0 and stable at ±1000 without warnings", quiet, "0.5 * (1 + np.tanh(x / 2))")
-test("sigmoid matches the textbook formula on ordinary inputs", lambda: np.allclose(sigmoid(np.array([-2.0, 0.5, 3.0])), 1 / (1 + np.exp(-np.array([-2.0, 0.5, 3.0])))))
-@@step The sigmoid's slope
-The derivative has a famous shortcut: it is the output times one minus the output:
-
-```python
-def sigmoid_grad(x):
-    s = sigmoid(x)
-    return s * (1 - s)
-```
-
-The check compares it with a numerical slope, `(f(x + h) − f(x − h)) / 2h`, the way you can verify any derivative.
-
-**Do:** implement `sigmoid_grad`, then Run.
-@@stepcheck
-import numpy as np
-x = np.array([-3.0, -0.5, 0.0, 1.2, 4.0])
-h = 1e-5
-numeric = (sigmoid(x + h) - sigmoid(x - h)) / (2 * h)
-test("sigmoid_grad matches the numerical slope", lambda: np.allclose(sigmoid_grad(x), numeric, atol=1e-6) and np.isclose(sigmoid_grad(0.0), 0.25), "s * (1 - s)")
 @@starter
 import numpy as np
 

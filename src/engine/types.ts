@@ -2,8 +2,6 @@ export interface TestResult {
   label: string
   ok: boolean
   msg: string
-  /** index of the step check that produced it; absent for the final check */
-  step?: number
 }
 
 export interface Emit {
@@ -24,11 +22,18 @@ export interface RunResult {
   infra?: string
 }
 
+/** What the editor shows when a function or class is hovered. */
+export interface HoverDoc {
+  /** qualified name + signature, e.g. `numpy.linspace(start, stop, num=50, ...)` */
+  sig: string
+  /** the docstring up to the end of its parameters section */
+  doc: string
+  /** where the text comes from, e.g. `numpy 2.4.6` */
+  src: string
+}
+
 export interface RunRequest {
   code: string
-  /** the final check: runs after every step check */
   check?: string
-  /** one check per step, each run in order and tagged with its index */
-  checks?: string[]
   packages?: string[]
 }

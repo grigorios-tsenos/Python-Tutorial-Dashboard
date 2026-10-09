@@ -22,56 +22,6 @@ np.std(x, ddof=1)             # SAMPLE std: divide by n - 1, not n
 `ddof=1` matters: a sample underestimates the population's spread, and dividing by `n − 1` corrects for it. Models and papers use the sample version.
 
 > **Mission:** implement `summarize(x)` → a dict with `p50`, `p95`, `p99`, `iqr` and `std` (sample, `ddof=1`), accepting a list or array. An empty input raises `ValueError`.
-
-@@step Percentiles with np.percentile
-Three percentiles describe the tail. `np.asarray` first, so lists work too:
-
-```python
-x = np.asarray(x, dtype=float)
-p50, p95, p99 = np.percentile(x, [50, 95, 99])
-return {"p50": p50, "p95": p95, "p99": p99}
-```
-
-**Do:** return the three percentiles, then Run.
-@@stepcheck
-import numpy as np
-L = [120, 135, 128, 142, 131, 119, 125, 900]
-out = summarize(L)
-test("p50, p95 and p99 come from np.percentile", lambda: np.isclose(out["p50"], np.percentile(L, 50)) and np.isclose(out["p95"], np.percentile(L, 95)) and np.isclose(out["p99"], np.percentile(L, 99)), "np.percentile(x, [50, 95, 99])")
-@@step The interquartile range
-The width of the middle half: 75th minus 25th percentile. Two outliers at either end cannot change it:
-
-```python
-p25, p75 = np.percentile(x, [25, 75])
-# ... "iqr": p75 - p25
-```
-
-**Do:** add `iqr` to the dict, then Run.
-@@stepcheck
-import numpy as np
-L = [120, 135, 128, 142, 131, 119, 125, 900]
-test("iqr is p75 - p25", lambda: np.isclose(summarize(L)["iqr"], np.percentile(L, 75) - np.percentile(L, 25)), '"iqr": p75 - p25')
-@@step Sample standard deviation, and an empty guard
-`np.std` defaults to the population formula (`ddof=0`). Pass `ddof=1` for a sample. And an empty array has no percentiles at all, so refuse it before computing anything:
-
-```python
-if x.size == 0:
-    raise ValueError("summarize needs at least one value")
-# ... "std": np.std(x, ddof=1)
-```
-
-**Do:** add both, then Run.
-@@stepcheck
-import numpy as np
-L = [120, 135, 128, 142, 131, 119, 125, 900]
-test("std is the sample standard deviation (ddof=1)", lambda: np.isclose(summarize(L)["std"], np.std(L, ddof=1)), "np.std(x, ddof=1)")
-def rejected():
-    try:
-        summarize([])
-    except ValueError:
-        return True
-    return False
-test("an empty input is rejected", rejected)
 @@starter
 import numpy as np
 

@@ -6,6 +6,7 @@ import { useUi } from './store/ui'
 import { Backdrop } from './ui/Backdrop'
 import { Celebration } from './ui/Celebration'
 import { CommandPalette } from './ui/CommandPalette'
+import { CourseView } from './ui/CourseView'
 import { MapView } from './ui/MapView'
 import { ReviewView } from './ui/ReviewView'
 import { SettingsModal } from './ui/SettingsModal'
@@ -15,6 +16,7 @@ import { Topbar } from './ui/Topbar'
 import { VimCheatsheet } from './ui/VimCheatsheet'
 
 const LessonView = lazy(() => import('./ui/LessonView').then((m) => ({ default: m.LessonView })))
+const CourseLessonView = lazy(() => import('./ui/CourseLessonView').then((m) => ({ default: m.CourseLessonView })))
 
 export default function App() {
   const route = useRoute()
@@ -71,6 +73,12 @@ export default function App() {
         {route.name === 'lesson' && (
           <Suspense fallback={<div className="boot" role="status"><span className="spinner big" aria-hidden /> Opening lesson…</div>}>
             <LessonView id={route.id} />
+          </Suspense>
+        )}
+        {route.name === 'course' && <CourseView phase={route.phase} path={route.path} />}
+        {route.name === 'course-lesson' && (
+          <Suspense fallback={<div className="boot" role="status"><span className="spinner big" aria-hidden /> Opening lesson…</div>}>
+            <CourseLessonView lessonKey={route.key} />
           </Suspense>
         )}
         {route.name === 'review' && <ReviewView />}

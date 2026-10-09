@@ -36,6 +36,7 @@ export function Topbar({ route }: { route: Route }) {
       </a>
       <nav aria-label="Primary">
         {link('#/', 'Map', route.name === 'map' || route.name === 'lesson')}
+        {link('#/course', 'Course', route.name === 'course' || route.name === 'course-lesson')}
         {link('#/review', 'Review', route.name === 'review', dueCount)}
         {link('#/stats', 'Dashboard', route.name === 'stats')}
       </nav>

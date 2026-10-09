@@ -16,37 +16,6 @@ A latency column arrived as **text**, with a `None` and the word `"oops"` mixed 
 The fix is a conversion, and the discipline is to **count what the conversion threw away**. Silent data loss is worse than a crash.
 
 > **Mission:** make `means` the mean latency per endpoint (`/chat` → `107.5`, `/embed` → `60.0`) and store how many latencies could not be parsed in `lost`.
-
-@@step Convert the column to numbers
-Run the starter once and read the error: it names the `mean` and the text dtype. Now convert before averaging:
-
-```python
-logs["latency_ms"] = pd.to_numeric(logs["latency_ms"], errors="coerce")
-```
-
-- `pd.to_numeric` parses `"120"` into `120.0`.
-- `errors="coerce"` turns anything unparseable (`"oops"`, `None`) into `NaN` instead of raising.
-- `.mean()` skips `NaN` by default, so the averages come out right.
-
-**Do:** add the line above the `groupby`, then Run.
-@@stepcheck
-import pandas as pd
-test("latency_ms is numeric now", lambda: pd.api.types.is_numeric_dtype(logs["latency_ms"]), 'pd.to_numeric(logs["latency_ms"], errors="coerce")')
-test("/chat averages 107.5 (oops ignored)", lambda: means["/chat"] == 107.5)
-@@step Count what coerce threw away
-`coerce` is convenient and dangerous: it never tells you how much it discarded. Count the gaps and print them, so a broken upstream feed shows up as a number instead of a quietly wrong average:
-
-```python
-lost = logs["latency_ms"].isna().sum()
-print("unparseable:", lost)
-```
-
-`isna()` is a boolean mask of missing cells; summing it counts them.
-
-**Do:** add both lines after the conversion, then Run. `lost` should be `2`.
-@@stepcheck
-test("lost counts the unparseable latencies", lambda: int(lost) == 2, 'lost = logs["latency_ms"].isna().sum()')
-test("the count is printed", lambda: "unparseable: 2" in __stdout__)
 @@starter
 import pandas as pd
 

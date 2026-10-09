@@ -1,11 +1,13 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { python } from '@codemirror/lang-python'
-import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import { HighlightStyle, bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { Compartment, EditorState, Prec } from '@codemirror/state'
-import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view'
+import { EditorView, drawSelection, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, keymap, lineNumbers, tooltips } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { Vim, vim } from '@replit/codemirror-vim'
 import { useEffect, useRef } from 'react'
+import { runner } from '../engine/runner'
+import type { HoverDoc } from '../engine/types'
 import { pythonIndentation } from './pythonIndentation'
 
 export interface VimActions {
@@ -25,6 +27,8 @@ let activeView: EditorView | null = null
 export function focusEditor(): boolean {
   if (!activeView) return false
   activeView.focus()
+  activeView.dom.scrollIntoView({ block: 'nearest' })
+  activeView.dispatch({ effects: EditorView.scrollIntoView(activeView.state.selection.main.head) })
   return true
 }
 
@@ -50,7 +54,7 @@ const highlight = HighlightStyle.define([
 ])
 
 const theme = EditorView.theme({
-  '&': { color: 'var(--text)', backgroundColor: 'transparent', fontSize: '13.5px', height: '100%' },
+  '&': { color: 'var(--text)', backgroundColor: 'transparent', fontSize: '13.5px' },
   '.cm-scroller': { fontFamily: 'var(--mono)', lineHeight: '1.65', overflow: 'auto' },
   '.cm-content': { caretColor: 'var(--accent)', padding: '10px 0' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '2px' },
@@ -65,6 +69,45 @@ const theme = EditorView.theme({
   '.cm-panels': { backgroundColor: 'transparent', color: 'var(--text-dim)', borderTop: '1px solid var(--line)' },
   '.cm-vim-panel': { fontFamily: 'var(--mono)', fontSize: '12px', padding: '3px 12px', color: 'var(--accent)' },
   '.cm-vim-panel input': { background: 'transparent', color: 'var(--text)', border: 'none', outline: 'none', fontFamily: 'var(--mono)' },
+  '.cm-tooltip.cm-tooltip-hover': { backgroundColor: 'var(--panel-solid)', color: 'var(--text)', border: '1px solid var(--line-strong)', borderRadius: '10px', boxShadow: 'var(--shadow)', overflow: 'hidden' },
+  '.cm-doc-tip': { maxWidth: 'min(580px, 80vw)', maxHeight: '320px', overflow: 'auto', fontFamily: 'var(--mono)', fontSize: '12px', lineHeight: '1.6' },
+  '.cm-doc-tip pre': { margin: '0', padding: '9px 13px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' },
+  '.cm-doc-tip .sig': { backgroundColor: 'color-mix(in srgb, var(--accent) 7%, transparent)', borderBottom: '1px solid var(--line)' },
+  '.cm-doc-tip .sig b': { color: 'var(--syn-func)', fontWeight: '600' },
+  '.cm-doc-tip .doc': { color: 'var(--text-dim)' },
+  '.cm-doc-tip .src': { position: 'sticky', bottom: '0', padding: '5px 13px', fontSize: '11px', color: 'var(--text-faint)', backgroundColor: 'var(--panel-solid)', borderTop: '1px solid var(--line)' },
+})
+
+function docTip(doc: HoverDoc) {
+  const dom = document.createElement('div')
+  dom.className = 'cm-doc-tip'
+  const paren = doc.sig.indexOf('(')
+  const sig = dom.appendChild(document.createElement('pre'))
+  sig.className = 'sig'
+  sig.appendChild(document.createElement('b')).textContent = doc.sig.slice(0, paren)
+  sig.append(doc.sig.slice(paren))
+  if (doc.doc) {
+    const body = dom.appendChild(document.createElement('pre'))
+    body.className = 'doc'
+    body.textContent = doc.doc
+  }
+  const src = dom.appendChild(document.createElement('div'))
+  src.className = 'src'
+  src.textContent = doc.src
+  return dom
+}
+
+/** Hover a function or class name to see its signature and parameter docs (resolved in the Python runtime). */
+const docHover = (prefix: () => string) => hoverTooltip(async (view, pos, side) => {
+  const node = syntaxTree(view.state).resolveInner(pos, side)
+  if (node.name !== 'VariableName' && node.name !== 'PropertyName') return null
+  const line = view.state.doc.lineAt(node.from)
+  // ponytail: columns are UTF-16 here and code points in Python; an emoji earlier on the line shifts them and the tooltip just won't show
+  const before = prefix()
+  const offset = before ? before.split('\n').length + 1 : 0
+  const code = (before ? before + '\n\n' : '') + view.state.doc.toString()
+  const doc = await runner.hover(code, line.number + offset, node.from - line.from)
+  return doc && { pos: node.from, end: node.to, above: true, create: () => ({ dom: docTip(doc) }) }
 })
 
 interface Props {
@@ -75,16 +118,18 @@ interface Props {
   onRun?: () => void
   readOnly?: boolean
   vimMode?: boolean
+  ariaLabel?: string
+  hoverPrefix?: string
 }
 
-export function CodeEditor({ docKey, value, onChange, onRun, readOnly, vimMode }: Props) {
+export function CodeEditor({ docKey, value, onChange, onRun, readOnly, vimMode, ariaLabel, hoverPrefix }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const vimCompartment = useRef(new Compartment())
-  const cb = useRef({ onChange, onRun })
-  cb.current = { onChange, onRun }
-  const initial = useRef({ value, vimMode })
-  initial.current = { value, vimMode }
+  const cb = useRef({ onChange, onRun, hoverPrefix })
+  cb.current = { onChange, onRun, hoverPrefix }
+  const initial = useRef({ value, vimMode, ariaLabel })
+  initial.current = { value, vimMode, ariaLabel }
 
   useEffect(() => {
     registerEx()
@@ -107,6 +152,8 @@ export function CodeEditor({ docKey, value, onChange, onRun, readOnly, vimMode }
           syntaxHighlighting(highlight),
           theme,
           pythonIndentation,
+          docHover(() => cb.current.hoverPrefix ?? ''),
+          tooltips({ parent: document.body }), // the editor pane clips: let a tall tooltip overlap its neighbours
           Prec.highest(
             keymap.of([
               {
@@ -121,6 +168,7 @@ export function CodeEditor({ docKey, value, onChange, onRun, readOnly, vimMode }
           keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
           EditorState.readOnly.of(!!readOnly),
           EditorView.editable.of(!readOnly),
+          EditorView.contentAttributes.of({ 'aria-label': initial.current.ariaLabel ?? 'Python code editor' }),
           EditorView.updateListener.of((u) => {
             if (u.docChanged) cb.current.onChange?.(u.state.doc.toString())
           }),

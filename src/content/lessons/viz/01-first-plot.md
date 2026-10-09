@@ -23,40 +23,6 @@ ax.set_xlabel("epoch")            # labels are methods on the axes
 Orbit renders every open figure below your output when the cell finishes.
 
 > **Mission:** plot a model's training loss per epoch: create `fig, ax`, draw the loss with a marker on each point, and label the x axis `epoch`, the y axis `loss`, with a title of your choice.
-
-@@step One figure, one axes
-`plt.subplots()` returns both objects at once. Keep both names: you need `fig` to save or lay out, and `ax` to draw:
-
-```python
-fig, ax = plt.subplots()
-```
-
-**Do:** replace the `None, None` line, then Run. An empty chart appears below the output.
-@@stepcheck
-import matplotlib.axes
-test("ax is a matplotlib Axes inside fig", lambda: isinstance(ax, matplotlib.axes.Axes) and ax.figure is fig, "fig, ax = plt.subplots()")
-@@step Draw the loss per epoch
-`ax.plot(x, y)` draws a line through the points; `marker="o"` adds a dot at each one so the reader can see where the data actually is:
-
-```python
-ax.plot(epochs, loss, marker="o")
-```
-
-**Do:** add the line, then Run.
-@@stepcheck
-test("one line carries the loss values with a marker on each point", lambda: len(ax.get_lines()) == 1 and list(ax.get_lines()[0].get_ydata()) == loss and ax.get_lines()[0].get_marker() not in ("None", None, ""), 'ax.plot(epochs, loss, marker="o")')
-@@step Label it or it is not a chart
-Unlabelled axes force the reader to guess. Three setters:
-
-```python
-ax.set_xlabel("epoch")
-ax.set_ylabel("loss")
-ax.set_title("Training loss")
-```
-
-**Do:** add the labels, then Run.
-@@stepcheck
-test("both axes are labelled and the chart has a title", lambda: ax.get_xlabel() == "epoch" and ax.get_ylabel() == "loss" and ax.get_title().strip() != "", 'ax.set_xlabel("epoch"), ax.set_ylabel("loss"), ax.set_title(...)')
 @@starter
 import matplotlib.pyplot as plt
 

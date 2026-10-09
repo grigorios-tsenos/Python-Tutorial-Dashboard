@@ -25,39 +25,6 @@ combined = current.unionByName(new_events)     # aligns columns by name
 > - append them to `current`, preserving its column order
 
 This is **insert-only**: a repeated ID never overwrites its stored payload. Both frames share column names; duplicates within a batch carry identical payloads. Keep both inputs unchanged; handle an empty batch and an empty `current`. Row order is not part of the contract.
-
-@@step Keep only valid, unique batch IDs
-Clean the batch before comparing it with anything. A NULL id fails `isNotNull`, a blank one fails the trimmed comparison, and `dropDuplicates` on the key keeps one row per id:
-
-```python
-valid = (
-    batch.filter(F.col("event_id").isNotNull() & (F.trim(F.col("event_id")) != ""))
-    .dropDuplicates(["event_id"])
-)
-return current.unionByName(valid)
-```
-
-**Do:** clean the batch, then Run. `e2` should now appear once; the NULL row is gone.
-@@stepcheck
-recs = lambda df: [(r["event_id"], r["user_id"], r["action"]) for r in df.collect()]
-out = recs(append_events(current, batch))
-test("null and blank ids are dropped, duplicates collapse to one row", lambda: all(r[0] is not None for r in out) and sum(1 for r in out if r[0] == "e2") == 1, 'filter(isNotNull & trim != "") then dropDuplicates(["event_id"])')
-@@step Skip what is already stored, union by name
-Compare the clean batch against the stored keys with a **left anti** join, so only unseen ids survive, then append by column name:
-
-```python
-unseen = valid.join(current.select("event_id"), "event_id", "left_anti")
-return current.unionByName(unseen)
-```
-
-`e1` already exists, so its new payload is ignored: insert-only.
-
-**Do:** add the anti join, then Run.
-@@stepcheck
-recs = lambda df: sorted((r["event_id"], r["user_id"], r["action"]) for r in df.collect())
-expected = [("e1", "u1", "signup"), ("e2", "u2", "purchase")]
-test("existing payload wins and a new ID is inserted once", lambda: recs(append_events(current, batch)) == expected, 'join(current.select("event_id"), "event_id", "left_anti")')
-test("replaying the batch does not add duplicates", lambda: recs(append_events(append_events(current, batch), batch)) == expected)
 @@starter
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F

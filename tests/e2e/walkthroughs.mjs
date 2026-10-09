@@ -34,6 +34,7 @@ try {
   const open = async id => {
     await page.evaluate(id => { location.hash = `#/lesson/${id}` }, id)
     await page.waitForFunction(title => document.querySelector('.lesson-pane header h1')?.textContent === title, lessons.find(lesson => lesson.id === id).title)
+    await page.getByRole('button', { name: 'Full exercise', exact: true }).click()
     await page.waitForSelector('.lesson-pane .lesson-intro')
   }
   for (const id of ids) {
@@ -90,6 +91,7 @@ try {
     } finally { db.close() }
   })
   await page.reload()
+  await page.getByRole('button', { name: 'Full exercise', exact: true }).click()
   await page.waitForSelector('.lesson-intro.collapsed')
   await open('np-broadcast')
   assert.equal(await page.locator('.lesson-intro.collapsed').count(), 0, 'other lessons stay open')
@@ -162,7 +164,8 @@ try {
         return stored && JSON.parse(stored).state.hints[id] === 3
       } finally { db.close() }
     }, id)
-    await page.reload()
+  await page.reload()
+  await page.getByRole('button', { name: 'Full exercise', exact: true }).click()
     await page.waitForSelector('.lesson-pane .lesson-intro')
     await page.locator('.intro-chapter').nth(1).click()
     await page.waitForSelector('.lesson-pane .lesson-intro code', { state: 'attached' })

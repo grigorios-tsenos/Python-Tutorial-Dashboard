@@ -23,40 +23,6 @@ model.score(X, y)                       # R²: 1.0 is perfect, 0.0 is "predict t
 `X` is always two-dimensional, even with one feature: `(n_examples, n_features)`.
 
 > **Mission:** fit a line from flat size to price, predict the price of a 120 m² flat, and print the model's R² score on the training data.
-
-@@step Fit a line to the examples
-`fit` finds the slope and intercept that minimise the squared error. It returns the model itself, so you can chain it:
-
-```python
-model = LinearRegression().fit(X, y)
-print("slope:", model.coef_[0], "intercept:", model.intercept_)
-```
-
-Attributes that end in an underscore (`coef_`) are *learned* values; they only exist after `fit`.
-
-**Do:** replace `model = None`, print the learned numbers, then Run.
-@@stepcheck
-test("the model is fitted: it has a learned slope near 2", lambda: model is not None and hasattr(model, "coef_") and abs(model.coef_[0] - 2.0) < 0.1, "model = LinearRegression().fit(X, y)")
-@@step Predict a price for a new size
-`predict` wants the same shape as `X`: a list of rows. One flat is one row with one feature:
-
-```python
-pred = model.predict([[120]])[0]
-```
-
-**Do:** replace `pred = 0`, then Run. Expect roughly 250 (thousand).
-@@stepcheck
-test("the prediction for 120 m² is about 250", lambda: abs(pred - 250) < 5, "model.predict([[120]])[0]")
-@@step Score it
-R² compares the model's errors with the errors of always predicting the mean. On this clean data it should be close to 1:
-
-```python
-r2 = model.score(X, y)
-```
-
-**Do:** replace `r2 = 0`, then Run.
-@@stepcheck
-test("R² on the training data is above 0.99", lambda: r2 > 0.99 and "0.99" in __stdout__, "r2 = model.score(X, y)")
 @@starter
 from sklearn.linear_model import LinearRegression
 
