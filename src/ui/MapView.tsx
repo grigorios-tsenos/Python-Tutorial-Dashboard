@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LESSONS, lessonsOf } from '../content'
+import { COURSE_LESSONS } from '../content/course'
 import { MAP_SIZE, TRACKS, TRACK_BY_ID } from '../content/tracks'
 import { KIND_LABEL, type Lesson, type Track } from '../content/types'
 import { dayKey } from '../lib/dates'
@@ -296,6 +297,7 @@ export function MapView() {
         )}
         {next && <a className="btn primary" href={lessonPath(next.id)}>{first ? 'Light your first star' : 'Continue'} →</a>}
         {first && <p className="hero-feats">{LESSONS.length} hands-on lessons · {TRACKS.length} chapters · step-by-step checks, XP, streaks & bosses</p>}
+        <a className="hero-course" href="#/course">📚 The long road: AI Engineering from Scratch, {COURSE_LESSONS.length} lessons in 20 phases →</a>
         <div className="hero-tracks" role="list" aria-label="Jump to a chapter">
           {progress.map(({ track: t, done, total }) => (
             <button

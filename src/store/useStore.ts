@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { LESSON_BY_ID } from '../content'
+import { COURSE_BY_KEY, courseXp } from '../content/course'
 import { ACHIEVEMENTS, type Achievement } from '../lib/achievements'
 import { dayKey } from '../lib/dates'
 import { QUEST_BONUS, QUEST_TARGET, levelFromXp, newCard, schedule, xpAward, type Grade } from '../lib/gamification'
@@ -18,8 +19,20 @@ export interface CompletionSummary {
   redo: boolean
 }
 
+export interface CourseSummary {
+  xp: number
+  levelUp: number | null
+  questBonus: number
+  /** passed again with a better score */
+  redo: boolean
+}
+
 interface Actions {
   setCode: (id: string, code: string) => void
+  setCourseCode: (key: string, code: string) => void
+  setCourseLast: (key: string) => void
+  /** a course lesson passes with ≥ 70 % of its quiz; a lesson without a quiz passes when marked as read (total 0) */
+  completeCourseLesson: (key: string, score: number, total: number) => CourseSummary | null
   setGuided: (id: string, progress: GuidedProgress) => void
   /** every run counts for stats; a graded run on `id` also counts toward that lesson's hint gate */
   recordRun: (id: string | undefined, vim: boolean) => void
@@ -55,6 +68,40 @@ export const useStore = create<Store>()(
       hydrated: false,
 
       setCode: (id, code) => set((s) => ({ code: { ...s.code, [id]: code } })),
+      setCourseCode: (key, code) => set((s) => ({ courseCode: { ...s.courseCode, [key]: code } })),
+      setCourseLast: (key) => set({ courseLast: key }),
+
+      completeCourseLesson: (key, score, total) => {
+        const s = get()
+        const entry = COURSE_BY_KEY[key]
+        if (!entry || (total > 0 && score / total < 0.7)) return null
+        const gained = total > 0 ? Math.round(courseXp(entry.lesson.minutes) * (score / total)) : courseXp(entry.lesson.minutes)
+        const prev = s.course[key]
+        if (prev && gained <= prev.xp) return null
+        const now = Date.now()
+        const today = dayKey(new Date(now))
+        let quest = s.quest.date === today ? { ...s.quest } : { date: today, done: 0, claimed: false }
+        let questBonus = 0
+        if (!prev) {
+          quest.done += 1
+          if (!quest.claimed && quest.done >= QUEST_TARGET) {
+            quest = { ...quest, claimed: true }
+            questBonus = QUEST_BONUS
+          }
+        }
+        const delta = gained - (prev?.xp ?? 0)
+        const xp = s.xp + delta + questBonus
+        set({
+          course: { ...s.course, [key]: { at: now, score, total, xp: gained } },
+          xp,
+          quest,
+          activity: { ...s.activity, [today]: (s.activity[today] ?? 0) + 1 },
+          courseLast: key,
+        })
+        const before = levelFromXp(s.xp)
+        const after = levelFromXp(xp)
+        return { xp: delta, levelUp: after > before ? after : null, questBonus, redo: !!prev }
+      },
       setGuided: (id, progress) => set((s) => ({ guided: { ...s.guided, [id]: progress } })),
 
       recordRun: (id, vim) =>

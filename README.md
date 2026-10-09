@@ -12,6 +12,7 @@ npm run dev        # http://localhost:5173
 | `npm run build` | typecheck + static build into `dist/` (host anywhere) |
 | `npm test` | engine, shims, **every lesson and every guided step under real Pyodide**, store logic |
 | `npm run e2e` | build, then drive the app in a real browser (set `BROWSER_PATH`) |
+| `npm run sync:course` | re-vendor the AI Engineering from Scratch course from `$CURRICULUM_DIR` (default `~/ai-engineering-from-scratch`) |
 
 First load fetches the Python runtime (~15 MB from jsDelivr); the browser caches it. Chapters that need scipy, scikit-learn or matplotlib fetch those packages the first time you run a lesson in them.
 
@@ -28,6 +29,15 @@ First load fetches the Python runtime (~15 MB from jsDelivr); the browser caches
 - **Engagement:** XP and levels, hints that cost XP, streaks, daily quest, spaced-repetition review deck, achievements, ⌘K command palette.
 - **Editor:** CodeMirror 6 with Vim mode (`:w` runs, `:q` returns to the map). Hover a function or class to see its signature and parameter docs, read from the library's own docstring. Page keys work even when the editor is not focused: `i` focuses it, `r` or ⌘/Ctrl+Enter runs, `[` `]` move between lessons, ⌘/Ctrl+\\ hides the guide, `?` lists them all. Both panes are resizable and the layout is remembered.
 - **Settings:** light/dark, five accent colours, reduced motion, star-title visibility, intro style, focus-sprint length, export/import JSON (IndexedDB, versioned and validated).
+
+## The Course: AI Engineering from Scratch
+
+The **Course** tab carries the full [AI Engineering from Scratch](https://github.com/rohitg00/ai-engineering-from-scratch) curriculum (MIT): 523 lessons in 20 phases, from setup and math foundations to agents, infrastructure and capstones, plus its 12 learning paths (MCP, Agent Skills, applied AI engineer, …) as filters.
+
+- **Lesson page:** the article on the left (diagrams render live; links to other lessons stay inside the app), the lesson's `main.py` in the editor on the right. Scripts that only need the standard library, NumPy, pandas, scipy or scikit-learn run in the browser (403 of 514); the rest (PyTorch, threads, subprocesses) are shown read-only with the command to run them locally.
+- **Completion:** every lesson with a quiz ends with it (pre-reading, check and post-reading questions, one at a time, with explanations). 70 % passes and pays XP scaled to the lesson's length (20–60 XP); a better retake tops up the difference. Lessons without a quiz are marked as read. Course lessons count toward the daily quest, activity heatmap, level and the "Course lessons" dashboard tile.
+- **Content pipeline:** `scripts/sync-curriculum.mjs` copies each lesson's text, script, quiz and figures into `public/curriculum/<phase>/<lesson>/` (fetched on demand) and writes the index `src/content/course/index.json` (titles, types, minutes, which scripts can run in Pyodide). Re-run it after pulling a new version of the course.
+- **Tests:** `tests/course.test.ts` checks the index against the vendored files, link rewriting, progress sanitizing and runs three course scripts under Pyodide; `node tests/e2e/course.mjs` drives the Course pages in a real browser.
 
 ## How the libraries work offline
 
@@ -71,11 +81,13 @@ packages: scikit-learn    # optional extra Pyodide packages
 
 ```
 src/engine    Pyodide worker, runner (timeout + restart), Python harness (checks, figure capture, hover docs) + shims
-src/content   lesson parser, tracks, lessons/*.md, intro kit, warm-ups, walkthroughs, line-by-line guides
+src/content   lesson parser, tracks, lessons/*.md, intro kit, warm-ups, walkthroughs, line-by-line guides, course index
+src/ui        … CourseView (phases + learning paths), CourseLessonView (article + script + quiz), CourseMarkdown, Quiz
+public/curriculum  vendored AI Engineering from Scratch lessons (regenerate with npm run sync:course)
 src/lib       pure logic: gamification, spaced repetition, achievements, dashboard metrics, router
 src/store     zustand + IndexedDB, validation of untrusted data
 src/ui        map, lesson (line-by-line practice, prediction tracing, output), review, dashboard, settings, palette, focus sprint
 src/labs      visual labs and the guided intro player
-scripts/      official_docs.py: rebuilds the hover-docs snapshot from the real packages
+scripts/      official_docs.py: rebuilds the hover-docs snapshot; sync-curriculum.mjs: re-vendors the course
 .10x/         specs, ADRs, decision log and reviews from the build
 ```
