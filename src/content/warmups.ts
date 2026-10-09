@@ -1,13 +1,12 @@
-import { area, step, type Walkthrough, type WalkthroughArea } from './walkthroughs'
+import { area, small, warmup, type Warmup } from './introKit'
+import { WARMUPS_ML } from './intros/ml'
+import { WARMUPS_NN } from './intros/nn'
+import { WARMUPS_STATS } from './intros/stats'
+import { WARMUPS_VIZ } from './intros/viz'
 
-export interface Warmup extends Walkthrough { review: string[] }
-const small = (title: string, explanation: string, ...areas: WalkthroughArea[]) => step(title, explanation, '', ...areas)
-const warmup = (purpose: string, review: string[], question: string, options: string[], answer: number, explanation: string, ...steps: Walkthrough['steps']): Warmup => {
-  steps[steps.length - 1].check = { question, options, answer, explanation }
-  return { purpose, review, steps, question, answer: explanation }
-}
+export type { Warmup } from './introKit'
 
-export const WARMUPS: Record<string, Warmup> = {
+const BASE: Record<string, Warmup> = {
   'np-first-array': warmup('Connect “data becomes numbers” to “one operation touches them all” before typing any NumPy.', [], 'An array holds [1, 2, 3]. What does adding 2 to the array give?', ['[3, 4, 5]', '[1, 2, 3, 2]', '5'], 0, 'The 2 is added to every element at once: that is what makes arrays different from lists.',
     small('Everything becomes numbers first', 'A sentence becomes a list of numbers (an embedding); an image becomes pixel values. Models only compute with numbers.', area('Text → numbers', [[['a','“hello” → 0.2, 0.7, …']]])),
     small('A list makes you loop', 'To add 1 to every value of a plain list you visit each element yourself, one line of bookkeeping per idea.', area('List', [[['a','1'],['b','2'],['c','3']]]), area('Loop', [[['l','for x in …: x + 1']]])),
@@ -306,3 +305,5 @@ export const WARMUPS: Record<string, Warmup> = {
     small("Valid JSON may still be the wrong event", "A line can parse but lack a required tool name or have the wrong structure. Count only records that pass the event contract.", area("Follow the stages", [[["item-0", "parse"]], [["item-1", "validate"]], [["item-2", "eligible event"]]])),
     small("Increment the matching counter", "For each eligible shell event, add one to shell’s count. Keep other tool counts separate.", area("Follow the stages", [[["item-0", "shell: 2"]], [["item-1", "other: 1"]]]))),
 }
+
+export const WARMUPS: Record<string, Warmup> = { ...BASE, ...WARMUPS_STATS, ...WARMUPS_VIZ, ...WARMUPS_ML, ...WARMUPS_NN }

@@ -23,12 +23,36 @@ graph.add_node("a", func_a)
 graph.add_edge(START, "a")
 graph.add_edge("a", END)
 app = graph.compile()
-app.invoke({...})
 ```
 
 Run the starter first: LangGraph refuses to compile a graph with no way in. Then wire it up; the **Graph Lab** animates the run.
 
 > **Mission:** connect `START → write_draft → polish → END`.
+
+@@step Enter the graph and connect the nodes
+Edges are directed: `add_edge(a, b)` means "after `a`, run `b`". Give the graph an entry point and link the two nodes:
+
+```python
+graph.add_edge(START, "write_draft")
+graph.add_edge("write_draft", "polish")
+```
+
+**Do:** add both edges, then Run.
+@@stepcheck
+test("write_draft ran and stored its draft", lambda: result["draft"].startswith("Answer to"), 'graph.add_edge(START, "write_draft") and graph.add_edge("write_draft", "polish")')
+@@step Leave through END
+Every path must end somewhere explicit. `END` is the exit marker:
+
+```python
+graph.add_edge("polish", END)
+```
+
+**Do:** add the last edge, then Run. The Graph Lab should show all three hops.
+@@stepcheck
+import orbit
+edges = {(e["from"], e["to"]) for t in orbit._emits if t["kind"] == "graph_trace" for e in t["data"]["edges"]}
+test("both nodes ran, in order", lambda: result["final"] == "ANSWER TO 'SHOULD I USE LANGGRAPH?': IT DEPENDS.")
+test("polish is wired to END", lambda: ("polish", "__end__") in edges, 'graph.add_edge("polish", END)')
 @@starter
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END

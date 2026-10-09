@@ -25,6 +25,28 @@ app.invoke(None, config)           # approved: carry on
 ```
 
 > **Mission:** two TODOs. Compile with a `MemorySaver` that pauses before `"act"`, then resume the thread after "approval" and store the final state in `final`.
+
+@@step Compile with a checkpointer and a gate
+Without a checkpointer there is nothing to resume from. Pass one, and name the node to stop in front of:
+
+```python
+app = g.compile(checkpointer=MemorySaver(), interrupt_before=["act"])
+```
+
+**Do:** change the compile line, then Run. The cell should print `paused before: ('act',)`.
+@@stepcheck
+test("it paused before 'act'", lambda: "paused before: ('act',)" in __stdout__, 'g.compile(checkpointer=MemorySaver(), interrupt_before=["act"])')
+@@step Resume the same thread
+`invoke(None, config)` says: no new input, continue the saved thread identified by `config`. The paused `act` node runs and the graph finishes:
+
+```python
+final = app.invoke(None, config)
+```
+
+**Do:** replace `final = None`, then Run. `get_state(config).next` is now empty: nothing is waiting.
+@@stepcheck
+test("the resumed run finished the task", lambda: final is not None and final["result"] == "DONE -> delete temp files for: cleanup", "final = app.invoke(None, config)")
+test("nothing is waiting any more", lambda: app.get_state(config).next == ())
 @@starter
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END

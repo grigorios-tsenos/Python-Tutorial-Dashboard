@@ -43,7 +43,7 @@ self.onmessage = (ev: MessageEvent) => {
     return
   }
   if (msg.type !== 'run') return
-  const { id, code, check, packages } = msg as RunRequest & { id: number }
+  const { id, code, check, checks, packages } = msg as RunRequest & { id: number }
   queue = queue.then(async () => {
     try {
       const py = await boot()
@@ -55,7 +55,7 @@ self.onmessage = (ev: MessageEvent) => {
         post({ type: 'status', phase: 'ready', detail: '' })
       }
       post({ type: 'started', id })
-      const result = await runCell(py, code, check)
+      const result = await runCell(py, code, check, checks)
       post({ type: 'result', id, result })
     } catch (e: any) {
       const text = String(e?.message ?? e)

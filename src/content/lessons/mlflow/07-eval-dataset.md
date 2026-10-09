@@ -11,12 +11,7 @@ minutes: 8
 @@body
 # A metric means nothing without its data
 
-Run A scored 0.82, run B 0.85. B is better only if both were scored on the **same** examples, and eval sets change constantly. Record a **digest** of the eval data on every run and only rank runs that share it:
-
-```python
-canonical = json.dumps(row, sort_keys=True, separators=(",", ":"))   # same dict -> same text
-hashlib.sha256(text.encode()).hexdigest()[:12]                       # short, stable fingerprint
-```
+Run A scored 0.82, run B 0.85. B is better only if both were scored on the **same** examples, and eval sets change constantly. Record a **digest** of the eval data on every run and only rank runs that share it.
 
 A good digest changes on **any** data change and ignores what cannot change the score: key order and row order. Duplicate rows count twice in a score, so they must change it.
 
@@ -25,6 +20,69 @@ A good digest changes on **any** data change and ignores what cannot change the 
 > 1. `dataset_digest(rows)` → the first 12 hex characters of the SHA-256 of the canonical rows, **sorted**, joined with newlines. Don't mutate `rows`.
 > 2. `log_eval(run_name, predict, rows)` → in experiment `"eval"`, start a run named `run_name`, set tag `dataset_digest`, log param `n_examples` and metric `accuracy` (fraction where `predict(row["input"]) == row["label"]`); return the run ID. An empty dataset raises `ValueError` before any run starts.
 > 3. `leaderboard(digest)` → `[(run_name, accuracy), ...]` for finished `"eval"` runs tagged with that digest, best first, ties by name. Use `search_runs` with a tag filter; an unknown digest gives `[]`.
+
+@@step A canonical, order-insensitive digest
+Python's `hash()` is randomized per process, so the starter's digest changes between runs. Serialize each row the same way every time, sort the rows, hash the text:
+
+```python
+canonical = sorted(json.dumps(row, sort_keys=True, separators=(",", ":")) for row in rows)
+return hashlib.sha256("\n".join(canonical).encode()).hexdigest()[:12]
+```
+
+`sort_keys` fixes key order, `sorted(...)` fixes row order, and compact separators keep the text stable.
+
+**Do:** implement `dataset_digest`, then Run.
+@@stepcheck
+A = [{"input": "a", "label": "x"}, {"input": "b", "label": "y"}, {"input": "c", "label": "z"}, {"input": "d", "label": "x"}]
+d = dataset_digest(A)
+test("the digest is a SHA-256 of the canonical rows", lambda: d == "2cc747407345", "sorted json.dumps(row, sort_keys=True, separators=(',', ':')) joined with newlines, sha256, [:12]")
+test("row order and key order do not change the digest", lambda: dataset_digest(list(reversed(A))) == d and dataset_digest([{"label": r["label"], "input": r["input"]} for r in A]) == d)
+@@step log_eval: tag the run with its data
+A tag is metadata about the run; the digest belongs there. Reject empty data before any run starts:
+
+```python
+if not rows:
+    raise ValueError("cannot evaluate on an empty dataset")
+mlflow.set_experiment("eval")
+with mlflow.start_run(run_name=run_name) as run:
+    mlflow.set_tag("dataset_digest", dataset_digest(rows))
+    mlflow.log_param("n_examples", len(rows))
+    mlflow.log_metric("accuracy", sum(predict(r["input"]) == r["label"] for r in rows) / len(rows))
+return run.info.run_id
+```
+
+**Do:** implement `log_eval`, then Run.
+@@stepcheck
+import mlflow
+S = [{"input": "s1", "label": "x"}, {"input": "s2", "label": "y"}, {"input": "s3", "label": "z"}, {"input": "s4", "label": "x"}]
+run = mlflow.get_run(log_eval("step-always-x", lambda q: "x", S))
+test("the run records digest, size and accuracy", lambda: run.info.experiment_name == "eval" and run.data.tags.get("dataset_digest") == dataset_digest(S) and run.data.params.get("n_examples") == "4" and run.data.metrics.get("accuracy") == 0.5, "set_tag, log_param, log_metric inside the run")
+def rejected():
+    try:
+        log_eval("empty", lambda q: "x", [])
+    except ValueError:
+        return True
+    return False
+test("an empty dataset is rejected before a run starts", lambda: rejected() and mlflow.active_run() is None)
+@@step leaderboard: only runs on the same data
+Filter by the tag and status on the server, then sort best first with names as the tie-breaker:
+
+```python
+runs = mlflow.search_runs(experiment_names=["eval"], filter_string=f"tags.dataset_digest = '{digest}' and attributes.status = 'FINISHED'")
+board = [(r["tags.mlflow.runName"], r["metrics.accuracy"]) for _, r in runs.iterrows()]
+return sorted(board, key=lambda item: (-item[1], item[0]))
+```
+
+**Do:** implement `leaderboard`, then Run.
+@@stepcheck
+S = [{"input": "s1", "label": "x"}, {"input": "s2", "label": "y"}, {"input": "s3", "label": "z"}, {"input": "s4", "label": "x"}]
+S2 = S + [{"input": "s5", "label": "q"}]
+lookup = {"s1": "x", "s2": "y", "s3": "z"}.get
+log_eval("board-x", lambda q: "x", S)
+log_eval("board-lookup", lookup, S)
+log_eval("board-new-data", lookup, S2)
+test("the leaderboard ranks only runs on the same data, best first", lambda: [n for n, _ in leaderboard(dataset_digest(S)) if n.startswith("board-")] == ["board-lookup", "board-x"] and all(n != "board-new-data" for n, _ in leaderboard(dataset_digest(S))), "filter_string=f\"tags.dataset_digest = '{digest}' and attributes.status = 'FINISHED'\"")
+test("an unknown digest gives an empty leaderboard", lambda: leaderboard("000000000000") == [])
 @@starter
 import hashlib
 import json

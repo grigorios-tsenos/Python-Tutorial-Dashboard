@@ -21,13 +21,41 @@ spark.sql("SELECT zone, COUNT(*) AS n_trips FROM trips GROUP BY zone")
 This report has **two** classic bugs:
 
 1. **`WHERE` vs `HAVING`.** `WHERE` filters rows **before** grouping and can't use `COUNT(*)`; `HAVING` filters groups **after**.
-2. **Formatting a query.** An f-string pastes `city` into the SQL: `St. John's` breaks the quote, and `x' OR '1'='1` rewrites the query. Use **named parameter markers**:
-
-```python
-spark.sql("SELECT * FROM trips WHERE city = :city", args={"city": city})
-```
+2. **Formatting a query.** An f-string pastes `city` into the SQL: `St. John's` breaks the quote, and `x' OR '1'='1` rewrites the query. Use **named parameter markers** and pass the values with `args={...}`.
 
 > **Mission:** fix `zone_report(spark, trips, city, min_trips)`: completed trips per zone for one city as `zone`, `n_trips`, `avg_fare` (2 decimals), keeping zones with **at least** `min_trips` completed trips, busiest first, ties by zone. Cancelled trips never count. Any city name must work, quotes included.
+
+@@step Move the aggregate condition to HAVING
+Run the starter and read the error: an aggregate in `WHERE` is not allowed, because `WHERE` runs before any groups exist. Keep the row-level conditions in `WHERE` and put the count after `GROUP BY`:
+
+```sql
+WHERE city = '{city}' AND status = 'completed'
+GROUP BY zone
+HAVING COUNT(*) >= {min_trips}
+```
+
+**Do:** rewrite the query, then Run.
+@@stepcheck
+rows = lambda df: [tuple(r) for r in df.collect()]
+test("busiest zones first, cancelled trips excluded", lambda: rows(zone_report(spark, trips, "London", 2)) == [("Camden", 3, 15.0), ("Soho", 2, 15.25)], "HAVING COUNT(*) >= ... after GROUP BY zone")
+test("the threshold is inclusive and comes from the argument", lambda: rows(zone_report(spark, trips, "London", 3)) == [("Camden", 3, 15.0)])
+@@step Replace the f-string with parameter markers
+Values must travel *beside* the SQL, never *inside* it. Drop the `f` prefix, write `:city` and `:min_trips` (no quotes), and pass the values separately:
+
+```python
+return spark.sql("""
+    ... WHERE city = :city AND status = 'completed'
+    GROUP BY zone
+    HAVING COUNT(*) >= :min_trips ...
+""", args={"city": city, "min_trips": min_trips})
+```
+
+**Do:** convert the query, then Run. The step check feeds `St. John's` and an injection attempt.
+@@stepcheck
+rows = lambda df: [tuple(r) for r in df.collect()]
+harbour = spark.createDataFrame([("St. John's", "Harbour", 10.0, "completed"), ("St. John's", "Harbour", 11.0, "completed"), ("St. John's", "Airport", 40.0, "completed")], "city string, zone string, fare double, status string")
+test("a city name containing a quote works", lambda: rows(zone_report(spark, harbour, "St. John's", 2)) == [("Harbour", 2, 10.5)], "WHERE city = :city with args={'city': city, ...}")
+test("an injection attempt matches no city", lambda: zone_report(spark, harbour, "x' OR '1'='1", 1).count() == 0)
 @@starter
 from pyspark.sql import SparkSession
 

@@ -4,6 +4,7 @@ import { currentStreak, levelProgress } from '../lib/gamification'
 import type { Route } from '../lib/router'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/ui'
+import { Sprint } from './Sprint'
 
 export function Topbar({ route }: { route: Route }) {
   const xp = useStore((s) => s.xp)
@@ -39,6 +40,7 @@ export function Topbar({ route }: { route: Route }) {
         {link('#/stats', 'Dashboard', route.name === 'stats')}
       </nav>
       <div className="top-right">
+        <Sprint />
         {streak > 0 && <span className="chip streak" title={`${streak}-day streak`}>🔥 {streak}</span>}
         <span className="chip level" title={`${lp.into}/${lp.need} XP to level ${lp.level + 1}`}>
           Lv {lp.level}

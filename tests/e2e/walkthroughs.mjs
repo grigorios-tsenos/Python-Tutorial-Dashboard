@@ -21,6 +21,11 @@ try {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(url)
+  // intros are collapsed by default; this script exercises the fully open player
+  await page.waitForSelector('.icon-btn[aria-label="Settings"]')
+  await page.locator('.icon-btn[aria-label="Settings"]').click()
+  await page.getByRole('radio', { name: 'Open fully', exact: true }).click()
+  await page.keyboard.press('Escape')
   const lessons = readdirSync('src/content/lessons').flatMap(track => readdirSync(`src/content/lessons/${track}`).map(file => {
     const source = readFileSync(`src/content/lessons/${track}/${file}`, 'utf8')
     return { id: /^id: (.+)$/m.exec(source)[1], title: /^title: (.+)$/m.exec(source)[1].replace(/^(['"])(.*)\1$/, '$2') }

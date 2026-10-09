@@ -1,15 +1,13 @@
-export interface WalkthroughCell { id: string; text: string }
-export interface WalkthroughArea { label: string; rows: WalkthroughCell[][] }
-export interface PredictionCheck { question: string; options: string[]; answer: number; explanation: string }
-export interface WalkthroughStep { check?: PredictionCheck; nesting?: string; title: string; explanation: string; code: string; areas: WalkthroughArea[] }
-export interface Walkthrough { purpose: string; steps: WalkthroughStep[]; question: string; answer: string }
+import { area, step, walk, type Walkthrough } from './introKit'
+import { WALKTHROUGHS_ML } from './intros/ml'
+import { WALKTHROUGHS_NN } from './intros/nn'
+import { WALKTHROUGHS_STATS } from './intros/stats'
+import { WALKTHROUGHS_VIZ } from './intros/viz'
 
-// Stable cell IDs let the same value move between positions and stages.
-export const area = (label: string, rows: [string, string][][]): WalkthroughArea => ({ label, rows: rows.map(row => row.map(([id, text]) => ({ id, text }))) })
-export const step = (title: string, explanation: string, code: string, ...areas: WalkthroughArea[]): WalkthroughStep => ({ title, explanation, code, areas })
-const walk = (purpose: string, question: string, answer: string, ...steps: WalkthroughStep[]): Walkthrough => ({ purpose, question, answer, steps })
+export { area, step } from './introKit'
+export type { PredictionCheck, Walkthrough, WalkthroughArea, WalkthroughCell, WalkthroughStep } from './introKit'
 
-export const WALKTHROUGHS: Record<string, Walkthrough> = {
+const BASE: Record<string, Walkthrough> = {
   'np-first-array': walk('Watch one operation touch every number at once, so you never write a loop for simple math again.', 'What would scores > 0.5 give for [0.2, 0.7]?', '[False, True]: one yes/no per value, again with no loop.',
     step('Data arrives as a plain list', 'This parallel example scores two search results. A Python list just holds the numbers; math on it needs a loop.', 'raw = [0.2, 0.7]', area('Python list', [[['a','0.2'],['b','0.7']]])),
     step('Upgrade it to an array', 'Same two numbers, new abilities. Nothing about the values changes.', 'scores = np.array(raw)', area('NumPy array', [[['a','0.2'],['b','0.7']]])),
@@ -373,3 +371,5 @@ export const WALKTHROUGHS: Record<string, Walkthrough> = {
     step('Update independent counters', 'Read has one call, errors has one failed result, and tokens add input plus output: 10 + 3 = 13.', 'tokens += event.get("input_tokens", 0) + event.get("output_tokens", 0)', area('Report counters', [[['a','Read calls: 1']],[['b','errors: 1']],[['c','tokens: 13']],[['d','skipped: 1']]])),
     step('Return the complete report', 'No hook blocks were in this example, so blocked is zero. Each invocation starts its own counters.', 'return {"tools": tools, "errors": errors, "blocked": blocked, "tokens": tokens, "skipped": skipped}', area('Report', [[['a','Read calls: 1']],[['b','errors: 1']],[['blocked','blocked: 0']],[['c','tokens: 13']],[['d','skipped: 1']]]))),
 }
+
+export const WALKTHROUGHS: Record<string, Walkthrough> = { ...BASE, ...WALKTHROUGHS_STATS, ...WALKTHROUGHS_VIZ, ...WALKTHROUGHS_ML, ...WALKTHROUGHS_NN }

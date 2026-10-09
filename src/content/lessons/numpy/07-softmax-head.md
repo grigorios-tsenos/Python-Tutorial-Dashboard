@@ -11,27 +11,88 @@ minutes: 7
 @@body
 # A classification head in two lines
 
-A linear model turns features into one **logit** per class with one matrix product:
+A linear classifier turns features into one **logit** (raw score) per class with a single matrix product, then **softmax** turns each row of logits into probabilities:
 
 ```
-X @ W + b    (n, d) @ (d, k) + (k,)  ->  (n, k)   one row of k logits per ticket
+X @ W + b        (n, d) @ (d, k) + (k,)  ->  (n, k)   k logits per ticket
+exp(z) / sum(exp(z))   per row              ->  (n, k)   k probabilities per ticket
 ```
 
-**Softmax** turns each row of logits into probabilities: `exp(z) / sum(exp(z))`, **per row** (`axis=1`). The easy-to-miss part is `keepdims=True`:
+Every classifier ends like this, and so does every LLM: the next token is a softmax over the vocabulary.
+
+> **Mission:** a support-ticket router.
+>
+> 1. `predict_proba(X, W, b)` → an `(n, k)` array, each row a probability distribution, finite for huge logits. `X` must be `(n, d)`, `W` `(d, k)` and `b` exactly `(k,)`, else `ValueError`. An empty `(0, d)` batch returns `(0, k)`.
+> 2. `predict_labels(X, W, b, labels)` → the most likely label per row, as a list; ties go to the first label. A label list whose length isn't `k` raises `ValueError`.
+
+@@step Normalize each row, not the whole batch
+The starter divides by `exp.sum()`: the total of the entire batch, so the three rows together add to 1 instead of each row. Sum per row and keep the result as a column:
 
 ```python
 exp.sum(axis=1)                 # (n,)    flat: lines up against k, not n
 exp.sum(axis=1, keepdims=True)  # (n, 1)  a column: each total stays beside its row
 ```
 
-Divide by the flat version and you get an error, or a silently wrong answer when `k == n`. The `(n, 1)` column makes broadcasting divide each row by its own total.
+Divide by the `(n, 1)` version and broadcasting divides each row by its own total.
 
-One trap: `np.exp(1000)` is `inf`, and `inf / inf` is `nan`. Softmax is unchanged when you add a constant to a row, so subtract each row's **maximum** first.
+**Do:** fix the division so every row sums to 1, then Run and check the printed rows.
+@@stepcheck
+import numpy as np
+X = np.array([[2.0, 0.0, 0.0], [0.0, 3.0, 1.0], [0.0, 0.0, 2.0]])
+W = np.array([[2.0, -1.0, 0.0], [-0.5, 2.0, 0.0], [0.0, 0.5, 1.5]])
+P = predict_proba(X, W, np.zeros(3))
+test("each row is a probability distribution", lambda: P.shape == (3, 3) and np.allclose(P.sum(axis=1), 1), "divide by exp.sum(axis=1, keepdims=True)")
+@@step Subtract the row maximum before exp
+`np.exp(1000)` overflows to `inf`, and `inf / inf` is `nan`. Softmax does not change when you add the same constant to every logit in a row, so shift each row so its largest logit is 0:
 
-> **Mission:** a support-ticket router.
->
-> 1. `predict_proba(X, W, b)` → an `(n, k)` array, each row a probability distribution, finite for huge logits. `X` must be `(n, d)`, `W` `(d, k)` and `b` exactly `(k,)`, else `ValueError`. An empty `(0, d)` batch returns `(0, k)`.
-> 2. `predict_labels(X, W, b, labels)` → the most likely label per row, as a list; ties go to the first label. A label list whose length isn't `k` raises `ValueError`.
+```python
+exp = np.exp(logits - logits.max(axis=1, keepdims=True))
+```
+
+Now the biggest term is `exp(0) = 1` and nothing overflows.
+
+**Do:** apply the shift, then Run. The step check feeds logits of 1000.
+@@stepcheck
+import numpy as np
+huge = predict_proba([[1.0]], [[1000.0, 999.0, -1000.0]], [0.0, 0.0, 0.0])
+test("huge logits stay finite", lambda: bool(np.isfinite(huge).all()) and np.allclose(huge[0], [1 / (1 + np.exp(-1)), np.exp(-1) / (1 + np.exp(-1)), 0]), "subtract logits.max(axis=1, keepdims=True) before np.exp")
+@@step Validate the shapes explicitly
+A bias of shape `(1,)` or `(k, 1)` would broadcast *silently* and produce nonsense. NumPy only complains when shapes cannot be stretched, so check them yourself:
+
+```python
+if X.ndim != 2 or W.ndim != 2 or X.shape[1] != W.shape[0] or b.shape != (W.shape[1],):
+    raise ValueError("expected X (n, d), W (d, k) and b (k,)")
+```
+
+**Do:** add the guard before the matrix product, then Run.
+@@stepcheck
+import numpy as np
+W = np.array([[2.0, -1.0, 0.0], [-0.5, 2.0, 0.0], [0.0, 0.5, 1.5]])
+X = np.array([[2.0, 0.0, 0.0], [0.0, 3.0, 1.0], [0.0, 0.0, 2.0]])
+def rejects(fn):
+    try:
+        fn()
+    except ValueError:
+        return True
+    return False
+test("a bias that would broadcast silently is rejected", lambda: rejects(lambda: predict_proba(X, W, [0.0])) and rejects(lambda: predict_proba(X, W, np.zeros((3, 1)))), "check b.shape == (W.shape[1],)")
+@@step Pick the most likely label per row
+`argmax(axis=1)` returns the column index of the largest value in each row; ties go to the first. Map indices to names with a list comprehension, after checking there is exactly one label per class:
+
+```python
+if len(labels) != np.shape(W)[1]:
+    raise ValueError("need exactly one label per class")
+return [labels[i] for i in predict_proba(X, W, b).argmax(axis=1)]
+```
+
+**Do:** implement `predict_labels`, then Run.
+@@stepcheck
+import numpy as np
+X = np.array([[2.0, 0.0, 0.0], [0.0, 3.0, 1.0], [0.0, 0.0, 2.0]])
+W = np.array([[2.0, -1.0, 0.0], [-0.5, 2.0, 0.0], [0.0, 0.5, 1.5]])
+L = ["billing", "bug", "feature"]
+test("each ticket gets its most likely label", lambda: predict_labels(X, W, np.zeros(3), L) == ["billing", "bug", "feature"], "[labels[i] for i in probs.argmax(axis=1)]")
+test("ties go to the first label", lambda: predict_labels([[0.0, 0.0, 0.0]], W, np.zeros(3), L) == ["billing"])
 @@starter
 import numpy as np
 

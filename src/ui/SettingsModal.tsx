@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ACCENTS, RIGORS, type MapLabels } from '../store/model'
+import { ACCENTS, RIGORS, SPRINTS, type MapLabels } from '../store/model'
 import { useStore } from '../store/useStore'
 import { useUi } from '../store/ui'
 
@@ -80,14 +80,22 @@ export function SettingsModal() {
           <button className={`switch ${settings.reduceMotion ? 'on' : ''}`} role="switch" aria-checked={settings.reduceMotion} onClick={() => setSetting('reduceMotion', !settings.reduceMotion)}><i /></button>
         </div>
         <div className="setting setting-col">
-          <div><strong>Lesson intros</strong><div className="dim">How each lesson's guided intro (warm-up + demo) opens. You can still show or hide it on any lesson, and that choice is remembered per lesson.</div></div>
+          <div><strong>Lesson intros</strong><div className="dim">Each lesson has an optional code-free warm-up and an animated demo. Collapsed keeps the page short and opens it on request; the choice is remembered per lesson.</div></div>
           <div className="seg" role="radiogroup" aria-label="Lesson intro style">
-            {([['full', 'Full guided'], ['quick', 'Start at the demo'], ['code', 'Straight to code']] as const).map(([v, label]) => (
+            {([['code', 'Collapsed'], ['quick', 'Open at the demo'], ['full', 'Open fully']] as const).map(([v, label]) => (
               <button key={v} className={`seg-btn ${settings.introStyle === v ? 'on' : ''}`} role="radio" aria-checked={settings.introStyle === v} onClick={() => setSetting('introStyle', v)}>{label}</button>
             ))}
           </div>
         </div>
 
+        <div className="setting">
+          <div><strong>Focus sprint</strong><div className="dim">The ⏱ button in the top bar starts a countdown of this length; when it ends you are told to take a break.</div></div>
+          <div className="seg" role="radiogroup" aria-label="Focus sprint length">
+            {SPRINTS.map((m) => (
+              <button key={m} className={`seg-btn ${settings.sprint === m ? 'on' : ''}`} role="radio" aria-checked={settings.sprint === m} onClick={() => setSetting('sprint', m)}>{m}m</button>
+            ))}
+          </div>
+        </div>
         <div className="setting setting-col">
           <div><strong>Struggle first</strong><div className="dim">Hints unlock after real attempts: runs on the lesson, or minutes spent, whichever comes first. The solution also asks what you tried. Standard: 2 / 4 / 6 runs or 3 / 6 / 10 min. Strict: 3 / 6 / 10 runs or 5 / 10 / 20 min.</div></div>
           <div className="seg" role="radiogroup" aria-label="Struggle first">

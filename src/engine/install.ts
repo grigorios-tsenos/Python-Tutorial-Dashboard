@@ -27,10 +27,10 @@ export async function installPython(py: PyLike) {
   )
 }
 
-export async function runCell(py: PyLike, code: string, check?: string): Promise<RunResult> {
+export async function runCell(py: PyLike, code: string, check?: string, checks?: string[]): Promise<RunResult> {
   const mod = py.globals.get('orbit_runtime')
   try {
-    const raw = await mod.orbit_run(code, check ?? null)
+    const raw = await mod.orbit_run(code, check ?? null, checks?.length ? JSON.stringify(checks) : null)
     return JSON.parse(raw as string) as RunResult
   } finally {
     mod.destroy?.()

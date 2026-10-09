@@ -14,6 +14,56 @@ minutes: 6
 `JsonOutputParser` turns an `AIMessage` into Python data, even when the JSON sits inside a Markdown code fence. But valid JSON can still have the wrong shape: a list, a missing answer, a non-string source. Validate at the boundary.
 
 > **Mission:** implement `parse_answer(message)` using the supplied parser. Return exactly `{"answer": ..., "sources": ...}`. The answer must be a non-empty string after stripping surrounding whitespace; return that stripped answer. Sources must be a list of strings (an empty list is valid). Ignore extra fields. Raise `ValueError` for invalid JSON, a non-object response, missing fields, or invalid field types.
+
+@@step Require an object with a real answer
+Parse, then check the *shape* before touching fields:
+
+```python
+data = parser.invoke(message)
+if not isinstance(data, dict):
+    raise ValueError("answer must be a JSON object")
+answer = data.get("answer")
+if not isinstance(answer, str) or not answer.strip():
+    raise ValueError("answer must be non-empty text")
+return {"answer": answer.strip(), "sources": data.get("sources")}
+```
+
+`isinstance` before `.strip()` is what keeps a numeric answer from crashing with `AttributeError` instead of a clear `ValueError`. (The parser itself raises on invalid JSON; let that propagate as a `ValueError` subclass or re-raise.)
+
+**Do:** add the object and answer checks, then Run.
+@@stepcheck
+from langchain_core.messages import AIMessage
+def rejects(text):
+    try:
+        parse_answer(AIMessage(text))
+    except ValueError:
+        return True
+    return False
+test("the answer is stripped", lambda: parse_answer(message)["answer"] == "Delta remembers versions.", 'return answer.strip()')
+test("non-objects and bad answers are rejected", lambda: rejects("not JSON") and rejects("[]") and rejects('{"sources":[]}') and rejects('{"answer":" ","sources":[]}') and rejects('{"answer":12,"sources":[]}'), "isinstance(data, dict) and isinstance(answer, str) checks that raise ValueError")
+@@step Validate the sources, return only the contract
+A list is required, and every element must be a string. `any(...)` over the elements finds a single bad one:
+
+```python
+sources = data.get("sources")
+if not isinstance(sources, list) or any(not isinstance(s, str) for s in sources):
+    raise ValueError("sources must be a list of strings")
+return {"answer": answer.strip(), "sources": sources}
+```
+
+Returning a new dict with exactly two keys drops anything extra the model added.
+
+**Do:** add the sources check, then Run.
+@@stepcheck
+from langchain_core.messages import AIMessage
+def rejects(text):
+    try:
+        parse_answer(AIMessage(text))
+    except ValueError:
+        return True
+    return False
+test("extra fields are dropped and empty source lists are valid", lambda: parse_answer(AIMessage('{"answer":"Graphs branch.","sources":["intro"],"score":9}')) == {"answer": "Graphs branch.", "sources": ["intro"]} and parse_answer(AIMessage('{"answer":"No citation.","sources":[]}')) == {"answer": "No citation.", "sources": []})
+test("missing or malformed sources are rejected", lambda: rejects('{"answer":"ok"}') and rejects('{"answer":"ok","sources":"guide"}') and rejects('{"answer":"ok","sources":[3]}'), "isinstance(sources, list) and every element a str")
 @@starter
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser

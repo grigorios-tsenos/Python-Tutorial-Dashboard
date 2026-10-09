@@ -11,17 +11,45 @@ minutes: 10
 @@body
 # Boss: build the heart of a vector database
 
-Every RAG system, recommender and semantic search engine does the same core thing: *find the rows of a matrix most similar to a query vector*, using **cosine similarity** — the angle between vectors, ignoring length.
+Every RAG system, recommender and semantic search engine does one core thing: *find the rows of a matrix most similar to a query vector*. The measure is **cosine similarity**, the angle between vectors, which ignores their length:
 
 ```
 cos(a, b) = (a · b) / (‖a‖ ‖b‖)
 ```
 
-A raw dot product won't do: a long, off-topic vector can out-score a short, perfectly aligned one. The starter has that bug built in.
+A raw dot product will not do: a long, off-topic vector out-scores a short, perfectly aligned one. The starter has exactly that bug built in.
 
 > **Mission:** finish `top_k(query, matrix, k)`. It must return the **row indices** of the `k` rows most cosine-similar to `query`, best first. Do it for all rows at once, with no Python loops.
 
 The boss checks new data too: zero-length vectors have similarity `0`, ties keep the original row order, `k <= 0` returns no indices, and oversized `k` returns every available row. Keep the input arrays unchanged.
+
+@@step Divide the dot products by the lengths
+`matrix @ query` gives one dot product per row. Divide each by the row's length times the query's length. `np.linalg.norm(matrix, axis=1)` returns one length per row, shaped `(n,)`, which lines up with the `(n,)` scores.
+
+Run the sample: the aligned row 0 should now beat the long diagonal row 2.
+@@stepcheck
+import numpy as np
+D = np.array([[1.0, 0.0, 0.0], [0.9, 0.1, 0.0], [30.0, 30.0, 0.0], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.0]])
+Q = np.array([1.0, 0.05, 0.0])
+test("best match is the aligned row, not the longest", lambda: int(top_k(Q, D, 1)[0]) == 0, "scores = (matrix @ query) / (row_norms * query_norm)")
+test("scale-invariant", lambda: [int(i) for i in top_k(Q * 1000, D, 3)] == [0, 1, 2], "multiplying the query by 1000 must not change the ranking")
+@@step Zero vectors score 0, ties keep row order
+A zero-length vector makes the denominator 0. `np.divide(..., out=np.zeros(len(matrix)), where=norms != 0)` computes only where it is safe and leaves `0` elsewhere.
+
+Equal scores must not reorder rows: `np.argsort(-scores, kind="stable")` keeps the input order for ties (the default sort does not promise that).
+@@stepcheck
+import numpy as np
+edge = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0], [-1.0, 0.0]])
+test("zero rows and tied scores rank predictably", lambda: [int(i) for i in top_k(np.array([1.0, 0.0]), edge, 10)] == [1, 2, 0, 3], "np.divide with where=norms != 0, then argsort(kind='stable')")
+test("zero query keeps the original row order", lambda: [int(i) for i in top_k(np.zeros(2), edge, 3)] == [0, 1, 2])
+@@step Make k safe at both ends
+A Python slice with a negative stop keeps rows from the *end*: `[:-2]` on five rows returns three. Clamp it: `[:max(0, k)]`. An oversized `k` is already fine; slicing past the end just returns everything.
+@@stepcheck
+import numpy as np
+D = np.array([[1.0, 0.0, 0.0], [0.9, 0.1, 0.0], [30.0, 30.0, 0.0], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.0]])
+Q = np.array([1.0, 0.05, 0.0])
+test("non-positive k returns no indices", lambda: len(top_k(Q, D, 0)) == 0 and len(top_k(Q, D, -2)) == 0, "slice with [:max(0, k)]")
+test("oversized k returns every row", lambda: len(top_k(Q, D, 50)) == 5)
 @@starter
 import numpy as np
 

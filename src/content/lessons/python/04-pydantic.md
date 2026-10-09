@@ -15,9 +15,6 @@ packages: pydantic
 Ask an LLM for JSON and eventually you get `"score": 9` on a 1-to-5 scale, or `"sentiment": "meh"`. **Pydantic** turns a class into a validator: bad output fails loudly at the boundary instead of corrupting data downstream.
 
 ```python
-from typing import Literal
-from pydantic import BaseModel, Field
-
 class Ticket(BaseModel):
     priority: Literal["low", "high"]        # only these two strings
     hours: int = Field(ge=1, le=40)         # 1 <= hours <= 40
@@ -28,6 +25,47 @@ Pydantic coerces where safe: `"4"` becomes `4`.
 `Review` below accepts anything. That's the bug.
 
 > **Mission:** make `Review` reject a `score` outside **1 to 5** and any `sentiment` other than `positive`, `neutral` or `negative`.
+
+@@step Restrict sentiment to three words
+Run the starter: it prints `accepted` for `"meh"`. A `str` field takes any string. `Literal` (from `typing`) lists the only values allowed:
+
+```python
+from typing import Literal
+
+sentiment: Literal["positive", "neutral", "negative"]
+```
+
+**Do:** add the import and change the field type, then Run.
+@@stepcheck
+from pydantic import ValidationError
+def rejects(**kw):
+    try:
+        Review(**kw)
+    except ValidationError:
+        return True
+    return False
+test("unknown sentiment rejected", lambda: rejects(sentiment="meh", score=3), 'sentiment: Literal["positive", "neutral", "negative"]')
+test("valid review accepted", lambda: Review(sentiment="positive", score=5).score == 5)
+@@step Bound the score with Field
+`int` accepts 9 and -3. `Field` attaches constraints: `ge` means greater-or-equal, `le` less-or-equal:
+
+```python
+score: int = Field(ge=1, le=5)
+```
+
+Coercion still works: the string `"4"` becomes `4` before the bounds are checked.
+
+**Do:** constrain the score, then Run. The cell should now print `rejected`.
+@@stepcheck
+from pydantic import ValidationError
+def rejects(**kw):
+    try:
+        Review(**kw)
+    except ValidationError:
+        return True
+    return False
+test("scores outside 1..5 are rejected", lambda: rejects(sentiment="positive", score=6) and rejects(sentiment="positive", score=0), "score: int = Field(ge=1, le=5)")
+test("numeric strings still coerced", lambda: Review(sentiment="neutral", score="4").score == 4)
 @@starter
 from pydantic import BaseModel, Field, ValidationError
 

@@ -27,7 +27,7 @@ export function Difficulty({ lesson }: { lesson: Lesson }) {
       <ol className="difficulty-path">
         {lessons.map((l) => (
           <li key={l.id}>
-            <a className={`difficulty-step ${completed[l.id] ? 'done' : ''}`} href={lessonPath(l.id)} aria-current={l.id === lesson.id ? 'step' : undefined} aria-label={`${STAGES[l.order - 1].label}: ${l.title}${completed[l.id] ? ', completed' : ''}`}>
+            <a className={`difficulty-step ${completed[l.id] ? 'done' : ''}`} href={lessonPath(l.id)} aria-current={l.id === lesson.id ? 'step' : undefined} title={`${STAGES[l.order - 1].label}: ${l.title}`} aria-label={`${STAGES[l.order - 1].label}: ${l.title}${completed[l.id] ? ', completed' : ''}`}>
               <span className="difficulty-number" aria-hidden>{completed[l.id] ? '✓' : `0${l.order}`}</span>
               <span className="difficulty-label">{STAGES[l.order - 1].label}</span>
             </a>

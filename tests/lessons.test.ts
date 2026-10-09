@@ -4,6 +4,7 @@ import { validateLesson } from '../src/content/parse'
 import { TRACKS } from '../src/content/tracks'
 import { seededShuffle } from '../src/lib/shuffle'
 import { allPassed, outputText } from '../src/engine/outputText'
+import { stepPassed } from '../src/lib/steps'
 import { run } from './pyodide-node'
 
 describe('curriculum shape', () => {
@@ -49,18 +50,21 @@ describe.each(LESSONS.map((l) => [l.id, l] as const))('lesson %s executes correc
     })
     return
   }
-  it('the solution passes', async () => {
-    const r = await run(l.solution, l.check || undefined, l.packages)
+  const checks = l.steps.length ? l.steps.map((s) => s.check) : undefined
+  it('the solution passes every step and the final check', async () => {
+    const r = await run(l.solution, l.check || undefined, l.packages, checks)
     expect(r.error).toBeNull()
-    if (l.check) {
+    if (l.check || checks) {
       expect(r.tests.filter((t) => !t.ok), JSON.stringify(r.tests)).toEqual([])
       expect(allPassed(r)).toBe(true)
+      for (let i = 0; i < l.steps.length; i++) expect(stepPassed(r, i), `step ${i + 1} produced no passing tests`).toBe(true)
     }
   })
-  if (l.check) {
-    it('the starter does not already pass', async () => {
-      const r = await run(l.starter, l.check, l.packages)
+  if (l.check || checks) {
+    it('the starter does not already pass, and every step demands a change', async () => {
+      const r = await run(l.starter, l.check || undefined, l.packages, checks)
       expect(allPassed(r)).toBe(false)
+      for (let i = 0; i < l.steps.length; i++) expect(stepPassed(r, i), `step ${i + 1} "${l.steps[i].title}" already passes on the starter`).toBe(false)
     })
   }
 })

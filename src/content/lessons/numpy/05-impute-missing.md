@@ -11,17 +11,15 @@ minutes: 6
 @@body
 # Boolean masks: count, select and replace without loops
 
-Real feature matrices have holes, stored as `NaN`, and `NaN` is contagious: any sum that touches it becomes `NaN`.
+Real feature matrices have holes, stored as `NaN`, and `NaN` is contagious: any sum that touches it becomes `NaN`, so one missing reading ruins a whole column's mean.
+
+A **mask** is a boolean array shaped like your data. Three moves do all the work:
 
 ```python
-X = np.array([[1.0, np.nan], [3.0, 4.0]])
-X.mean(axis=0)            # [2., nan]   one gap ruins the column
-mask = np.isnan(X)        # [[False, True], [False, False]]  same shape as X
-(~mask).sum(axis=0)       # [2, 1]      observed values per column
-np.where(mask, 0.0, X)    # gaps -> 0, everything else kept
+mask = np.isnan(X)         # True where a cell is missing
+(~mask).sum(axis=0)        # how many real values per column
+np.where(mask, 0.0, X)     # gaps -> 0, everything else kept
 ```
-
-A **mask** is a boolean array shaped like your data. Read `np.where(missing, means, X)` out loud: *where a cell is missing, take that column's mean; else keep X.* `means` is `(d,)`, one per column, and broadcasting repeats it down the rows, so each gap gets **its own column's** mean.
 
 > **Mission:** implement `impute_columns(values)` for a 2-D matrix. Replace every `NaN` with the mean of the observed values in the same column.
 >
@@ -29,6 +27,78 @@ A **mask** is a boolean array shaped like your data. Read `np.where(missing, mea
 > - a column with **no** observed values is filled with `0.0`, without dividing by zero or triggering the "Mean of empty slice" warning
 > - keep the input unchanged, keep observed values exactly, keep an empty `(0, d)` shape
 > - a 1-D input raises `ValueError`
+
+@@step Refuse anything that is not a matrix
+Column statistics only make sense with columns. Right after the `np.asarray(...)` line, guard the shape:
+
+```python
+if values.ndim != 2:
+    raise ValueError("expected a two-dimensional matrix")
+```
+
+`ndim` is the number of axes. A flat vector has 1; a table has 2. Failing loudly here beats a confusing `IndexError` three lines later.
+
+**Do:** add the guard, then Run. (Your output will still show gaps; that is the next step.)
+@@stepcheck
+import numpy as np
+def rejects():
+    try:
+        impute_columns([1.0, np.nan, 3.0])
+    except ValueError:
+        return True
+    return False
+test("one-dimensional input is rejected with ValueError", rejects, "if values.ndim != 2: raise ValueError(...)")
+@@step Build the mask and report the gaps
+`np.isnan(values)` gives a boolean array the same shape as the input. Summing booleans counts the `True`s, and `axis=0` counts down each column:
+
+```python
+missing = np.isnan(values)
+report = missing.sum(axis=0)    # how many gaps per column
+```
+
+Return that report as the second value while the first value is still the input. The printed report should read `[1 1 1]` for the sample data.
+
+**Do:** compute `missing` and return `values, missing.sum(axis=0)`, then Run.
+@@stepcheck
+import numpy as np
+X = np.array([[30.0, np.nan, 12.0], [np.nan, 50000.0, 3.0], [34.0, 60000.0, np.nan], [38.0, 55000.0, 6.0]])
+test("the report counts filled cells per column", lambda: np.asarray(impute_columns(X)[1]).tolist() == [1, 1, 1], "return missing.sum(axis=0) as the second value")
+@@step Fill each gap with its column's mean
+You need the mean of the **observed** values only. Zero out the gaps, sum, and divide by the observed count:
+
+```python
+observed = (~missing).sum(axis=0)                  # (d,) real values per column
+totals = np.where(missing, 0.0, values).sum(axis=0)
+means = totals / observed                          # (d,) one mean per column
+filled = np.where(missing, means, values)
+```
+
+Read the last line aloud: *where a cell is missing, take that column's mean; otherwise keep the value.* `means` has shape `(d,)`, so broadcasting repeats it down the rows and every gap receives **its own column's** mean.
+
+**Do:** compute `filled` and return it as the first value, then Run.
+@@stepcheck
+import numpy as np
+X = np.array([[30.0, np.nan, 12.0], [np.nan, 50000.0, 3.0], [34.0, 60000.0, np.nan], [38.0, 55000.0, 6.0]])
+test("each gap gets its own column's observed mean", lambda: np.allclose(impute_columns(X)[0], [[30, 55000, 12], [34, 50000, 3], [34, 60000, 7], [38, 55000, 6]]), "np.where(missing, means, values)")
+@@step Keep empty columns quiet
+If a column has no observed values, `totals / observed` is `0 / 0`: a warning and a `NaN`. `np.divide` can skip those positions and write a default instead:
+
+```python
+means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)
+```
+
+- `out=` is the array that receives the results, pre-filled with zeros.
+- `where=` says which positions to actually compute. Skipped positions keep their zero.
+
+**Do:** replace the plain division with `np.divide(...)`, then Run. The final checks also try an empty matrix and integer input.
+@@stepcheck
+import numpy as np, warnings
+def quiet():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        filled, report = impute_columns([[np.nan, 1.0], [np.nan, 3.0]])
+    return np.allclose(filled, [[0, 1], [0, 3]]) and np.asarray(report).tolist() == [2, 0]
+test("an all-missing column becomes zeros without warnings", quiet, "np.divide(totals, observed, out=np.zeros(...), where=observed > 0)")
 @@starter
 import numpy as np
 

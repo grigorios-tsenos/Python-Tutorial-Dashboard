@@ -2,6 +2,8 @@ export interface TestResult {
   label: string
   ok: boolean
   msg: string
+  /** index of the step check that produced it; absent for the final check */
+  step?: number
 }
 
 export interface Emit {
@@ -24,6 +26,9 @@ export interface RunResult {
 
 export interface RunRequest {
   code: string
+  /** the final check: runs after every step check */
   check?: string
+  /** one check per step, each run in order and tagged with its index */
+  checks?: string[]
   packages?: string[]
 }

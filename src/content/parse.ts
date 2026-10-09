@@ -1,9 +1,11 @@
-import type { Flashcard, Lesson, LessonKind, TrackId } from './types'
+import type { Flashcard, Lesson, LessonKind, Step, TrackId } from './types'
 
 const KINDS: LessonKind[] = ['run', 'lab', 'predict', 'bug', 'parsons', 'build', 'boss']
 
 interface Section {
   name: string
+  /** text after the marker on the same line (`@@step Title`) */
+  arg: string
   text: string
 }
 
@@ -21,15 +23,15 @@ export function parseLesson(src: string, file = 'lesson'): Lesson {
     fm[l.slice(0, i).trim()] = l.slice(i + 1).trim().replace(/^(['"])(.*)\1$/, '$2')
   }
   const sections: Section[] = []
-  let cur: { name: string; buf: string[] } | null = null
+  let cur: { name: string; arg: string; buf: string[] } | null = null
   for (const l of lines.slice(end + 1)) {
-    const m = /^@@(\w+)\s*$/.exec(l)
+    const m = /^@@(\w+)(?:\s+(.*?))?\s*$/.exec(l)
     if (m) {
-      if (cur) sections.push({ name: cur.name, text: trim(cur.buf) })
-      cur = { name: m[1], buf: [] }
+      if (cur) sections.push({ name: cur.name, arg: cur.arg, text: trim(cur.buf) })
+      cur = { name: m[1], arg: m[2] ?? '', buf: [] }
     } else if (cur) cur.buf.push(l)
   }
-  if (cur) sections.push({ name: cur.name, text: trim(cur.buf) })
+  if (cur) sections.push({ name: cur.name, arg: cur.arg, text: trim(cur.buf) })
 
   const one = (n: string) => sections.find((s) => s.name === n)?.text ?? ''
   const many = (n: string) => sections.filter((s) => s.name === n).map((s) => s.text)
@@ -40,6 +42,18 @@ export function parseLesson(src: string, file = 'lesson'): Lesson {
   const as = many('a')
   if (qs.length !== as.length) throw new Error(`${file}: @@q / @@a count mismatch`)
   const cards: Flashcard[] = qs.map((q, i) => ({ q, a: as[i] }))
+
+  // `@@step Title` opens a step; the `@@stepcheck` that follows belongs to it
+  const steps: Step[] = []
+  for (const sec of sections) {
+    if (sec.name === 'step') steps.push({ title: sec.arg, body: sec.text, check: '' })
+    else if (sec.name === 'stepcheck') {
+      const last = steps.at(-1)
+      if (!last) throw new Error(`${file}: @@stepcheck before any @@step`)
+      if (last.check) throw new Error(`${file}: step "${last.title}" has two checks`)
+      last.check = sec.text
+    }
+  }
 
   // parsons lines keep their indentation; blank lines are dropped
   const rawLines = sections.find((s) => s.name === 'lines')
@@ -59,6 +73,7 @@ export function parseLesson(src: string, file = 'lesson'): Lesson {
     starter: one('starter'),
     solution: one('solution'),
     check: one('check'),
+    steps,
     hints: many('hint'),
     choices: many('choice'),
     answer: fm.answer !== undefined ? Number(fm.answer) : -1,
@@ -99,5 +114,12 @@ export function validateLesson(l: Lesson): string[] {
     need(!!l.solution, 'solution required')
   }
   if (l.kind === 'build' || l.kind === 'bug' || l.kind === 'boss') need(!!l.check, 'graded kinds need a @@check')
+  if (l.kind === 'predict' || l.kind === 'parsons') need(l.steps.length === 0, `${l.kind} lessons have no steps`)
+  else need(l.steps.length >= 2, 'at least 2 steps required')
+  l.steps.forEach((s, i) => {
+    need(!!s.title, `step ${i + 1} needs a title`)
+    need(!!s.body, `step ${i + 1} needs a body`)
+    need(!!s.check, `step ${i + 1} needs a @@stepcheck`)
+  })
   return errs
 }

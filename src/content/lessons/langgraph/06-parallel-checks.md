@@ -15,12 +15,7 @@ Guardrail checks on a drafted reply (PII? too long? wrong tone?) don't depend on
 
 **Fan out:** an edge from `START` to each check; nodes that become ready together run in one **step**. **Fan in:** an edge from each check to `decide`, which runs once after all three finish.
 
-The catch: all three write `findings` in the same step. A plain key holds one value per step, so LangGraph raises `InvalidUpdateError`. A **reducer** says how parallel writes combine:
-
-```python
-class Review(TypedDict):
-    findings: Annotated[list, operator.add]   # parallel lists are concatenated
-```
+The catch: all three write `findings` in the same step. A plain key holds one value per step, so LangGraph raises `InvalidUpdateError`. A **reducer** says how parallel writes combine.
 
 > **Mission:** implement `build_review()` → the compiled graph:
 >
@@ -29,6 +24,54 @@ class Review(TypedDict):
 > 3. `decide` sets `verdict` to `"send"` with no findings, else `"revise"`, and `summary` to the findings **sorted** and joined with `"; "` (`""` when none). Parallel writes arrive in any order, so sort first.
 >
 > Run the starter first to see the error without the reducer.
+
+@@step Give findings a reducer
+`Annotated[type, reducer]` attaches a merge function to a state key. With `operator.add`, lists from parallel nodes are concatenated instead of fighting:
+
+```python
+import operator
+from typing import Annotated, TypedDict
+
+findings: Annotated[list, operator.add]
+```
+
+**Do:** add the imports and change the annotation, then Run. The `InvalidUpdateError` disappears.
+@@stepcheck
+import operator
+from typing import get_type_hints
+hints = get_type_hints(Review, include_extras=True)
+test("findings carries an operator.add reducer", lambda: getattr(hints["findings"], "__metadata__", ()) and hints["findings"].__metadata__[0] is operator.add, "findings: Annotated[list, operator.add]")
+@@step Fan in to decide
+Each check currently goes straight to `END`, so `decide` never runs. Point the checks at `decide` and let `decide` exit:
+
+```python
+for check in ["pii", "length", "tone"]:
+    graph.add_edge(START, check)
+    graph.add_edge(check, "decide")
+graph.add_edge("decide", END)
+```
+
+**Do:** rewire the edges, then Run. The Graph Lab should show three parallel nodes feeding one.
+@@stepcheck
+import orbit
+traces = [e["data"] for e in orbit._emits if e["kind"] == "graph_trace"]
+edges = {(e["from"], e["to"]) for e in traces[-1]["edges"]} if traces else set()
+test("the graph fans out from START and in to decide", lambda: edges >= {("__start__", "pii"), ("__start__", "length"), ("__start__", "tone"), ("pii", "decide"), ("length", "decide"), ("tone", "decide"), ("decide", "__end__")}, 'graph.add_edge(check, "decide") inside the loop, then graph.add_edge("decide", END)')
+@@step decide: a verdict and a sorted summary
+Parallel results arrive in an unpredictable order, so sort once and use the sorted list for both outputs:
+
+```python
+findings = sorted(state["findings"])
+return {"verdict": "revise" if findings else "send", "summary": "; ".join(findings)}
+```
+
+**Do:** implement `decide`, then Run.
+@@stepcheck
+review = build_review()
+clean = review.invoke({"draft": "Thanks for waiting. Your refund is on its way."})
+messy = review.invoke({"draft": "Obviously, write to ana@example.com or bo@test.org."})
+test("a clean draft is sent with no findings", lambda: clean["verdict"] == "send" and clean["summary"] == "")
+test("the verdict and a sorted summary come from decide", lambda: messy["verdict"] == "revise" and messy["summary"] == "pii: ana@example.com; pii: bo@test.org; tone: obviously", 'sorted(state["findings"]) joined with "; "')
 @@starter
 import re
 from typing import TypedDict

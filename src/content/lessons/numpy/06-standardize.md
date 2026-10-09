@@ -9,15 +9,69 @@ xp: 50
 minutes: 6
 ---
 @@body
-# Standardize each feature column
+# Put every feature on the same scale
 
-A training matrix is one row per example, one column per feature. Age spans 18–90 while income reaches thousands: raw distances are not comparable.
+A training matrix is one row per example, one column per feature. Age spans 18–90 while income reaches tens of thousands, so a raw distance between two customers is really just an income difference.
 
-**Standardization** subtracts each column's mean and divides by its population standard deviation (`ddof=0`), giving varying columns mean `0` and standard deviation `1`. A constant column has no variation: return zeros rather than dividing by zero.
+**Standardization** fixes that per column: subtract the column's mean, divide by its standard deviation. Every varying column ends with mean `0` and standard deviation `1`. A constant column has no spread, so it becomes zeros instead of a division by zero.
+
+```python
+values.mean(axis=0)   # (d,) one mean per column
+values.std(axis=0)    # (d,) one spread per column (population std, ddof=0)
+```
 
 > **Mission:** implement `standardize(values)` for a finite, two-dimensional numeric matrix. Return a floating-point array with the same shape, standardizing columns independently. Keep the input unchanged. An empty matrix keeps its shape; a one-dimensional input raises `ValueError`.
 
-Use reductions over `axis=0` and broadcasting. `np.divide` can write zeros where a denominator is zero.
+@@step Reject vectors, keep floats
+Two lines of hygiene first. The starter already converts to float (so integer input never truncates). Add the shape guard right after it:
+
+```python
+if values.ndim != 2:
+    raise ValueError("expected a two-dimensional matrix")
+```
+
+**Do:** add the guard, then Run.
+@@stepcheck
+import numpy as np
+def rejects():
+    try:
+        standardize(np.array([1, 2, 3]))
+    except ValueError:
+        return True
+    return False
+test("one-dimensional inputs are rejected", rejects, "if values.ndim != 2: raise ValueError(...)")
+@@step Center, then scale, column by column
+Both statistics come back as shape `(d,)`, which broadcasts against every row of the `(n, d)` matrix:
+
+```python
+centered = values - values.mean(axis=0)
+scales = values.std(axis=0)
+return centered / scales
+```
+
+Note that `np.asarray(...)` and subtraction create new arrays, so the caller's matrix is never modified.
+
+**Do:** return the centered, scaled matrix. Run, and look at the third column of the printed output: it is constant `7`, and dividing by its zero spread prints `nan`. That is the next step.
+@@stepcheck
+import numpy as np
+X = np.array([[10, 100, 7], [20, 200, 7], [30, 300, 7]])
+out = standardize(X)
+test("each varying column is centered and scaled", lambda: np.allclose(out[:, :2].mean(axis=0), 0) and np.allclose(out[:, :2].std(axis=0), 1), "(values - mean) / std, both over axis=0")
+@@step Constant columns become zeros
+`np.divide` with `out=` and `where=` computes only where the spread is non-zero and leaves zeros elsewhere:
+
+```python
+return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)
+```
+
+One more edge: with **zero rows**, `mean` warns about an empty slice. Return `values.copy()` early when `len(values) == 0` so the shape `(0, d)` survives.
+
+**Do:** use `np.divide`, add the empty-input early return, then Run.
+@@stepcheck
+import numpy as np
+X = np.array([[10, 100, 7], [20, 200, 7], [30, 300, 7]])
+test("constant columns become zeros", lambda: np.allclose(standardize(X)[:, 2], 0), "np.divide(..., out=np.zeros_like(centered), where=scales != 0)")
+test("empty input keeps its shape without warnings", lambda: standardize(np.empty((0, 4))).shape == (0, 4))
 @@starter
 import numpy as np
 

@@ -55,7 +55,7 @@ export function LessonWalkthrough({ lessonId, solutionRevealed }: { lessonId: st
     return (
       <section className="lab lesson-intro collapsed" aria-label="Guided intro, collapsed">
         <div className="intro-collapsed-row">
-          <span><strong>Guided intro</strong> <span className="dim">· warm-up and demo{stepCount ? ` · ${stepCount} steps` : ''}{completed ? ' · lesson completed' : ''}</span></span>
+          <span><strong>{completed ? 'Guided intro' : 'New to this idea?'}</strong> <span className="dim">· code-free warm-up and animated demo{stepCount ? ` · ${stepCount} short steps` : ''}{completed ? ' · lesson completed' : ''}</span></span>
           <button className="btn small" onClick={() => useStore.getState().setIntroPref(lessonId, 'open')}>Show the intro</button>
         </div>
       </section>

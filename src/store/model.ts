@@ -18,6 +18,10 @@ export const DEMO_SPEEDS = [5000, 3000, 1500] as const
 
 /** how hard the app makes it to reach for help: see lib/learning.ts */
 export const RIGORS = ['off', 'standard', 'strict'] as const
+
+/** focus sprint lengths in minutes */
+export const SPRINTS = [10, 15, 25, 45] as const
+export type SprintMinutes = (typeof SPRINTS)[number]
 export type Rigor = (typeof RIGORS)[number]
 
 export const ACCENTS = ['mint', 'violet', 'amber', 'sky', 'rose'] as const
@@ -47,6 +51,7 @@ export interface Settings {
   dashboardHidden: DashboardPanel[]
   rigor: Rigor
   layout: Layout
+  sprint: SprintMinutes
 }
 
 export interface Note {
@@ -84,7 +89,7 @@ export function defaults(): Persisted {
     activity: {},
     cards: {},
     badges: {},
-    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'full', demoSpeed: 3000, accent: 'mint', dashboardHidden: [], rigor: 'standard', layout: { ...DEFAULT_LAYOUT } },
+    settings: { vim: false, theme: 'dark', reduceMotion: false, mapLabels: 'all', introStyle: 'code', demoSpeed: 3000, accent: 'mint', dashboardHidden: [], rigor: 'standard', layout: { ...DEFAULT_LAYOUT }, sprint: 15 },
     intro: {},
     tries: {},
     notes: {},
@@ -137,10 +142,11 @@ export function sanitize(raw: unknown): Persisted {
     d.settings.theme = s.theme === 'light' ? 'light' : 'dark'
     d.settings.reduceMotion = s.reduceMotion === true
     d.settings.mapLabels = oneOf(['all', 'focus', 'off'] as const, s.mapLabels, 'all')
-    d.settings.introStyle = oneOf(['full', 'quick', 'code'] as const, s.introStyle, 'full')
+    d.settings.introStyle = oneOf(['full', 'quick', 'code'] as const, s.introStyle, 'code')
     d.settings.demoSpeed = oneOf(DEMO_SPEEDS, s.demoSpeed, 3000)
     d.settings.accent = oneOf(ACCENTS, s.accent, 'mint')
     d.settings.rigor = oneOf(RIGORS, s.rigor, 'standard')
+    d.settings.sprint = oneOf(SPRINTS, s.sprint, 15)
     if (isObj(s.layout)) {
       const frac = (v: unknown, lo: number, hi: number, dflt: number) => Math.min(hi, Math.max(lo, num(v, dflt)))
       d.settings.layout = { guide: frac(s.layout.guide, 0.22, 0.65, DEFAULT_LAYOUT.guide), editor: frac(s.layout.editor, 0.25, 0.85, DEFAULT_LAYOUT.editor), guideOpen: s.layout.guideOpen !== false }

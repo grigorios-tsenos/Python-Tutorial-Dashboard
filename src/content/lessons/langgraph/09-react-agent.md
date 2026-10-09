@@ -26,6 +26,34 @@ The fake model is scripted: first it asks for `multiply(17, 3)`, then it answers
 > **Mission:** implement `agent`, `tools` and `should_continue`, build the graph with nodes named exactly **`agent`** and **`tools`**, compile it into `app`, and keep the `out = app.invoke(...)` line at the bottom.
 
 Handle multiple tool calls in one reply, other registered tools and repeated rounds. Preserve each call's `id` in its `ToolMessage` and keep message order; a reply with no tool calls finishes immediately.
+
+@@step agent: ask the model, append its reply
+The node hands the whole conversation to the model and returns the reply as a one-element update; the `messages` reducer appends it. While the graph is unfinished, comment out the two bottom lines to test pieces.
+@@stepcheck
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.language_models import GenericFakeChatModel
+saved = model
+try:
+    model = GenericFakeChatModel(messages=iter([AIMessage("plain answer")]))
+    probe = agent({"messages": [HumanMessage("q")]})
+    ok = isinstance(probe, dict) and len(probe.get("messages", [])) == 1 and probe["messages"][0].content == "plain answer"
+finally:
+    model = saved
+test("agent returns the model's reply as a messages update", lambda: ok, '{"messages": [model.invoke(state["messages"])]}')
+@@step tools: run each call, wrap the result
+Loop over the last message's `tool_calls`, look each tool up in `TOOLS` by name, invoke it with the call's args, and wrap the result in a `ToolMessage(content=str(output), tool_call_id=call["id"])`.
+@@stepcheck
+from langchain_core.messages import AIMessage
+probe = tools({"messages": [AIMessage("", tool_calls=[{"name": "multiply", "args": {"a": 3, "b": 4}, "id": "m1"}])]})
+test("tools returns one ToolMessage per call with the call id", lambda: [(m.content, m.tool_call_id, m.type) for m in probe["messages"]] == [("12", "m1", "tool")], "ToolMessage(content=str(output), tool_call_id=call['id'])")
+@@step should_continue and the graph
+The router returns `"tools"` when the last message has tool calls, else `END`. Wire `START → agent`, a conditional edge from `agent`, `tools → agent`, and compile into `app`.
+@@stepcheck
+import orbit
+steps = [s["node"] for e in orbit._emits if e["kind"] == "graph_trace" for s in e["data"]["steps"]]
+msgs = out["messages"]
+test("conversation: human, ai (tool request), tool, ai", lambda: [m.type for m in msgs] == ["human", "ai", "tool", "ai"] and msgs[-1].content == "17 * 3 = 51", 'add_conditional_edges("agent", should_continue, {"tools": "tools", END: END}) and add_edge("tools", "agent")')
+test("nodes ran agent -> tools -> agent", lambda: steps == ["agent", "tools", "agent"], "got " + str(steps))
 @@starter
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage, ToolMessage

@@ -31,7 +31,65 @@ chunk 2:                   w6 w7 w8 w9      <- reached the end: stop
 > - blank documents produce no chunks; don't modify the inputs
 > - require `chunk_size >= 1` and `0 <= overlap < chunk_size`, else `ValueError`
 
-Real splitters count tokens rather than words; the windowing is the same.
+@@step Validate the window
+An overlap as large as the chunk would never advance: an infinite loop waiting to happen. Guard first:
+
+```python
+if chunk_size < 1 or not 0 <= overlap < chunk_size:
+    raise ValueError("need chunk_size >= 1 and 0 <= overlap < chunk_size")
+```
+
+**Do:** add the guard, then Run.
+@@stepcheck
+from langchain_core.documents import Document
+ten = Document(" ".join(f"w{i}" for i in range(10)), {"source": "a.md"})
+def rejects(size, overlap):
+    try:
+        split_documents([ten], size, overlap)
+    except ValueError:
+        return True
+    return False
+test("invalid sizes are rejected", lambda: rejects(0, 0) and rejects(4, -1) and rejects(4, 4) and rejects(3, 5), "chunk_size >= 1 and 0 <= overlap < chunk_size")
+@@step Slide a window over the words
+Per document: split into words, walk a `start` index forward by `chunk_size - overlap`, and stop once a chunk reaches the end:
+
+```python
+words = doc.page_content.split()
+start = 0
+while start < len(words):
+    text = " ".join(words[start:start + chunk_size])
+    chunks.append(Document(text, dict(doc.metadata)))
+    if start + chunk_size >= len(words):
+        break
+    start += chunk_size - overlap
+```
+
+The `break` is the subtle part: without it, 7 words with size 4 and overlap 1 would produce a third chunk containing only `g`, pure overlap.
+
+**Do:** build the chunks with copied metadata, then Run.
+@@stepcheck
+from langchain_core.documents import Document
+ten = Document(" ".join(f"w{i}" for i in range(10)), {"source": "a.md"})
+test("windows overlap by exactly `overlap` words", lambda: [c.page_content for c in split_documents([ten], 4, 1)] == ["w0 w1 w2 w3", "w3 w4 w5 w6", "w6 w7 w8 w9"], "advance start by chunk_size - overlap")
+test("no trailing chunk that only repeats overlap", lambda: [c.page_content for c in split_documents([Document("a b c d e f g", {})], 4, 1)] == ["a b c d", "d e f g"], "break once start + chunk_size >= len(words)")
+@@step Record each chunk's position
+Give every chunk its number and first-word index, on a **copy** of the source metadata so documents never share a dict:
+
+```python
+chunks.append(Document(text, {**doc.metadata, "chunk": number, "start_word": start}))
+```
+
+Keep `number` per document (restart at 0 for each one). A blank document has no words, so the loop body never runs: no special case needed.
+
+**Do:** add the metadata, then Run.
+@@stepcheck
+from langchain_core.documents import Document
+ten = Document(" ".join(f"w{i}" for i in range(10)), {"source": "a.md"})
+parts = split_documents([ten], 4, 1)
+test("chunks record their number and first word", lambda: [(c.metadata["chunk"], c.metadata["start_word"]) for c in parts] == [(0, 0), (1, 3), (2, 6)], '{**doc.metadata, "chunk": number, "start_word": start}')
+meta = {"source": "c.md", "team": "data"}
+many = split_documents([Document("x y z", meta), Document("   ", {"source": "blank.md"}), Document("p q r s t", {"source": "d.md"})], 3, 1)
+test("numbering restarts per document, blanks are skipped, metadata is copied", lambda: [(c.metadata["source"], c.metadata["chunk"]) for c in many] == [("c.md", 0), ("d.md", 0), ("d.md", 1)] and many[0].metadata is not meta and meta == {"source": "c.md", "team": "data"})
 @@starter
 from langchain_core.documents import Document
 
