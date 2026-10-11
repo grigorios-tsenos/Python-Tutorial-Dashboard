@@ -19,7 +19,7 @@ _BUILTINS = vars(builtins)
 
 
 # modules whose __name__ differs from the path lessons import them by
-_MODULE_ALIASES = {"posixpath": "os.path", "ntpath": "os.path", "_sha2": "hashlib", "_hashlib": "hashlib"}
+_MODULE_ALIASES = {"_sha2": "hashlib", "_hashlib": "hashlib"}
 
 
 def _public(module_name):
