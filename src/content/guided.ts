@@ -18,6 +18,7 @@ export interface CodingStep {
   code: string
   check: string
   expected: string
+  /** shown once the step passes: a short takeaway, or '' when the check says it all */
   reassurance: string
 }
 

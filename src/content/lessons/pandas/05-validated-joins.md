@@ -11,7 +11,7 @@ minutes: 6
 @@body
 # Validate the relationship before trusting the join
 
-Events have many rows per user; a user lookup should have **one** plan per user. If the lookup accidentally lists a user twice, a plain merge copies every one of that user's events. Totals inflate, nothing crashes, and the report is fiction.
+Events have many rows per user; a user lookup should have **one** plan per user. If the lookup lists a user twice, a plain merge copies every one of that user's events and the totals inflate without an error.
 
 Two merge arguments stop that: `how="left"` keeps every event even when its user is missing from the lookup, and `validate="many_to_one"` makes pandas raise `pd.errors.MergeError` the moment the right side has duplicate keys.
 

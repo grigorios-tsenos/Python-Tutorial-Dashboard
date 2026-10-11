@@ -276,8 +276,7 @@ function LessonInner({ lesson }: { lesson: Lesson }) {
           <>
             <section className="guided-intro">
               <h2>{isPredict ? 'Read → trace → predict' : 'Write → check → continue'}</h2>
-              <p>{isPredict ? 'Follow the code one step at a time. Keep track of what changes, then make your prediction and compare it with the real output.' : 'Tackle one small goal at a time. Each step explains the behavior to build and what to verify; you decide how to write the code. The final check verifies the complete exercise.'}</p>
-              <p className="dim">Take your time. Your progress is saved, and retries are part of learning.</p>
+              <p>{isPredict ? 'Trace the code one line at a time, then predict the output and compare it with the real run.' : 'One small goal per step: each says what to build and what to verify, and how you write it is up to you. The last step runs the full exercise checks.'}</p>
             </section>
             <details className="guided-notes"><summary>Chapter notes and full mission</summary><Markdown src={lesson.body} /></details>
             <details className="guided-notes"><summary>Warm-up and concept demo</summary><LessonWalkthrough lessonId={id} solutionRevealed={hintsUsed >= 3} /></details>

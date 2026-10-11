@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { commandsFor } from '../content/commands'
 import type { Lesson } from '../content/types'
 import { useStore } from '../store/useStore'
+import { CommandCards } from './CommandCards'
 import { Markdown } from './Markdown'
 
 const READING_GUIDES: Record<string, string[]> = {
@@ -92,12 +94,13 @@ export function PredictionGuide({ lesson, onReady }: { lesson: Lesson; onReady: 
       <h2 ref={heading} tabIndex={-1}>Line {index + 1}: what does this line do?</h2>
       <Markdown src={'```python\n' + lines[index] + '\n```'} />
       <Markdown src={READING_GUIDES[lesson.id]?.[index] ?? 'Track the names this line reads and the value it creates. Note anything it prints.'} />
-      <p className="guided-expected"><strong>Verify your reasoning:</strong> keep a short list of values and printed lines. You will compare your prediction with real Python output after choosing an answer.</p>
+      <CommandCards commands={commandsFor(lesson.id, index)} unit="line" />
+      <p className="guided-expected"><strong>Verify your reasoning:</strong> note each value and printed line; you compare them with the real output after answering.</p>
       <div className="guided-actions">
         <button className="btn small ghost" disabled={index === 0} onClick={() => move(index - 1)}>← Previous line</button>
         {!last && <button className="btn small primary" onClick={() => move(index + 1)}>Next line →</button>}
       </div>
-      <p role="status">{last ? 'You have traced every line. Make your prediction below; it is fine to try again if your trace needs adjusting.' : 'Take your time. You do not need to hold the whole program in your head.'}</p>
+      <p role="status">{last ? 'Every line traced. Make your prediction below.' : ''}</p>
       <details className="guided-code"><summary>Review the lines read so far</summary><pre><code>{lines.slice(0, index + 1).join('\n')}</code></pre></details>
     </section>
   )

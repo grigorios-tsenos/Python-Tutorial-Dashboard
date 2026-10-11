@@ -13,7 +13,7 @@ minutes: 6
 
 A latency column arrived as **text**, with a `None` and the word `"oops"` mixed in. pandas refuses to average text, so the cell dies on the `groupby`.
 
-The fix is a conversion, and the discipline is to **count what the conversion threw away**. Silent data loss is worse than a crash.
+Convert it to numbers, and **count what the conversion threw away**: silent data loss is worse than a crash.
 
 > **Mission:** make `means` the mean latency per endpoint (`/chat` → `107.5`, `/embed` → `60.0`) and store how many latencies could not be parsed in `lost`.
 @@starter

@@ -11,9 +11,9 @@ minutes: 4
 @@body
 # Everything becomes numbers first
 
-A sentence becomes an *embedding* (a list of numbers). An image becomes a grid of pixel values. A customer becomes a row of features. Models only compute with numbers, so every AI pipeline starts by turning data into **arrays**.
+Models only compute with numbers, so text, images and records all become **arrays** first (a sentence becomes an *embedding*, a list of numbers).
 
-A NumPy array is a list with one superpower: **maths applies to every element at once**.
+Unlike a list, a NumPy array applies **maths to every element at once**.
 
 ```python
 scores = np.array([0.2, 0.5, 0.9])
@@ -21,7 +21,7 @@ scores + 0.1       # [0.3, 0.6, 1.0]   no loop
 scores.mean()      # 0.533...
 ```
 
-> **Mission:** a search engine returned similarity scores as a plain Python list. Turn it into an array called `scores`, make `boosted` by adding `0.05` to every score at once (no loop), and print the average of the boosted scores.
+> **Mission:** `raw` holds similarity scores as a plain Python list. Turn it into an array called `scores`, make `boosted` by adding `0.05` to every score at once (no loop), and print the average of the boosted scores.
 @@starter
 import numpy as np
 

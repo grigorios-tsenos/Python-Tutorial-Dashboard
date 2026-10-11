@@ -18,9 +18,9 @@ X @ W + b        (n, d) @ (d, k) + (k,)  ->  (n, k)   k logits per ticket
 exp(z) / sum(exp(z))   per row              ->  (n, k)   k probabilities per ticket
 ```
 
-Every classifier ends like this, and so does every LLM: the next token is a softmax over the vocabulary.
+LLMs end the same way: the next token is a softmax over the vocabulary.
 
-> **Mission:** a support-ticket router.
+> **Mission:** route support tickets.
 >
 > 1. `predict_proba(X, W, b)` → an `(n, k)` array, each row a probability distribution, finite for huge logits. `X` must be `(n, d)`, `W` `(d, k)` and `b` exactly `(k,)`, else `ValueError`. An empty `(0, d)` batch returns `(0, k)`.
 > 2. `predict_labels(X, W, b, labels)` → the most likely label per row, as a list; ties go to the first label. A label list whose length isn't `k` raises `ValueError`.

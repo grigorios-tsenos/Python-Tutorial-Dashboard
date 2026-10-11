@@ -52,7 +52,7 @@ try {
   await page.locator('.guided-check').click()
   await page.waitForSelector('.out-error, .out-verdict.fail', { timeout: 120000 })
   assert.equal(await next.isDisabled(), true, 'incorrect code cannot advance')
-  assert.match(await page.locator('.guided-feedback').innerText(), /earlier work is saved/)
+  assert.match(await page.locator('.guided-feedback').innerText(), /Not yet/)
   await edit(await attempt())
   await check()
   assert.equal(await page.locator('.done-chip').count(), 0, 'an early check does not complete the lesson')

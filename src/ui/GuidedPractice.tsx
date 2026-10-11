@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
+import { commandsFor } from '../content/commands'
 import { guidedCheck, guidedSource, type CodingGuide } from '../content/guided'
 import type { Lesson } from '../content/types'
 import { allPassed } from '../engine/outputText'
@@ -6,6 +7,7 @@ import { runner } from '../engine/runner'
 import type { RunResult } from '../engine/types'
 import { useStore } from '../store/useStore'
 import { CodeEditor } from './CodeEditor'
+import { CommandCards } from './CommandCards'
 import { Markdown } from './Markdown'
 import { OutputPanel } from './OutputPanel'
 
@@ -76,8 +78,9 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
         <div className="guided-progress"><span>Write & check · step {index + 1} of {guide.steps.length}</span><progress aria-label="Guided progress" value={index + (passed ? 1 : 0)} max={guide.steps.length} /></div>
         <h2 ref={heading} tabIndex={-1}>Step {index + 1}: {step.title}</h2>
         <Markdown src={step.instruction} />
-        <p className="small dim">Write your own approach below, then check its behavior. Your code runs after earlier steps. When changing a function or class, write its updated definition here.</p>
-        <div className="guided-expected"><strong>What to verify</strong><Markdown src={step.expected} /><span className="small dim">Some steps create a value without printing. The checks below inspect it for you.</span></div>
+        <CommandCards commands={commandsFor(lesson.id, index)} unit="step" />
+        <p className="small dim">Write your own approach below. It runs after your earlier steps; to change a function, write its whole new definition.</p>
+        <div className="guided-expected"><strong>What to verify</strong><Markdown src={step.expected} /></div>
       </div>
       <div className="guided-editor" aria-label="Write the current step">
         <CodeEditor docKey={`guided-${lesson.id}-${index}`} value={draft} hoverPrefix={guidedSource(guide, drafts, index - 1)} ariaLabel={`Write step ${index + 1}: ${step.title}`} vimMode={vim} onRun={() => { void run() }} onChange={text => {
@@ -92,7 +95,7 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
         {!last && <button className="btn small" disabled={!passed || running} onClick={() => move(index + 1)}>Next step →</button>}
       </div>
       <div className={`guided-feedback ${passed ? 'pass' : ''}`} role="status">
-        {running ? 'Checking your code. Take a moment to predict the result.' : passed ? <><strong>{last ? '✓ Lesson verified. ' : '✓ This step works. '}</strong>{step.reassurance}{last ? ' All exercise checks passed.' : ' Continue when you feel ready.'}</> : result?.infra ? 'Python could not check this step yet. Your draft is saved; retry when it is ready.' : result ? <>You’re still on the same step, and your earlier work is saved. Read the first error or failing check below, compare it with “What to verify”, and change one thing.</> : 'One step at a time is enough. You can retry as often as you need; your draft is saved as you type.'}
+        {running ? 'Checking…' : passed ? <><strong>{last ? '✓ Lesson verified. All exercise checks passed.' : '✓ This step works.'}</strong>{step.reassurance && ` ${step.reassurance}`}</> : result?.infra ? 'Python could not check this step yet. Your draft is saved; retry when it is ready.' : result ? 'Not yet. Read the first error or failing check below and compare it with “What to verify”.' : 'Your draft saves as you type.'}
       </div>
       <OutputPanel result={result} running={running} graded completed={false} visualFirst={lesson.kind === 'lab' || lesson.track === 'viz'} showTestMessages={false} emptyMessage="Use the check button above. The verification result and any printed output will appear here." />
       {result?.error && <p className="guided-code small dim">Error line numbers refer to the combined program in “Provided setup and your code so far”.</p>}

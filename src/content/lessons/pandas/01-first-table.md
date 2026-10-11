@@ -11,9 +11,9 @@ minutes: 4
 @@body
 # Tables are how data arrives
 
-Logs, user records, benchmarks, training examples: they all arrive as **tables**. One row per *thing*, one column per *fact about it*. pandas calls the table a `DataFrame`.
+Most data arrives as a **table**: one row per *thing*, one column per *fact about it*. pandas calls it a `DataFrame`.
 
-Three moves cover most of what you will ever do with one, and every lesson in this chapter is these three with more steps:
+Three moves cover most of the work:
 
 ```python
 df.head(2)                 # LOOK: the first rows
@@ -21,7 +21,7 @@ df["latency_ms"]           # PICK a column -> a Series
 df["latency_ms"].mean()    # SUMMARIZE -> one number
 ```
 
-> **Mission:** you're on call and the table below holds last night's API requests. Look at the first two rows with `.head(2)`, store the `latency_ms` column in `latencies`, and store its average in `average` (then print it).
+> **Mission:** `requests` holds API requests. Look at the first two rows with `.head(2)`, store the `latency_ms` column in `latencies`, and store its average in `average` (then print it).
 @@starter
 import pandas as pd
 
