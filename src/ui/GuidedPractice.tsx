@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
+import { commandsFor } from '../content/commands'
 import { guidedCheck, guidedSource, type CodingGuide } from '../content/guided'
 import type { Lesson } from '../content/types'
 import { allPassed } from '../engine/outputText'
@@ -6,6 +7,7 @@ import { runner } from '../engine/runner'
 import type { RunResult } from '../engine/types'
 import { useStore } from '../store/useStore'
 import { CodeEditor } from './CodeEditor'
+import { CommandCards } from './CommandCards'
 import { Markdown } from './Markdown'
 import { OutputPanel } from './OutputPanel'
 
@@ -76,6 +78,7 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
         <div className="guided-progress"><span>Write & check · step {index + 1} of {guide.steps.length}</span><progress aria-label="Guided progress" value={index + (passed ? 1 : 0)} max={guide.steps.length} /></div>
         <h2 ref={heading} tabIndex={-1}>Step {index + 1}: {step.title}</h2>
         <Markdown src={step.instruction} />
+        <CommandCards commands={commandsFor(lesson.id, index)} unit="step" />
         <p className="small dim">Write your own approach below, then check its behavior. Your code runs after earlier steps. When changing a function or class, write its updated definition here.</p>
         <div className="guided-expected"><strong>What to verify</strong><Markdown src={step.expected} /><span className="small dim">Some steps create a value without printing. The checks below inspect it for you.</span></div>
       </div>

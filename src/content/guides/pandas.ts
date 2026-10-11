@@ -79,10 +79,18 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "You know exactly how much data the cleaning discarded. Now average what is left."
       },
       {
+        "title": "Group by endpoint",
+        "instruction": "Create `by_endpoint`: the `latency_ms` values of `logs` grouped by `endpoint`, ready to be summarized per group. Nothing is computed yet.",
+        "code": "by_endpoint = logs.groupby(\"endpoint\")[\"latency_ms\"]",
+        "check": "test(\"Group by endpoint\", lambda: by_endpoint.ngroups == 2 and sorted(by_endpoint.groups) == [\"/chat\", \"/embed\"], \"by_endpoint has two groups: /chat and /embed.\")",
+        "expected": "by_endpoint has two groups: /chat and /embed.",
+        "reassurance": "The rows are sorted into two groups. Now reduce each group to one number."
+      },
+      {
         "title": "Average each endpoint",
-        "instruction": "Create a Series named `means` with the average `latency_ms` for each `endpoint` in `logs`. Missing measurements must not contribute to the mean.",
-        "code": "means = logs.groupby(\"endpoint\")[\"latency_ms\"].mean()",
-        "check": "test('Average each endpoint', lambda: means.to_dict() == {\"/chat\": 107.5, \"/embed\": 60.0}, 'The means are /chat → 107.5 and /embed → 60.0.')",
+        "instruction": "Create a Series named `means` with the average latency of each group in `by_endpoint`. Missing measurements must not contribute to the mean.",
+        "code": "means = by_endpoint.mean()",
+        "check": "test(\"Average each endpoint\", lambda: means.to_dict() == {\"/chat\": 107.5, \"/embed\": 60.0}, \"The means are /chat \\u2192 107.5 and /embed \\u2192 60.0.\")",
         "expected": "The means are /chat → 107.5 and /embed → 60.0.",
         "reassurance": "Both averages are right; the bad values were excluded from their denominators."
       },
@@ -161,11 +169,19 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
     "setup": "import pandas as pd\nevents = pd.DataFrame({\"event_id\": [7, 8, 9], \"user_id\": [2, 1, 3], \"amount\": [5, 20, 10]})\nusers = pd.DataFrame({\"user_id\": [1, 2], \"plan\": [\"pro\", \"free\"]})",
     "steps": [
       {
-        "title": "Join with relationship validation",
-        "instruction": "Create `joined` by attaching each user’s plan from `users` to `events` on `user_id`. Keep every event in its original order, leaving unmatched plans missing. Validate the many-to-one relationship so duplicate lookup keys are rejected instead of multiplying events; preserve both input tables.",
+        "title": "Attach plans to events",
+        "instruction": "Create `joined` by attaching each user’s plan from `users` to `events`, matching on `user_id`. Keep every event, even one whose user is not in `users`; its plan stays missing.",
+        "code": "joined = events.merge(users, on=\"user_id\", how=\"left\")",
+        "check": "test(\"Attach plans to events\", lambda: len(joined) == 3 and joined.set_index(\"event_id\")[\"plan\"].iloc[:2].tolist() == [\"free\", \"pro\"] and joined[\"plan\"].isna().sum() == 1, \"All three events remain; the unknown user has a missing plan.\")",
+        "expected": "All three events remain; the unknown user has a missing plan.",
+        "reassurance": "Every event survived the join. Next, protect it against bad lookup tables."
+      },
+      {
+        "title": "Guard the join",
+        "instruction": "Redo the join into `joined`, now also keeping the events in their original order and validating the relationship as many-to-one, so a lookup table with duplicate `user_id` keys is rejected instead of multiplying events. Preserve both input tables.",
         "code": "joined = events.merge(users, on=\"user_id\", how=\"left\", sort=False, validate=\"many_to_one\")",
-        "check": "test('Join with relationship validation', lambda: joined[\"event_id\"].tolist() == [7, 8, 9] and joined[\"plan\"].iloc[:2].tolist() == [\"free\", \"pro\"] and pd.isna(joined[\"plan\"].iloc[2]), 'All three events remain in order; the missing user has a missing plan.')",
-        "expected": "All three events remain in order; the missing user has a missing plan.",
+        "check": "test(\"Guard the join\", lambda: joined[\"event_id\"].tolist() == [7, 8, 9] and joined[\"plan\"].iloc[:2].tolist() == [\"free\", \"pro\"] and pd.isna(joined[\"plan\"].iloc[2]) and \"many_to_one\" in __source__, \"All three events remain in order, and the join declares the many-to-one relationship.\")",
+        "expected": "All three events remain in order, and the join declares the many-to-one relationship.",
         "reassurance": "The example join preserved the event rows. Validation will protect new inputs from duplicate lookup keys."
       },
       {
@@ -190,26 +206,50 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
     "setup": "import pandas as pd\nlogs = pd.DataFrame({\"at\": [\"2026-03-01T09:00:00Z\", \"2026-03-01T09:05:00Z\", \"2026-03-01T17:30:00Z\", \"2026-03-03T08:00:00Z\", \"2026-03-03T08:01:00Z\"], \"endpoint\": [\"/chat\", \"/embed\", \"/chat\", \"/chat\", \"/embed\"], \"status\": [500, 200, 503, 200, 502]})\nstart, end = \"2026-03-01\", \"2026-03-03\"",
     "steps": [
       {
-        "title": "Create the complete calendar",
-        "instruction": "Create a DatetimeIndex named `days` covering every day from `start` through `end`, inclusive. Use UTC midnights and give the index the name `day`, including dates with no logs.",
+        "title": "List the calendar days",
+        "instruction": "Create `days`, a sequence of dates with one entry per day from `start` through `end`, inclusive.",
+        "code": "days = pd.date_range(start, end, freq=\"D\")",
+        "check": "test(\"List the calendar days\", lambda: days.strftime(\"%Y-%m-%d\").tolist() == [\"2026-03-01\", \"2026-03-02\", \"2026-03-03\"], \"days holds March 1, March 2 and March 3.\")",
+        "expected": "days holds March 1, March 2 and March 3.",
+        "reassurance": "Three days, including the quiet one. Next make them UTC and give the index a name."
+      },
+      {
+        "title": "Make the calendar UTC",
+        "instruction": "Recreate `days` with the same range, but as UTC midnights and with the index name `day`.",
         "code": "days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")",
-        "check": "test('Create the complete calendar', lambda: days.strftime(\"%Y-%m-%d\").tolist() == [\"2026-03-01\", \"2026-03-02\", \"2026-03-03\"] and days.name == \"day\", 'days contains March 1, March 2 and March 3 as UTC midnights.')",
-        "expected": "days contains March 1, March 2 and March 3 as UTC midnights.",
+        "check": "test(\"Make the calendar UTC\", lambda: days.strftime(\"%Y-%m-%d\").tolist() == [\"2026-03-01\", \"2026-03-02\", \"2026-03-03\"] and days.name == \"day\" and str(days.tz) == \"UTC\", \"days contains March 1, March 2 and March 3 as UTC midnights, named day.\")",
+        "expected": "days contains March 1, March 2 and March 3 as UTC midnights, named day.",
         "reassurance": "The quiet middle day has a place in the result before any log is counted."
       },
       {
+        "title": "Parse the timestamps",
+        "instruction": "Create a Series named `parsed` by converting the `at` text of `logs` into timezone-aware timestamps expressed in UTC.",
+        "code": "parsed = pd.to_datetime(logs[\"at\"], utc=True)",
+        "check": "test(\"Parse the timestamps\", lambda: str(parsed.dt.tz) == \"UTC\" and parsed.dt.hour.tolist() == [9, 9, 17, 8, 8], \"parsed holds five UTC timestamps; their hours are 9, 9, 17, 8, 8.\")",
+        "expected": "parsed holds five UTC timestamps; their hours are 9, 9, 17, 8, 8.",
+        "reassurance": "The text is now real time values. Next, drop the time of day."
+      },
+      {
         "title": "Assign UTC days to requests",
-        "instruction": "Create a Series named `day` containing the UTC midnight date of each timestamp in the `at` column of `logs`. Interpret timezone offsets before deciding which UTC date a request belongs to.",
-        "code": "day = pd.to_datetime(logs[\"at\"], utc=True).dt.floor(\"D\")",
-        "check": "test('Assign UTC days to requests', lambda: day.dt.strftime(\"%Y-%m-%d\").tolist() == [\"2026-03-01\"] * 3 + [\"2026-03-03\"] * 2, 'Three requests fall on March 1 and two on March 3.')",
+        "instruction": "Create a Series named `day` with the UTC midnight date of each timestamp in `parsed`, rounding each one down to the start of its day.",
+        "code": "day = parsed.dt.floor(\"D\")",
+        "check": "test(\"Assign UTC days to requests\", lambda: day.dt.strftime(\"%Y-%m-%d\").tolist() == [\"2026-03-01\"] * 3 + [\"2026-03-03\"] * 2, \"Three requests fall on March 1 and two on March 3.\")",
         "expected": "Three requests fall on March 1 and two on March 3.",
         "reassurance": "The grouping dates use one timezone consistently."
       },
       {
+        "title": "Flag the server errors",
+        "instruction": "Create `flagged`, a new frame from `logs` with two added columns: `day` from your `day` Series, and a boolean `errors` that is True for status codes of at least 500. Preserve `logs`.",
+        "code": "flagged = logs.assign(day=day, errors=logs[\"status\"] >= 500)",
+        "check": "test(\"Flag the server errors\", lambda: flagged[\"errors\"].tolist() == [True, False, True, False, True] and \"day\" in flagged.columns and \"day\" not in logs.columns, \"errors is [True, False, True, False, True], and logs is unchanged.\")",
+        "expected": "errors is [True, False, True, False, True], and logs is unchanged.",
+        "reassurance": "Each request now carries its day and an error flag. Next keep only the requested dates."
+      },
+      {
         "title": "Keep the requested window",
-        "instruction": "Create `window` from `logs` with two added columns: `day` from the parsed dates, and boolean `errors` for status codes of at least 500. Keep only requests whose UTC day lies within `days`, including both boundaries. Preserve `logs`.",
-        "code": "window = logs.assign(day=day, errors=logs[\"status\"] >= 500)[day.between(days[0], days[-1])]",
-        "check": "test('Keep the requested window', lambda: len(window) == 5 and window[\"errors\"].tolist() == [True, False, True, False, True] and \"day\" not in logs.columns, 'There are five in-window requests, with error flags [True, False, True, False, True].')",
+        "instruction": "Create `window` from `flagged`, keeping only requests whose `day` lies between the first and last entries of `days`, including both boundaries.",
+        "code": "window = flagged[day.between(days[0], days[-1])]",
+        "check": "test(\"Keep the requested window\", lambda: len(window) == 5 and window[\"errors\"].tolist() == [True, False, True, False, True] and \"day\" not in logs.columns, \"There are five in-window requests, with error flags [True, False, True, False, True].\")",
         "expected": "There are five in-window requests, with error flags [True, False, True, False, True].",
         "reassurance": "Healthy requests remain so their endpoints can still receive zero-count columns."
       },
@@ -222,16 +262,32 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The counts are right. The quiet day still needs to be inserted from the calendar."
       },
       {
-        "title": "Restore quiet days",
-        "instruction": "Create `daily` by aligning `table` to every date in `days`, filling quiet dates with zeros. Store the counts as integers.",
-        "code": "daily = table.reindex(days, fill_value=0).astype(int)",
-        "check": "test('Restore quiet days', lambda: daily.values.tolist() == [[2, 0], [0, 0], [0, 1]] and all(pd.api.types.is_integer_dtype(t) for t in daily.dtypes), 'The three daily rows are [2, 0], [0, 0] and [0, 1], all integers.')",
-        "expected": "The three daily rows are [2, 0], [0, 0] and [0, 1], all integers.",
-        "reassurance": "The missing day now appears explicitly with zeros."
+        "title": "Add the quiet days",
+        "instruction": "Create `aligned` by giving `table` one row for every date in `days`, filling dates that had no requests with zeros.",
+        "code": "aligned = table.reindex(days, fill_value=0)",
+        "check": "test(\"Add the quiet days\", lambda: len(aligned) == 3 and aligned.values.tolist() == [[2, 0], [0, 0], [0, 1]], \"aligned has three rows: [2, 0], [0, 0] and [0, 1].\")",
+        "expected": "aligned has three rows: [2, 0], [0, 0] and [0, 1].",
+        "reassurance": "The missing day now appears explicitly. Last, make the counts whole numbers."
       },
       {
-        "title": "Build daily_errors",
-        "instruction": "Implement `daily_errors(logs, start, end)`, with parameters in that order, returning daily server-error counts by endpoint with columns sorted alphabetically. Include every UTC day in the inclusive date range, even quiet days, and endpoints with only healthy in-window requests. Exclude outside-window traffic, return integer counts and name the date index `day`. Reject reversed dates with `ValueError`, handle an empty window and preserve `logs`.",
+        "title": "Store whole-number counts",
+        "instruction": "Create `daily` from `aligned` with every count stored as an integer.",
+        "code": "daily = aligned.astype(int)",
+        "check": "test(\"Store whole-number counts\", lambda: daily.values.tolist() == [[2, 0], [0, 0], [0, 1]] and all(pd.api.types.is_integer_dtype(t) for t in daily.dtypes), \"The three daily rows are [2, 0], [0, 0] and [0, 1], all integers.\")",
+        "expected": "The three daily rows are [2, 0], [0, 0] and [0, 1], all integers.",
+        "reassurance": "The table is ready. Next, package the whole pipeline as a function."
+      },
+      {
+        "title": "Wrap the pipeline in a function",
+        "instruction": "Define `daily_errors(logs, start, end)`, with parameters in that order. Inside it, repeat your steps on its own arguments and return the integer table with one row per day and one column per endpoint.",
+        "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    day = pd.to_datetime(logs[\"at\"], utc=True).dt.floor(\"D\")\n    window = logs.assign(day=day, errors=logs[\"status\"] >= 500)[day.between(days[0], days[-1])]\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    return table.reindex(days, fill_value=0).astype(int)",
+        "check": "test(\"Wrap the pipeline in a function\", lambda: daily_errors(logs, start, end).equals(daily) and \"day\" not in logs.columns, \"daily_errors(logs, start, end) returns the same table as daily, and logs is unchanged.\")",
+        "expected": "daily_errors(logs, start, end) returns the same table as daily, and logs is unchanged.",
+        "reassurance": "The pipeline is reusable. One guard is left: a date range that runs backwards."
+      },
+      {
+        "title": "Reject reversed dates",
+        "instruction": "Update `daily_errors` so that, right after building the calendar, it raises a `ValueError` when the calendar is empty, which happens when `end` comes before `start`. Then run Check.",
         "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    if days.empty: raise ValueError(\"end must not be before start\")\n    day = pd.to_datetime(logs[\"at\"], utc=True).dt.floor(\"D\")\n    window = logs.assign(day=day, errors=logs[\"status\"] >= 500)[day.between(days[0], days[-1])]\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    return table.reindex(days, fill_value=0).astype(int)",
         "check": "",
         "expected": "The complete check covers UTC offsets, healthy endpoints, outside-window traffic, empty windows and reversed dates.",
@@ -251,32 +307,64 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The upper time boundary is fixed before any features are calculated."
       },
       {
-        "title": "Clean a new frame",
-        "instruction": "Create a new frame named `clean` from `events`. Parse mixed-format `at` values as UTC timestamps, treating invalid dates as missing; convert `amount` values to numbers, treating invalid or missing amounts as zero. Preserve `events`.",
-        "code": "clean = events.assign(\n    at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"),\n    amount=pd.to_numeric(events[\"amount\"], errors=\"coerce\").fillna(0),\n)",
-        "check": "test('Clean a new frame', lambda: clean[\"amount\"].tolist() == [5, 12, 100] and events[\"amount\"].tolist() == [\"5\", \"12\", \"100\"] and str(clean[\"at\"].dt.tz) == \"UTC\", 'Amounts are numeric in clean, while events still holds the original strings.')",
+        "title": "Parse the timestamps",
+        "instruction": "Create a new frame named `clean` from `events` whose `at` column holds UTC timestamps. The text comes in mixed formats; treat anything that cannot be parsed as a missing time instead of raising an error. Preserve `events`.",
+        "code": "clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"))",
+        "check": "test(\"Parse the timestamps\", lambda: str(clean[\"at\"].dt.tz) == \"UTC\" and clean[\"at\"].dt.day.tolist() == [2, 8, 9] and events[\"at\"].tolist()[0] == \"2026-01-02\", \"clean has UTC timestamps on days 2, 8 and 9; events still holds the original text.\")",
+        "expected": "clean has UTC timestamps on days 2, 8 and 9; events still holds the original text.",
+        "reassurance": "The times are real timestamps now. The amounts are still text."
+      },
+      {
+        "title": "Convert the amounts",
+        "instruction": "Update `clean` so its `amount` column holds numbers. Invalid or missing amounts become zero.",
+        "code": "clean = clean.assign(amount=pd.to_numeric(clean[\"amount\"], errors=\"coerce\").fillna(0))",
+        "check": "test(\"Convert the amounts\", lambda: clean[\"amount\"].tolist() == [5, 12, 100] and events[\"amount\"].tolist() == [\"5\", \"12\", \"100\"] and str(clean[\"at\"].dt.tz) == \"UTC\", \"Amounts are numeric in clean, while events still holds the original strings.\")",
         "expected": "Amounts are numeric in clean, while events still holds the original strings.",
         "reassurance": "The cleaned data is ready without overwriting the raw log."
       },
       {
+        "title": "Find the window start",
+        "instruction": "Create `window_start`: the moment exactly `days` days before `cutoff`.",
+        "code": "window_start = cutoff - pd.Timedelta(days=days)",
+        "check": "test(\"Find the window start\", lambda: window_start == pd.Timestamp(\"2026-01-01\", tz=\"UTC\"), \"window_start is January 1, 2026 at midnight UTC.\")",
+        "expected": "window_start is January 1, 2026 at midnight UTC.",
+        "reassurance": "Both ends of the window are known. Now keep the rows in between."
+      },
+      {
         "title": "Apply both time boundaries",
-        "instruction": "Create `window` containing rows of `clean` within the preceding `days` days. The lower boundary is exclusive and `cutoff` is inclusive. Invalid timestamps and events after the prediction instant must be excluded.",
-        "code": "window = clean[(clean[\"at\"] > cutoff - pd.Timedelta(days=days)) & (clean[\"at\"] <= cutoff)]",
-        "check": "test('Apply both time boundaries', lambda: window[\"user\"].tolist() == [\"a\", \"a\"] and window[\"amount\"].tolist() == [5, 12], 'Only the two a events remain; the January 9 event is excluded.')",
+        "instruction": "Create `window` containing the rows of `clean` after `window_start` (exclusive) and at or before `cutoff` (inclusive). Invalid timestamps and events after the prediction instant must be excluded.",
+        "code": "window = clean[(clean[\"at\"] > window_start) & (clean[\"at\"] <= cutoff)]",
+        "check": "test(\"Apply both time boundaries\", lambda: window[\"user\"].tolist() == [\"a\", \"a\"] and window[\"amount\"].tolist() == [5, 12], \"Only the two a events remain; the January 9 event is excluded.\")",
         "expected": "Only the two a events remain; the January 9 event is excluded.",
         "reassurance": "The example respects prediction time and excludes its future information."
       },
       {
         "title": "Aggregate recent behavior",
-        "instruction": "Create `features` with one row per user in `window`, sorted by `user`. Include normal columns `user`, `n_events` for the event count and `revenue` for the total amount, in that order.",
-        "code": "features = window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\")).reset_index()",
-        "check": "test('Aggregate recent behavior', lambda: features.to_dict(\"list\") == {\"user\": [\"a\"], \"n_events\": [2], \"revenue\": [17]}, 'User a has 2 events and revenue 17.')",
+        "instruction": "Create `per_user` with one row per user in `window`, sorted by `user`, and two named results: `n_events` counting the events and `revenue` summing `amount`. The users stay in the index for now.",
+        "code": "per_user = window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\"))",
+        "check": "test(\"Aggregate recent behavior\", lambda: per_user.index.tolist() == [\"a\"] and per_user[\"n_events\"].tolist() == [2] and per_user[\"revenue\"].tolist() == [17], \"User a has 2 events and revenue 17.\")",
         "expected": "User a has 2 events and revenue 17.",
+        "reassurance": "The numbers are right. Next turn the user index back into a normal column."
+      },
+      {
+        "title": "Make user a column",
+        "instruction": "Create `features` from `per_user` with `user` moved out of the index into a normal first column, followed by `n_events` and `revenue`.",
+        "code": "features = per_user.reset_index()",
+        "check": "test(\"Make user a column\", lambda: features.to_dict(\"list\") == {\"user\": [\"a\"], \"n_events\": [2], \"revenue\": [17]}, \"features has columns user, n_events, revenue: a, 2, 17.\")",
+        "expected": "features has columns user, n_events, revenue: a, 2, 17.",
         "reassurance": "The example feature row is correct. Next preserve this pipeline for other cutoffs and windows."
       },
       {
-        "title": "Build recent_features",
-        "instruction": "Implement `recent_features(events, as_of, days=7)`, with parameters in that order and a default of seven days. Return `user`, `n_events`, `revenue` for events after the lower time boundary and at or before the UTC cutoff, sorted by user. Clean mixed timestamps and amounts as before, preserve inputs and handle empty results. Reject non-positive window lengths with `ValueError`.",
+        "title": "Wrap the pipeline in a function",
+        "instruction": "Define `recent_features(events, as_of, days=7)`, with parameters in that order and a default of seven days. Repeat your steps on its own arguments: the cutoff, the cleaned frame, the window and the per-user features.",
+        "code": "def recent_features(events, as_of, days=7):\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"), amount=pd.to_numeric(events[\"amount\"], errors=\"coerce\").fillna(0))\n    window = clean[(clean[\"at\"] > cutoff - pd.Timedelta(days=days)) & (clean[\"at\"] <= cutoff)]\n    return window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\")).reset_index()",
+        "check": "test(\"Wrap the pipeline in a function\", lambda: recent_features(events, as_of).equals(features) and recent_features(events, as_of, days=1)[\"n_events\"].tolist() == [1], \"recent_features(events, as_of) matches features, and a one-day window keeps one event.\")",
+        "expected": "recent_features(events, as_of) matches features, and a one-day window keeps one event.",
+        "reassurance": "The pipeline is reusable for any cutoff. One guard is left: a window that is not positive."
+      },
+      {
+        "title": "Reject empty windows",
+        "instruction": "Update `recent_features` so it raises a `ValueError` before doing anything else when `days` is less than one. Then run Check.",
         "code": "def recent_features(events, as_of, days=7):\n    if days < 1: raise ValueError(\"days must be positive\")\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"), amount=pd.to_numeric(events[\"amount\"], errors=\"coerce\").fillna(0))\n    window = clean[(clean[\"at\"] > cutoff - pd.Timedelta(days=days)) & (clean[\"at\"] <= cutoff)]\n    return window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\")).reset_index()",
         "check": "",
         "expected": "The full check covers exact boundaries, invalid values, UTC offsets, empty data, shorter windows and input preservation.",
@@ -288,18 +376,42 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
     "setup": "import pandas as pd\ntrain = pd.DataFrame({\"user\": [\"a\", \"b\", \"c\", \"d\", \"e\"], \"plan\": [\"pro\", \"free\", \"team\", \"free\", \"pro\"], \"sessions\": [12, 3, 8, 1, 20]})\ncolumn = \"plan\"",
     "steps": [
       {
+        "title": "Drop the missing values",
+        "instruction": "Create `observed` with the values of the `column` column of `train`, leaving out any missing entries.",
+        "code": "observed = train[column].dropna()",
+        "check": "test(\"Drop the missing values\", lambda: observed.tolist() == [\"pro\", \"free\", \"team\", \"free\", \"pro\"], \"observed holds the five plans, in order.\")",
+        "expected": "observed holds the five plans, in order.",
+        "reassurance": "Only real categories are left. Now count them."
+      },
+      {
         "title": "Count observed categories",
-        "instruction": "Create `counts` with the number of occurrences of each non-missing category in the `column` column of `train`. Ignore missing values.",
-        "code": "counts = pd.Series(train[column]).dropna().value_counts()",
-        "check": "test('Count observed categories', lambda: counts.to_dict() == {\"pro\": 2, \"free\": 2, \"team\": 1}, 'pro and free appear twice; team appears once.')",
+        "instruction": "Create `counts` with the number of occurrences of each category in `observed`.",
+        "code": "counts = observed.value_counts()",
+        "check": "test(\"Count observed categories\", lambda: counts.to_dict() == {\"pro\": 2, \"free\": 2, \"team\": 1}, \"pro and free appear twice; team appears once.\")",
         "expected": "pro and free appear twice; team appears once.",
         "reassurance": "The vocabulary will be based on observed training categories."
       },
       {
+        "title": "Keep the frequent categories",
+        "instruction": "Create `frequent` with only the entries of `counts` whose count is at least 1.",
+        "code": "frequent = counts[counts >= 1]",
+        "check": "test(\"Keep the frequent categories\", lambda: frequent.to_dict() == {\"pro\": 2, \"free\": 2, \"team\": 1}, \"All three categories pass a threshold of 1.\")",
+        "expected": "All three categories pass a threshold of 1.",
+        "reassurance": "With a higher threshold, rare categories would drop out here. Next turn the survivors into a list."
+      },
+      {
+        "title": "List the category names",
+        "instruction": "Create `labels`: the category names of `frequent` as a plain Python list. In a counts Series the categories are the index labels.",
+        "code": "labels = frequent.index.tolist()",
+        "check": "test(\"List the category names\", lambda: isinstance(labels, list) and sorted(labels) == [\"free\", \"pro\", \"team\"], \"labels is a list holding free, pro and team, in count order.\")",
+        "expected": "labels is a list holding free, pro and team, in count order.",
+        "reassurance": "The names are a plain list now. Their order still depends on the counts, so fix it next."
+      },
+      {
         "title": "Freeze a sorted vocabulary",
-        "instruction": "Create a sorted list named `vocabulary` containing the categories in `counts` observed at least once.",
-        "code": "vocabulary = sorted(counts[counts >= 1].index.tolist())",
-        "check": "test('Freeze a sorted vocabulary', lambda: vocabulary == [\"free\", \"pro\", \"team\"], 'vocabulary is [\"free\", \"pro\", \"team\"].')",
+        "instruction": "Create `vocabulary`: the entries of `labels` sorted alphabetically, as a new list.",
+        "code": "vocabulary = sorted(labels)",
+        "check": "test(\"Freeze a sorted vocabulary\", lambda: vocabulary == [\"free\", \"pro\", \"team\"], \"vocabulary is [\\\"free\\\", \\\"pro\\\", \\\"team\\\"].\")",
         "expected": "vocabulary is [\"free\", \"pro\", \"team\"].",
         "reassurance": "This ordered list can be reused for serving batches that contain fewer categories."
       },
@@ -328,16 +440,32 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The fallback rule is checked before building the indicator columns."
       },
       {
+        "title": "Encode the known values",
+        "instruction": "Create `dummies`: one integer indicator column per distinct value in `known`, named with the source column name, `=` and the value. Keep the original index.",
+        "code": "dummies = pd.get_dummies(known, prefix=column, prefix_sep=\"=\", dtype=int)",
+        "check": "test(\"Encode the known values\", lambda: sorted(dummies.columns) == [\"plan=free\", \"plan=pro\", \"plan=team\"] and dummies.sum(axis=1).tolist() == [1] * 5, \"dummies has plan=free, plan=pro and plan=team, with one 1 per row.\")",
+        "expected": "dummies has plan=free, plan=pro and plan=team, with one 1 per row.",
+        "reassurance": "Every training value has its column. A serving batch could miss some, so line them up with names next."
+      },
+      {
         "title": "Encode and align the indicators",
-        "instruction": "Create `indicators` with integer one-hot columns for `known`, aligned to `names` in that exact order. Keep the original index and include every named column even when its values are all zero.",
-        "code": "indicators = pd.get_dummies(known, prefix=column, prefix_sep=\"=\", dtype=int).reindex(columns=names, fill_value=0)",
-        "check": "test('Encode and align the indicators', lambda: list(indicators.columns) == names and indicators.sum(axis=1).tolist() == [1] * 5 and indicators[\"plan=other\"].tolist() == [0] * 5, 'Each row has one 1, and plan=other exists even though it is all zeros here.')",
+        "instruction": "Create `indicators` from `dummies` with exactly the columns in `names`, in that order. A column that `dummies` lacks must appear filled with zeros.",
+        "code": "indicators = dummies.reindex(columns=names, fill_value=0)",
+        "check": "test(\"Encode and align the indicators\", lambda: list(indicators.columns) == names and indicators.sum(axis=1).tolist() == [1] * 5 and indicators[\"plan=other\"].tolist() == [0] * 5, \"Each row has one 1, and plan=other exists even though it is all zeros here.\")",
         "expected": "Each row has one 1, and plan=other exists even though it is all zeros here.",
         "reassurance": "The training batch has the frozen schema and exactly one active category per row."
       },
       {
+        "title": "Swap the column for its indicators",
+        "instruction": "Create `encoded`: `train` without the `column` column, followed by the columns of `indicators` side by side, keeping the row index.",
+        "code": "encoded = pd.concat([train.drop(columns=column), indicators], axis=1)",
+        "check": "test(\"Swap the column for its indicators\", lambda: list(encoded.columns) == [\"user\", \"sessions\"] + names and len(encoded) == 5 and \"plan\" in train.columns, \"encoded has user, sessions, then the four indicator columns; train still has plan.\")",
+        "expected": "encoded has user, sessions, then the four indicator columns; train still has plan.",
+        "reassurance": "The encoded training frame is correct. Last, make the whole encoder reusable."
+      },
+      {
         "title": "Build the reusable encoder",
-        "instruction": "Implement `encode(frame, column, vocabulary)`, with parameters in that order. Return a new frame with the selected column replaced by integer one-hot indicators in vocabulary order plus an `other` column. Indicator names use the source column name, `=` and category. Unknown or missing categories map to `other`; each row has one active indicator. Keep other columns first, preserve the input index and inputs, and support empty batches.",
+        "instruction": "Implement `encode(frame, column, vocabulary)`, with parameters in that order, repeating your steps on its own arguments: the names, the known values, the aligned indicators and the swapped columns. Unknown or missing categories map to `other`. Then run Check.",
         "code": "def encode(frame, column, vocabulary):\n    \"\"\"Replace column with one indicator per vocabulary entry, plus column=other.\"\"\"\n    names = [f\"{column}={value}\" for value in vocabulary] + [f\"{column}=other\"]\n    known = frame[column].where(frame[column].isin(vocabulary), \"other\")\n    indicators = pd.get_dummies(known, prefix=column, prefix_sep=\"=\", dtype=int).reindex(columns=names, fill_value=0)\n    return pd.concat([frame.drop(columns=column), indicators], axis=1)",
         "check": "",
         "expected": "The full check includes one-row requests, unseen and missing categories, custom index, vocabulary order, empty batches and unchanged inputs.",
@@ -358,11 +486,19 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Aggregate one row per user",
-        "instruction": "Create `out` with one row per user, sorted by `user`. Include `n_events` counting all events, `n_views` and `n_purchases` counting their flags, and `revenue` summing `value` while ignoring missing values. Keep `user` as a normal column.",
-        "code": "out = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n    n_views=(\"is_view\", \"sum\"),\n    n_purchases=(\"is_purchase\", \"sum\"),\n    revenue=(\"value\", \"sum\"),\n).reset_index()",
-        "check": "test('Aggregate one row per user', lambda: out[\"user\"].tolist() == [\"a\", \"b\", \"c\"] and out[\"n_events\"].tolist() == [3, 2, 1] and out[\"revenue\"].tolist() == [30.0, 0.0, 0.0], 'Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].')",
+        "instruction": "Create `per_user` with one row per user, sorted by user, and four named results: `n_events` counting all events, `n_views` and `n_purchases` counting their flags, and `revenue` summing `value` while ignoring missing values. The users stay in the index for now.",
+        "code": "per_user = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n    n_views=(\"is_view\", \"sum\"),\n    n_purchases=(\"is_purchase\", \"sum\"),\n    revenue=(\"value\", \"sum\"),\n)",
+        "check": "test(\"Aggregate one row per user\", lambda: per_user.index.tolist() == [\"a\", \"b\", \"c\"] and per_user[\"n_events\"].tolist() == [3, 2, 1] and per_user[\"revenue\"].tolist() == [30.0, 0.0, 0.0], \"Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].\")",
         "expected": "Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].",
-        "reassurance": "The grouped counts and revenue are correct. Views remain available for the conversion calculation."
+        "reassurance": "The grouped counts and revenue are correct. Next turn the user index into a column."
+      },
+      {
+        "title": "Make user a column",
+        "instruction": "Create `out` from `per_user` with `user` moved out of the index into a normal first column.",
+        "code": "out = per_user.reset_index()",
+        "check": "test(\"Make user a column\", lambda: out[\"user\"].tolist() == [\"a\", \"b\", \"c\"] and list(out.columns)[:2] == [\"user\", \"n_events\"], \"out starts with the columns user and n_events, one row per user.\")",
+        "expected": "out starts with the columns user and n_events, one row per user.",
+        "reassurance": "Views remain available for the conversion calculation."
       },
       {
         "title": "Calculate conversion safely",

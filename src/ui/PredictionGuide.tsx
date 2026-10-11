@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { commandsFor } from '../content/commands'
 import type { Lesson } from '../content/types'
 import { useStore } from '../store/useStore'
+import { CommandCards } from './CommandCards'
 import { Markdown } from './Markdown'
 
 const READING_GUIDES: Record<string, string[]> = {
@@ -92,6 +94,7 @@ export function PredictionGuide({ lesson, onReady }: { lesson: Lesson; onReady: 
       <h2 ref={heading} tabIndex={-1}>Line {index + 1}: what does this line do?</h2>
       <Markdown src={'```python\n' + lines[index] + '\n```'} />
       <Markdown src={READING_GUIDES[lesson.id]?.[index] ?? 'Track the names this line reads and the value it creates. Note anything it prints.'} />
+      <CommandCards commands={commandsFor(lesson.id, index)} unit="line" />
       <p className="guided-expected"><strong>Verify your reasoning:</strong> keep a short list of values and printed lines. You will compare your prediction with real Python output after choosing an answer.</p>
       <div className="guided-actions">
         <button className="btn small ghost" disabled={index === 0} onClick={() => move(index - 1)}>← Previous line</button>
