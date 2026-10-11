@@ -12,7 +12,7 @@ answer: 1
 @@body
 # Predict the output
 
-Slicing a NumPy array does **not** copy. It returns a *view*: a window onto the same memory. That makes NumPy fast — and causes some of the most confusing bugs in data science.
+Slicing a NumPy array does **not** copy. It returns a *view*: a window onto the same memory. Writing through a view changes the original array.
 
 Read the code and commit to a guess before the output unlocks.
 @@starter

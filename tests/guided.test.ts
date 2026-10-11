@@ -16,13 +16,13 @@ vi.mock('../src/engine/runner', async importOriginal => ({
 
 const codingLessons = LESSONS.filter(lesson => lesson.kind !== 'predict')
 
-it('provides a guided path with verification and reassurance for every coding lesson', () => {
+it('provides a guided path with verification for every coding lesson', () => {
   expect(Object.keys(CODING_GUIDES).sort()).toEqual(codingLessons.map(lesson => lesson.id).sort())
   for (const lesson of codingLessons) {
     const guide = CODING_GUIDES[lesson.id]
     expect(guide.steps.length, lesson.id).toBeGreaterThan(1)
     for (const [index, step] of guide.steps.entries()) {
-      for (const value of [step.title, step.instruction, step.code, step.expected, step.reassurance]) expect(value.trim(), `${lesson.id} step ${index + 1}`).not.toBe('')
+      for (const value of [step.title, step.instruction, step.code, step.expected]) expect(value.trim(), `${lesson.id} step ${index + 1}`).not.toBe('')
       expect(step.code.split('\n').length, `${lesson.id} step ${index + 1}: keep the writing small`).toBeLessThanOrEqual(8)
       for (const text of [step.instruction, step.expected, step.reassurance]) expect(text, `${lesson.id} step ${index + 1}: guidance contains no solution block`).not.toContain('```')
       expect(guidedCheck(guide, index, lesson.check), `${lesson.id} step ${index + 1}`).toContain('test(')

@@ -11,7 +11,7 @@ minutes: 4
 @@body
 # Every array has a shape
 
-Embeddings, images, batches of tokens: everything is an **n-dimensional array**. The first question to ask any array is *what shape are you?*
+Every array has a **shape**: the length of each of its axes. Check it first.
 
 ```python
 a = np.arange(6)              # [0 1 2 3 4 5]

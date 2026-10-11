@@ -18,8 +18,6 @@ df["temp"] > 8             # a True/False mask, one entry per row
 df[df["temp"] > 8]         # keep only the rows where the mask is True
 ```
 
-No loops: describe *which rows you want*, pandas does the rest.
-
 > **Mission:** from the model benchmark table, keep only the models with accuracy **above 0.85** and store them in `strong`.
 @@starter
 import pandas as pd

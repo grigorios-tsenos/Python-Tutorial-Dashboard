@@ -11,7 +11,7 @@ minutes: 10
 @@body
 # Boss: build the heart of a vector database
 
-Every RAG system, recommender and semantic search engine does one core thing: *find the rows of a matrix most similar to a query vector*. The measure is **cosine similarity**, the angle between vectors, which ignores their length:
+Search, recommendation and RAG retrieval all *find the rows of a matrix most similar to a query vector*. The measure is **cosine similarity**, the angle between vectors, which ignores their length:
 
 ```
 cos(a, b) = (a · b) / (‖a‖ ‖b‖)
@@ -21,7 +21,7 @@ A raw dot product will not do: a long, off-topic vector out-scores a short, perf
 
 > **Mission:** finish `top_k(query, matrix, k)`. It must return the **row indices** of the `k` rows most cosine-similar to `query`, best first. Do it for all rows at once, with no Python loops.
 
-The boss checks new data too: zero-length vectors have similarity `0`, ties keep the original row order, `k <= 0` returns no indices, and oversized `k` returns every available row. Keep the input arrays unchanged.
+It must also handle new data: zero-length vectors have similarity `0`, ties keep the original row order, `k <= 0` returns no indices, and oversized `k` returns every available row. Keep the input arrays unchanged.
 @@starter
 import numpy as np
 

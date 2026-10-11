@@ -11,7 +11,7 @@ minutes: 12
 @@body
 # Boss: build user features from clickstream events
 
-Models don't read logs; they read **feature tables**: one row per entity, one column per signal. You get an event log: `user`, `action` (`view`, `click`, `purchase`) and `value` (revenue, only on purchases).
+Models read **feature tables**, not logs: one row per entity, one column per signal. The event log has `user`, `action` (`view`, `click`, `purchase`) and `value` (revenue, only on purchases).
 
 > **Mission:** write `build_user_features(events)` → a DataFrame with **exactly** these columns, one row per user, sorted by user:
 >
@@ -23,7 +23,7 @@ Models don't read logs; they read **feature tables**: one row per entity, one co
 > | `revenue` | sum of `value` (0.0 if none) |
 > | `conversion` | purchases ÷ views, or `0.0` with no views |
 
-Don't mutate the input. The boss checks new users, shuffled events, a purchaser with no views, and an empty frame (which still returns the five columns).
+Don't mutate the input. It must also handle new users, shuffled events, a purchaser with no views, and an empty frame (which still returns the five columns).
 @@starter
 import numpy as np
 import pandas as pd

@@ -10,7 +10,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "import numpy as np",
         "check": "test('Import NumPy', lambda: np.array([1, 2]).sum() == 3, 'A tiny array adds to 3; no lesson output is needed yet.')",
         "expected": "A tiny array adds to 3; no lesson output is needed yet.",
-        "reassurance": "The array tools are available. The next step converts your own data."
+        "reassurance": ""
       },
       {
         "title": "Turn the list into an array",
@@ -18,7 +18,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "scores = np.array(raw)",
         "check": "test('Turn the list into an array', lambda: isinstance(scores, np.ndarray) and scores.tolist() == raw, 'scores contains the same five numbers as raw.')",
         "expected": "scores contains the same five numbers as raw.",
-        "reassurance": "The values survived the conversion; you can now apply arithmetic to all of them."
+        "reassurance": ""
       },
       {
         "title": "Boost every score",
@@ -26,7 +26,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "boosted = scores + 0.05",
         "check": "test('Boost every score', lambda: np.allclose(boosted, [0.36, 0.73, 0.49, 0.96, 0.32]) and scores.tolist() == raw, 'boosted is [0.36, 0.73, 0.49, 0.96, 0.32]; scores is unchanged.')",
         "expected": "boosted is [0.36, 0.73, 0.49, 0.96, 0.32]; scores is unchanged.",
-        "reassurance": "Your vectorized addition is correct. One final step will show its average."
+        "reassurance": ""
       },
       {
         "title": "Print the average",
@@ -34,7 +34,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "print(boosted.mean())",
         "check": "",
         "expected": "The output includes 0.572.",
-        "reassurance": "The full check confirms the conversion, every boosted value, the printed average and the untouched input."
+        "reassurance": ""
       }
     ]
   },
@@ -47,7 +47,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "import numpy as np",
         "check": "test('Import the array tools', lambda: np.arange(3).tolist() == [0, 1, 2], 'arange(3) produces 0, 1, 2.')",
         "expected": "NumPy is available, and its small-array check produces the values 0, 1, 2.",
-        "reassurance": "NumPy is ready; next you will create the twelve values."
+        "reassurance": ""
       },
       {
         "title": "Create twelve numbers",
@@ -55,7 +55,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "a = np.arange(12)",
         "check": "test('Create twelve numbers', lambda: a.shape == (12,) and int(a.sum()) == 66, 'a has shape (12,) and sums to 66.')",
         "expected": "a has shape (12,) and sums to 66.",
-        "reassurance": "All twelve values are present before you reshape them."
+        "reassurance": ""
       },
       {
         "title": "Reshape into rows and columns",
@@ -63,7 +63,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "grid = a.reshape(3, 4)",
         "check": "test('Reshape into rows and columns', lambda: grid.shape == (3, 4) and np.array_equal(grid.ravel(), a), 'grid.shape is (3, 4); flattening it restores a.')",
         "expected": "grid.shape is (3, 4); flattening it restores a.",
-        "reassurance": "Only the arrangement changed. The column totals are ready to inspect."
+        "reassurance": ""
       },
       {
         "title": "Print the shape",
@@ -71,7 +71,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "print(grid.shape)",
         "check": "test(\"Print the shape\", lambda: \"(3, 4)\" in __stdout__, \"The output shows (3, 4).\")",
         "expected": "The output shows (3, 4).",
-        "reassurance": "Three rows of four. Next, total the numbers down each column."
+        "reassurance": ""
       },
       {
         "title": "Total each column",
@@ -79,7 +79,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "print(grid.sum(axis=0))",
         "check": "test(\"Total each column\", lambda: \"[12 15 18 21]\" in __stdout__, \"The output shows [12 15 18 21].\")",
         "expected": "The output shows [12 15 18 21].",
-        "reassurance": "Four columns, four totals. The row totals work the same way along the other axis."
+        "reassurance": ""
       },
       {
         "title": "Total each row",
@@ -87,7 +87,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "print(grid.sum(axis=1))",
         "check": "",
         "expected": "The output shows (3, 4), then [12 15 18 21], then [ 6 22 38].",
-        "reassurance": "The complete check verifies the shape, retained values and printed totals."
+        "reassurance": ""
       }
     ]
   },
@@ -100,7 +100,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "kept = 1 - discounts",
         "check": "test('Keep the fraction after each discount', lambda: np.allclose(kept, [1, 0.9, 0.75, 0.5]) and kept.shape == (4,), 'kept is [1, 0.9, 0.75, 0.5], with shape (4,).')",
         "expected": "kept is [1, 0.9, 0.75, 0.5], with shape (4,).",
-        "reassurance": "The discount fractions are right. Their shape can stretch across each product row."
+        "reassurance": ""
       },
       {
         "title": "Build every price and discount pair",
@@ -108,7 +108,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "table = prices * kept",
         "check": "test('Build every price and discount pair', lambda: table.shape == (3, 4) and np.allclose(table, [[10, 9, 7.5, 5], [20, 18, 15, 10], [30, 27, 22.5, 15]]), 'table is 3 × 4; the bottom-right price is 15.')",
         "expected": "table is 3 × 4; the bottom-right price is 15.",
-        "reassurance": "Every product now has every discounted price. The next step draws how the shapes stretch."
+        "reassurance": ""
       },
       {
         "title": "Inspect the broadcast",
@@ -116,7 +116,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "orbit.show_broadcast(prices, kept, \"*\")\ntable",
         "check": "",
         "expected": "The Broadcast Lab shows three product rows and four discount columns.",
-        "reassurance": "The complete check confirms the result shape, unchanged full-price column and the 50% discount."
+        "reassurance": ""
       }
     ]
   },
@@ -129,7 +129,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "missing = np.isnan(values)",
         "check": "test('Find the missing cells', lambda: missing.shape == values.shape and missing.sum(axis=0).tolist() == [1, 1, 1], 'There is one missing cell in each of the three columns.')",
         "expected": "There is one missing cell in each of the three columns.",
-        "reassurance": "Your mask identifies the gaps without changing any data."
+        "reassurance": ""
       },
       {
         "title": "Count observed cells",
@@ -137,7 +137,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "observed = (~missing).sum(axis=0)",
         "check": "test('Count observed cells', lambda: observed.tolist() == [3, 3, 3], 'observed is [3, 3, 3].')",
         "expected": "observed is [3, 3, 3].",
-        "reassurance": "Each mean will use three real observations, rather than counting a missing reading."
+        "reassurance": "Each mean divides by the real observations only, not by the missing readings."
       },
       {
         "title": "Blank out the gaps",
@@ -145,7 +145,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "observed_only = np.where(missing, 0.0, values)",
         "check": "test(\"Blank out the gaps\", lambda: not np.isnan(observed_only).any() and observed_only[:, 0].tolist() == [30, 0, 34, 38] and np.isnan(values).sum() == 3, \"observed_only has no NaN; its first column is [30, 0, 34, 38].\")",
         "expected": "observed_only has no NaN; its first column is [30, 0, 34, 38].",
-        "reassurance": "With the gaps set to zero they cannot spoil a sum. The totals come next."
+        "reassurance": ""
       },
       {
         "title": "Sum only observed values",
@@ -161,7 +161,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "fallback = np.zeros(values.shape[1])",
         "check": "test(\"Prepare a fallback\", lambda: fallback.shape == (3,) and not fallback.any(), \"fallback is three zeros, one per column.\")",
         "expected": "fallback is three zeros, one per column.",
-        "reassurance": "The safety net is ready. Now divide wherever it is safe and leave the fallback everywhere else."
+        "reassurance": ""
       },
       {
         "title": "Divide only where it is safe",
@@ -169,7 +169,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "means = np.divide(totals, observed, out=fallback, where=observed > 0)",
         "check": "test(\"Divide only where it is safe\", lambda: np.allclose(means, [34, 55000, 7]) and np.divide([0.0], [0], out=np.zeros(1), where=np.array([False])).tolist() == [0], \"means is [34, 55000, 7]; an unobserved column keeps zero.\")",
         "expected": "means is [34, 55000, 7]; an unobserved column keeps zero.",
-        "reassurance": "The safe divide covers all-missing columns as well as this example."
+        "reassurance": ""
       },
       {
         "title": "Fill the gaps",
@@ -177,7 +177,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "filled = np.where(missing, means, values)",
         "check": "test('Fill the gaps', lambda: np.allclose(filled, [[30, 55000, 12], [34, 50000, 3], [34, 60000, 7], [38, 55000, 6]]) and np.isnan(values).sum() == 3, 'The three gaps become 55000, 34 and 7; the source still has three gaps.')",
         "expected": "The three gaps become 55000, 34 and 7; the source still has three gaps.",
-        "reassurance": "The example is filled correctly and the source is intact. Now make it reusable."
+        "reassurance": ""
       },
       {
         "title": "Wrap the steps in a function",
@@ -185,7 +185,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def impute_columns(values):\n    missing = np.isnan(values)\n    observed = (~missing).sum(axis=0)\n    totals = np.where(missing, 0.0, values).sum(axis=0)\n    means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "test(\"Wrap the steps in a function\", lambda: np.allclose(impute_columns(values)[0], filled) and impute_columns(values)[1].tolist() == [1, 1, 1] and np.isnan(values).sum() == 3, \"impute_columns(values) returns your filled matrix and the counts [1, 1, 1]; values keeps its gaps.\")",
         "expected": "impute_columns(values) returns your filled matrix and the counts [1, 1, 1]; values keeps its gaps.",
-        "reassurance": "Your five steps now run as one reusable function. Next it learns to accept other kinds of input."
+        "reassurance": ""
       },
       {
         "title": "Accept any numeric matrix",
@@ -193,7 +193,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    missing = np.isnan(values)\n    observed = (~missing).sum(axis=0)\n    totals = np.where(missing, 0.0, values).sum(axis=0)\n    means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "test(\"Accept any numeric matrix\", lambda: np.issubdtype(impute_columns([[1, 2], [3, 4]])[0].dtype, np.floating) and impute_columns([[1, 2], [3, 4]])[0].tolist() == [[1, 2], [3, 4]], \"A list of integer lists comes back as the same numbers in a float array.\")",
         "expected": "A list of integer lists comes back as the same numbers in a float array.",
-        "reassurance": "Plain Python lists work now. One guard is left: input that is not a matrix."
+        "reassurance": ""
       },
       {
         "title": "Reject the wrong shape",
@@ -201,7 +201,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    missing = np.isnan(values)\n    observed = (~missing).sum(axis=0)\n    totals = np.where(missing, 0.0, values).sum(axis=0)\n    means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "",
         "expected": "The full check covers integer input, an all-missing column, an empty matrix and one-dimensional input.",
-        "reassurance": "The complete check confirms every requirement, including the edge cases the sample did not show."
+        "reassurance": ""
       }
     ]
   },
@@ -214,7 +214,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "centered = values - values.mean(axis=0)",
         "check": "test('Center each feature', lambda: np.allclose(centered, [[-10, -100, 0], [0, 0, 0], [10, 100, 0]]), 'The centered columns have mean zero; the constant column is all zeros.')",
         "expected": "The centered columns have mean zero; the constant column is all zeros.",
-        "reassurance": "Centering worked independently for each feature."
+        "reassurance": ""
       },
       {
         "title": "Measure each column spread",
@@ -222,7 +222,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "scales = values.std(axis=0)",
         "check": "test('Measure each column spread', lambda: np.allclose(scales, [np.sqrt(200 / 3), np.sqrt(20000 / 3), 0]), 'The first two scales are about 8.165 and 81.650; the last is 0.')",
         "expected": "The first two scales are about 8.165 and 81.650; the last is 0.",
-        "reassurance": "The zero scale is expected for a constant feature. The next step handles it safely."
+        "reassurance": "A constant feature has a scale of zero, so dividing by it needs care."
       },
       {
         "title": "Scale without dividing by zero",
@@ -230,7 +230,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "scaled = np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "test('Scale without dividing by zero', lambda: np.allclose(scaled[:, :2].mean(axis=0), 0) and np.allclose(scaled[:, :2].std(axis=0), 1) and np.allclose(scaled[:, 2], 0), 'Varying columns have mean 0 and standard deviation 1; the constant column stays 0.')",
         "expected": "Varying columns have mean 0 and standard deviation 1; the constant column stays 0.",
-        "reassurance": "The example has the intended scale, with no invalid constant-column values."
+        "reassurance": ""
       },
       {
         "title": "Wrap it in a function",
@@ -238,7 +238,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def standardize(values):\n    centered = values - values.mean(axis=0)\n    scales = values.std(axis=0)\n    return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "test(\"Wrap it in a function\", lambda: np.allclose(standardize(values), scaled) and values[0].tolist() == [10, 100, 7], \"standardize(values) matches scaled, and values is unchanged.\")",
         "expected": "standardize(values) matches scaled, and values is unchanged.",
-        "reassurance": "The three steps now run as one function. Next it learns to check what it is given."
+        "reassurance": ""
       },
       {
         "title": "Convert and check the input",
@@ -246,7 +246,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def standardize(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    centered = values - values.mean(axis=0)\n    scales = values.std(axis=0)\n    return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Convert and check the input\", lambda: np.allclose(standardize([[1, 3], [3, 3]]), [[-1, 0], [1, 0]]) and _rejects(lambda: standardize([1.0, 2.0])), \"A list of integer lists is standardized, and a one-dimensional input raises ValueError.\")",
         "expected": "A list of integer lists is standardized, and a one-dimensional input raises ValueError.",
-        "reassurance": "Bad shapes now fail loudly. One edge case is left: a matrix with no rows."
+        "reassurance": ""
       },
       {
         "title": "Handle an empty matrix",
@@ -254,7 +254,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def standardize(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    if len(values) == 0: return values.copy()\n    centered = values - values.mean(axis=0)\n    scales = values.std(axis=0)\n    return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "",
         "expected": "The complete check covers constant features, a single row, empty matrices, new shapes and unchanged inputs.",
-        "reassurance": "The reusable function is checked on both typical data and the required boundary cases."
+        "reassurance": ""
       }
     ]
   },
@@ -267,7 +267,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "logits = X @ W + b",
         "check": "test('Compute class scores', lambda: logits.shape == (3, 3) and np.allclose(logits[0], [4, -2, 0]), 'logits has shape (3, 3); its first row is [4, -2, 0].')",
         "expected": "logits has shape (3, 3); its first row is [4, -2, 0].",
-        "reassurance": "Each ticket now has a score for each of the three classes."
+        "reassurance": ""
       },
       {
         "title": "Shift each row safely",
@@ -275,7 +275,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "shifted = logits - logits.max(axis=1, keepdims=True)",
         "check": "test('Shift each row safely', lambda: np.allclose(shifted.max(axis=1), 0) and np.allclose(shifted[0], [0, -6, -4]), 'Each row has maximum 0; the first row is [0, -6, -4].')",
         "expected": "Each row has maximum 0; the first row is [0, -6, -4].",
-        "reassurance": "This shift preserves relative scores and prevents positive exponential overflow."
+        "reassurance": "The shift keeps the differences between scores and stops the exponential from overflowing."
       },
       {
         "title": "Exponentiate the shifted scores",
@@ -283,7 +283,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "exp = np.exp(shifted)",
         "check": "test('Exponentiate the shifted scores', lambda: bool(np.isfinite(exp).all()) and np.allclose(exp.max(axis=1), 1), 'All values are finite and each row has maximum 1.')",
         "expected": "All values are finite and each row has maximum 1.",
-        "reassurance": "The exponential step is stable for these scores. Next normalize each row independently."
+        "reassurance": ""
       },
       {
         "title": "Normalize each row",
@@ -291,7 +291,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "probs = exp / exp.sum(axis=1, keepdims=True)",
         "check": "test('Normalize each row', lambda: np.allclose(probs.sum(axis=1), 1) and bool((probs >= 0).all()), 'Every row sums to 1, with no negative probabilities.')",
         "expected": "Every row sums to 1, with no negative probabilities.",
-        "reassurance": "You have three valid probability distributions; the full function will also validate shapes."
+        "reassurance": ""
       },
       {
         "title": "Choose the winning labels",
@@ -299,7 +299,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "winners = [labels[i] for i in probs.argmax(axis=1)]",
         "check": "test('Choose the winning labels', lambda: winners == [\"billing\", \"bug\", \"feature\"], 'winners is [\"billing\", \"bug\", \"feature\"].')",
         "expected": "winners is [\"billing\", \"bug\", \"feature\"].",
-        "reassurance": "The example routes all three tickets correctly. Now preserve those operations for new inputs."
+        "reassurance": ""
       },
       {
         "title": "Turn the steps into predict_proba",
@@ -307,7 +307,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def predict_proba(X, W, b):\n    logits = X @ W + b\n    exp = np.exp(logits - logits.max(axis=1, keepdims=True))\n    return exp / exp.sum(axis=1, keepdims=True)",
         "check": "test(\"Turn the steps into predict_proba\", lambda: np.allclose(predict_proba(X, W, b), probs) and np.isfinite(predict_proba(np.array([[1.0]]), np.array([[1000.0, 999.0]]), np.zeros(2))).all(), \"The function matches the example probabilities and stays finite for logits near 1000.\")",
         "expected": "The function matches the example probabilities and stays finite for logits near 1000.",
-        "reassurance": "The probability function works on arrays. Next it checks the shapes it receives."
+        "reassurance": ""
       },
       {
         "title": "Validate the shapes",
@@ -315,7 +315,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def predict_proba(X, W, b):\n    X, W, b = (np.asarray(a, dtype=float) for a in (X, W, b))\n    if X.ndim != 2 or W.ndim != 2 or X.shape[1] != W.shape[0] or b.shape != (W.shape[1],):\n        raise ValueError(\"expected X (n, d), W (d, k) and b (k,)\")\n    logits = X @ W + b\n    exp = np.exp(logits - logits.max(axis=1, keepdims=True))\n    return exp / exp.sum(axis=1, keepdims=True)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate the shapes\", lambda: np.allclose(predict_proba([[1]], [[1000, 999]], [0, 0]).sum(), 1) and _rejects(lambda: predict_proba(np.ones((2, 2)), W, b)) and _rejects(lambda: predict_proba(X, W, [0.0])), \"Plain lists work, and mismatched shapes raise ValueError.\")",
         "expected": "Plain lists work, and mismatched shapes raise ValueError.",
-        "reassurance": "The probability function is checked on normal input, huge scores and bad shapes. The label-selection goal is next."
+        "reassurance": ""
       },
       {
         "title": "Build predict_labels",
@@ -323,7 +323,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def predict_labels(X, W, b, labels):\n    if len(labels) != np.shape(W)[1]:\n        raise ValueError(\"need exactly one label per class\")\n    return [labels[i] for i in predict_proba(X, W, b).argmax(axis=1)]",
         "check": "",
         "expected": "The full check includes huge logits, empty batches, tied classes, malformed shapes and unchanged inputs.",
-        "reassurance": "The complete checks exercise the stability and validation that the example alone cannot prove."
+        "reassurance": ""
       }
     ]
   },
@@ -336,7 +336,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "left_float = np.asarray(left, dtype=float)\nright_float = np.asarray(right, dtype=float)",
         "check": "test('Convert before subtracting', lambda: np.issubdtype(left_float.dtype, np.floating) and np.array_equal(left_float, left) and np.array_equal(right_float, right), 'Both arrays hold the same coordinates as floating-point numbers.')",
         "expected": "Both arrays hold the same coordinates as floating-point numbers.",
-        "reassurance": "The coordinates are intact and ready for safe arithmetic."
+        "reassurance": ""
       },
       {
         "title": "Make room for every pair",
@@ -344,7 +344,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "differences = left_float[:, None, :] - right_float[None, :, :]",
         "check": "test('Make room for every pair', lambda: differences.shape == (2, 3, 2) and differences[1, 0].tolist() == [3, 4], 'The shape is (2, 3, 2); the second-left/first-right difference is [3, 4].')",
         "expected": "The shape is (2, 3, 2); the second-left/first-right difference is [3, 4].",
-        "reassurance": "The pair axes are correct. The last axis still holds the two coordinate differences."
+        "reassurance": ""
       },
       {
         "title": "Reduce coordinates to distances",
@@ -352,7 +352,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "distances = np.sum(differences ** 2, axis=-1)",
         "check": "test('Reduce coordinates to distances', lambda: np.allclose(distances, [[0, 16, 9], [25, 9, 16]]), 'distances is [[0, 16, 9], [25, 9, 16]], with shape (2, 3).')",
         "expected": "distances is [[0, 16, 9], [25, 9, 16]], with shape (2, 3).",
-        "reassurance": "The entire example distance table is correct; no Python loop was needed."
+        "reassurance": ""
       },
       {
         "title": "Wrap it in a function",
@@ -360,7 +360,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def pairwise_squared(left, right):\n    left = np.asarray(left, dtype=float)\n    right = np.asarray(right, dtype=float)\n    differences = left[:, None, :] - right[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
         "check": "test(\"Wrap it in a function\", lambda: np.allclose(pairwise_squared(left, right), distances) and np.allclose(pairwise_squared([[50000]], [[-50000]]), [[1e10]]), \"The function matches distances and handles large integers without overflow.\")",
         "expected": "The function matches distances and handles large integers without overflow.",
-        "reassurance": "The broadcasting trick is reusable now. The last step rejects inputs it cannot pair up."
+        "reassurance": ""
       },
       {
         "title": "Reject mismatched shapes",
@@ -368,7 +368,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def pairwise_squared(left, right):\n    left = np.asarray(left, dtype=float)\n    right = np.asarray(right, dtype=float)\n    if left.ndim != 2 or right.ndim != 2 or left.shape[1] != right.shape[1]:\n        raise ValueError(\"expected matrices with matching feature counts\")\n    # ponytail: n*m*d temporary values; chunk rows when vector collections outgrow memory.\n    differences = left[:, None, :] - right[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
         "check": "",
         "expected": "The full check includes swapped inputs, empty collections, large integers, invalid shapes and unchanged inputs.",
-        "reassurance": "The complete check verifies the function beyond this two-point example."
+        "reassurance": ""
       }
     ]
   },
@@ -381,7 +381,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "norms = np.linalg.norm(docs, axis=1) * np.linalg.norm(query)",
         "check": "test('Measure vector lengths', lambda: norms.shape == (5,) and np.allclose(norms[0], np.linalg.norm(query)) and norms[2] > norms[0], 'There is one denominator per document; the long third document has the largest.')",
         "expected": "There is one denominator per document; the long third document has the largest.",
-        "reassurance": "Vector length is now accounted for rather than rewarded."
+        "reassurance": "Dividing by length means a long vector is not rewarded just for being long."
       },
       {
         "title": "Score every document",
@@ -389,7 +389,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "dots = docs @ query",
         "check": "test(\"Score every document\", lambda: np.allclose(dots, [1.0, 0.905, 31.5, 0.0, -1.0]), \"dots is [1.0, 0.905, 31.5, 0.0, -1.0].\")",
         "expected": "dots is [1.0, 0.905, 31.5, 0.0, -1.0].",
-        "reassurance": "The raw scores reward long vectors. Dividing by the lengths fixes that next."
+        "reassurance": ""
       },
       {
         "title": "Compute safe cosine scores",
@@ -405,7 +405,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "ranked = np.argsort(-scores, kind=\"stable\")",
         "check": "test('Rank best first', lambda: ranked[:3].tolist() == [0, 1, 2] and np.argsort(-np.array([0.0, 1.0, 1.0]), kind=\"stable\").tolist() == [1, 2, 0], 'The top three rows are [0, 1, 2]; equal scores retain their original order.')",
         "expected": "The top three rows are [0, 1, 2]; equal scores retain their original order.",
-        "reassurance": "The example ranking and tie rule are both checked."
+        "reassurance": ""
       },
       {
         "title": "Finish top_k",
@@ -413,7 +413,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def top_k(query, matrix, k):\n    \"\"\"Indices of the k rows of `matrix` most cosine-similar to `query`, best first.\"\"\"\n    norms = np.linalg.norm(matrix, axis=1) * np.linalg.norm(query)\n    scores = np.divide(matrix @ query, norms, out=np.zeros(len(matrix)), where=norms != 0)\n    return np.argsort(-scores, kind=\"stable\")[:max(0, k)]",
         "check": "",
         "expected": "The complete check includes zero vectors, a zero query, tied scores, empty data and non-positive k.",
-        "reassurance": "Your search function is verified on the required edge cases as well as the sample query."
+        "reassurance": ""
       }
     ]
   }
