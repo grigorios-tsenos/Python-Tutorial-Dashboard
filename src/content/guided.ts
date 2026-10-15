@@ -10,6 +10,7 @@ import { STATS_GUIDES } from './guides/stats'
 import { VIZ_GUIDES } from './guides/viz'
 import { ML_GUIDES } from './guides/ml'
 import { NN_GUIDES } from './guides/nn'
+import { RAG_GUIDES } from './guides/rag'
 
 export interface CodingStep {
   title: string
@@ -30,7 +31,7 @@ export interface CodingGuide {
 export const CODING_GUIDES: Record<string, CodingGuide> = {
   ...NUMPY_GUIDES, ...PANDAS_GUIDES, ...PYTHON_GUIDES, ...LANGCHAIN_GUIDES,
   ...LANGGRAPH_GUIDES, ...MLFLOW_GUIDES, ...DATABRICKS_GUIDES, ...CLAUDE_GUIDES,
-  ...STATS_GUIDES, ...VIZ_GUIDES, ...ML_GUIDES, ...NN_GUIDES,
+  ...STATS_GUIDES, ...VIZ_GUIDES, ...ML_GUIDES, ...NN_GUIDES, ...RAG_GUIDES,
 }
 
 export function guidedSource(guide: CodingGuide, drafts: string[], step: number): string {

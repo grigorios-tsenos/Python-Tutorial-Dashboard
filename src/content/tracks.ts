@@ -10,11 +10,12 @@ export const TRACKS: Track[] = [
   { id: 'nn', name: 'Neural Nets', glyph: '⌬', color: '#a3e635', blurb: 'Neurons, forward pass, loss, gradients, backprop and attention, all in NumPy.', x: 1980, y: 830, tilt: 6 },
   { id: 'python', name: 'Python for AI', glyph: 'λ', color: '#60a5fa', blurb: 'Dataclasses, pydantic, generators and async: the glue of AI code.', x: 1180, y: 910, tilt: -8 },
   { id: 'langchain', name: 'LangChain', glyph: '⛓', color: '#4ade80', blurb: 'Prompts, chains, tools and retrieval, composed with the | operator.', x: 420, y: 860, tilt: 12 },
-  { id: 'langgraph', name: 'LangGraph', glyph: '◈', color: '#a78bfa', blurb: 'Agents as state machines: routing, memory, human-in-the-loop.', x: 420, y: 1480, tilt: -10 },
-  { id: 'mlflow', name: 'MLflow', glyph: '◎', color: '#f472b6', blurb: 'Track experiments, compare runs, register models, evaluate prompts.', x: 1220, y: 1420, tilt: 8 },
-  { id: 'databricks', name: 'Databricks', glyph: '◆', color: '#f87171', blurb: 'Spark DataFrames, Delta tables, time travel and the medallion pattern.', x: 2020, y: 1500, tilt: -6 },
-  { id: 'claude', name: 'Claude Code', glyph: '✦', color: '#fdba74', blurb: 'Permissions, hooks, skills: configure an agent you can trust.', x: 2800, y: 1440, tilt: 10 },
+  { id: 'rag', name: 'RAG Techniques', glyph: '⌕', color: '#22d3ee', blurb: 'One technique per stage: chunk, embed, search, rerank, generate, then HyDE.', x: 420, y: 1480, tilt: -10 },
+  { id: 'langgraph', name: 'LangGraph', glyph: '◈', color: '#a78bfa', blurb: 'Agents as state machines: routing, memory, human-in-the-loop.', x: 1220, y: 1420, tilt: 8 },
+  { id: 'mlflow', name: 'MLflow', glyph: '◎', color: '#f472b6', blurb: 'Track experiments, compare runs, register models, evaluate prompts.', x: 2020, y: 1500, tilt: -6 },
+  { id: 'databricks', name: 'Databricks', glyph: '◆', color: '#f87171', blurb: 'Spark DataFrames, Delta tables, time travel and the medallion pattern.', x: 2800, y: 1440, tilt: 10 },
+  { id: 'claude', name: 'Claude Code', glyph: '✦', color: '#fdba74', blurb: 'Permissions, hooks, skills: configure an agent you can trust.', x: 2800, y: 2040, tilt: -8 },
 ]
 
 export const TRACK_BY_ID = Object.fromEntries(TRACKS.map((t) => [t.id, t])) as Record<Track['id'], Track>
-export const MAP_SIZE = { w: 3220, h: 1800 }
+export const MAP_SIZE = { w: 3220, h: 2380 }
