@@ -13,16 +13,56 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Sentences are the units every chunk is built from."
       },
       {
-        "title": "Fill one chunk",
-        "instruction": "Define `pack(sentences, start, max_words)`: walk forward from `start`, adding each sentence's word count, and return the index just past the last sentence that fits in `max_words`. The first sentence is always taken, even when it alone is too long.",
+        "title": "Set up a walk",
+        "instruction": "Create `sentences` with the handbook's sentences, set `start` to 1 and `max_words` to 20, then begin a walk: `end` starts at `start` and the running word total `words` at 0.",
+        "code": "sentences, start, max_words = split_sentences(HANDBOOK), 1, 20\nend, words = start, 0",
+        "check": "test(\"Set up a walk\", lambda: sentences == split_sentences(HANDBOOK) and (start, max_words, end, words) == (1, 20, 1, 0), \"The walk starts at sentence 1 with no words counted.\")",
+        "expected": "The walk starts at sentence 1 with no words counted.",
+        "reassurance": ""
+      },
+      {
+        "title": "Walk to the end",
+        "instruction": "Reset `end` and `words` as before, then loop while `end` is still a sentence index: count the words of the sentence at `end`, add them to `words`, and move `end` one forward.",
+        "code": "end, words = start, 0\nwhile end < len(sentences):\n    n = len(sentences[end].split())\n    words, end = words + n, end + 1",
+        "check": "test(\"Walk to the end\", lambda: end == 6 and words == sum(len(x.split()) for x in sentences[1:]), \"end reaches 6 and words counts every word of sentences 1 to 5.\")",
+        "expected": "end reaches 6 and words counts every word of sentences 1 to 5.",
+        "reassurance": ""
+      },
+      {
+        "title": "Stop at the budget",
+        "instruction": "Run the walk again, but before adding a sentence, leave the loop when it would push `words` past `max_words`. Never stop on the walk's first sentence (while `end` is still `start`).",
+        "code": "end, words = start, 0\nwhile end < len(sentences):\n    n = len(sentences[end].split())\n    if end > start and words + n > max_words:\n        break\n    words, end = words + n, end + 1",
+        "check": "test(\"Stop at the budget\", lambda: end == 4 and words == 20, \"The walk stops at end = 4: sentences 1 to 3 fill exactly 20 words.\")",
+        "expected": "The walk stops at end = 4: sentences 1 to 3 fill exactly 20 words.",
+        "reassurance": ""
+      },
+      {
+        "title": "Wrap it as pack",
+        "instruction": "Define `pack(sentences, start, max_words)` from your walk: run it from `start` and return `end`, the index just past the last sentence that fits in `max_words`. The first sentence is always taken, even when it alone is too long.",
         "code": "def pack(sentences, start, max_words):\n    end, words = start, 0\n    while end < len(sentences):\n        n = len(sentences[end].split())\n        if end > start and words + n > max_words:\n            break\n        words, end = words + n, end + 1\n    return end",
         "check": "_S = split_sentences(HANDBOOK)\ntest(\"Fill one chunk\", lambda: pack(_S, 0, 20) == 1 and pack(_S, 1, 20) == 4 and pack(_S, 3, 20) == 6 and pack(_S, 0, 3) == 1, \"From sentence 0 only one fits in 20 words; from 1, three fit exactly; an over-long sentence is still taken alone.\")",
         "expected": "From sentence 0 only one fits in 20 words; from 1, three fit exactly; an over-long sentence is still taken alone.",
         "reassurance": ""
       },
       {
+        "title": "Pack the first chunk",
+        "instruction": "Start chunking from the beginning: create an empty list `chunks` and set `start` and `end` to 0. Then `pack` from `start` into `end`, and append the sentences from `start` up to `end`, joined with single spaces, to `chunks`.",
+        "code": "chunks, start, end = [], 0, 0\nend = pack(sentences, start, max_words)\nchunks.append(\" \".join(sentences[start:end]))",
+        "check": "test(\"Pack the first chunk\", lambda: chunks == [sentences[0]] and end == 1, \"chunks holds one chunk, the first sentence, and end is 1.\")",
+        "expected": "chunks holds one chunk, the first sentence, and end is 1.",
+        "reassurance": ""
+      },
+      {
+        "title": "Find the next start",
+        "instruction": "Set `overlap` to 1, then move `start` to `overlap` sentences before `end`, but at least one sentence later than the current start so the walk always moves on.",
+        "code": "overlap = 1\nstart = max(end - overlap, start + 1)",
+        "check": "test(\"Find the next start\", lambda: start == 1, \"start is 1: one sentence back from end would be 0, which does not move forward.\")",
+        "expected": "start is 1: one sentence back from end would be 0, which does not move forward.",
+        "reassurance": ""
+      },
+      {
         "title": "Slide with overlap",
-        "instruction": "Define `chunk_sentences(sentences, max_words, overlap=1)`: repeatedly `pack` from `start`, join that run of sentences with single spaces, and begin the next chunk `overlap` sentences before the end, but always at least one sentence later than the current start. Stop once a chunk reaches the last sentence.",
+        "instruction": "Define `chunk_sentences(sentences, max_words, overlap=1)`: repeat pack, append and move-the-start in a loop that runs until a chunk reaches the last sentence, and return the chunks.",
         "code": "def chunk_sentences(sentences, max_words, overlap=1):\n    chunks, start, end = [], 0, 0\n    while end < len(sentences):\n        end = pack(sentences, start, max_words)\n        chunks.append(\" \".join(sentences[start:end]))\n        start = max(end - overlap, start + 1)\n    return chunks",
         "check": "_S = split_sentences(HANDBOOK)\ntest(\"Slide with overlap\", lambda: chunk_sentences(_S, 20) == [_S[0], \" \".join(_S[1:4]), \" \".join(_S[3:6])] and chunk_sentences(_S, 20, overlap=0) == [_S[0], \" \".join(_S[1:4]), \" \".join(_S[4:6])] and chunk_sentences([], 20) == [], \"Three chunks sharing one boundary sentence; overlap=0 shares none; no sentences give no chunks.\")",
         "expected": "Three chunks sharing one boundary sentence; overlap=0 shares none; no sentences give no chunks.",
@@ -58,12 +98,36 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Every later stage reads text through this function."
       },
       {
+        "title": "Start from zeros",
+        "instruction": "Set `text` to `Refund refunded to my card` and create `v`, a vector of `DIM` zeros.",
+        "code": "text = \"Refund refunded to my card\"\nv = np.zeros(DIM)",
+        "check": "test(\"Start from zeros\", lambda: v.shape == (DIM,) and v.sum() == 0, \"v is 13 zeros.\")",
+        "expected": "v is 13 zeros.",
+        "reassurance": ""
+      },
+      {
+        "title": "Count the known words",
+        "instruction": "Loop over the tokens of `text`; for each one found in `CONCEPTS`, add one to `v` at that token's concept index. Unknown words are skipped.",
+        "code": "for t in tokens(text):\n    if t in CONCEPTS:\n        v[CONCEPTS[t]] += 1",
+        "check": "test(\"Count the known words\", lambda: v[0] == 2 and v[1] == 1 and v.sum() == 3, \"Two refund words land on dimension 0 and card on dimension 1.\")",
+        "expected": "Two refund words land on dimension 0 and card on dimension 1.",
+        "reassurance": ""
+      },
+      {
         "title": "Count concepts",
-        "instruction": "Define `count_vector(text)`: a zero vector of length `DIM`, plus one at the concept index of every token found in `CONCEPTS`. Unknown words are skipped.",
+        "instruction": "Define `count_vector(text)` from your last two steps: the zero vector plus one per known token, returned at the end.",
         "code": "def count_vector(text):\n    v = np.zeros(DIM)\n    for t in tokens(text):\n        if t in CONCEPTS:\n            v[CONCEPTS[t]] += 1\n    return v",
         "check": "test(\"Count concepts\", lambda: count_vector(\"Refund refunded to my card\")[0] == 2 and count_vector(\"Refund refunded to my card\")[1] == 1 and count_vector(\"Refund refunded to my card\").sum() == 3 and count_vector(\"hello\").sum() == 0, \"Two refund words land on dimension 0, card on dimension 1, and the rest is ignored.\")",
         "expected": "Two refund words land on dimension 0, card on dimension 1, and the rest is ignored.",
         "reassurance": "Synonyms already share a dimension; next, remove the effect of length."
+      },
+      {
+        "title": "Measure the length",
+        "instruction": "Recreate `v` as the count vector of `text`, and create `norm` with its L2 norm (its length).",
+        "code": "v = count_vector(text)\nnorm = np.linalg.norm(v)",
+        "check": "test(\"Measure the length\", lambda: np.isclose(norm, np.sqrt(5)), \"norm is about 2.24, the square root of 2\\u00b2 + 1\\u00b2.\")",
+        "expected": "norm is about 2.24, the square root of 2² + 1².",
+        "reassurance": ""
       },
       {
         "title": "Unit length",
@@ -148,8 +212,32 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Start the scores",
+        "instruction": "Set `rankings` to the two rankings `[2, 0]` and `[0, 1]` and `k` to 60, and create `fused`: an empty dict that will map each chunk index to its score.",
+        "code": "rankings, k = [[2, 0], [0, 1]], 60\nfused = {}",
+        "check": "test(\"Start the scores\", lambda: rankings == [[2, 0], [0, 1]] and k == 60 and fused == {}, \"Two rankings, k = 60, no scores yet.\")",
+        "expected": "Two rankings, k = 60, no scores yet.",
+        "reassurance": ""
+      },
+      {
+        "title": "Score one ranking",
+        "instruction": "Loop over the first ranking with ranks counting from 1, and add 1 / (k + rank) to each chunk's entry in `fused`, starting a missing entry at 0.",
+        "code": "for rank, i in enumerate(rankings[0], start=1):\n    fused[i] = fused.get(i, 0.0) + 1 / (k + rank)",
+        "check": "test(\"Score one ranking\", lambda: fused == {2: 1 / 61, 0: 1 / 62}, \"Chunk 2 (rank 1) gets 1/61 and chunk 0 (rank 2) gets 1/62.\")",
+        "expected": "Chunk 2 (rank 1) gets 1/61 and chunk 0 (rank 2) gets 1/62.",
+        "reassurance": ""
+      },
+      {
+        "title": "Score every ranking",
+        "instruction": "Empty `fused` again and score every ranking in `rankings` the same way, so a chunk that appears in several rankings collects one term from each.",
+        "code": "fused = {}\nfor ranked in rankings:\n    for rank, i in enumerate(ranked, start=1):\n        fused[i] = fused.get(i, 0.0) + 1 / (k + rank)",
+        "check": "test(\"Score every ranking\", lambda: set(fused) == {0, 1, 2} and abs(fused[0] - (1 / 62 + 1 / 61)) < 1e-12, \"Chunk 0 appears in both rankings and collects 1/62 + 1/61.\")",
+        "expected": "Chunk 0 appears in both rankings and collects 1/62 + 1/61.",
+        "reassurance": ""
+      },
+      {
         "title": "Fuse the rankings",
-        "instruction": "Define `rrf(rankings, k=60)`: for every ranking, give each chunk 1 / (k + rank) with ranks starting at 1, sum per chunk across rankings, and return the chunk indices sorted by that sum, highest first, ties by lower index.",
+        "instruction": "Define `rrf(rankings, k=60)` from your last step, and return the chunk indices sorted by their fused score, highest first, ties by lower index.",
         "code": "def rrf(rankings, k=60):\n    fused = {}\n    for ranked in rankings:\n        for rank, i in enumerate(ranked, start=1):\n            fused[i] = fused.get(i, 0.0) + 1 / (k + rank)\n    return sorted(fused, key=lambda i: (-fused[i], i))",
         "check": "test(\"Fuse the rankings\", lambda: rrf([[2, 0], [0, 1]]) == [0, 2, 1] and rrf([[5]], k=0) == [5] and rrf([]) == [] and rrf([[3], [1]]) == [1, 3], \"A chunk in both lists beats one that tops a single list; ties go to the lower index; no rankings give no results.\")",
         "expected": "A chunk in both lists beats one that tops a single list; ties go to the lower index; no rankings give no results.",
@@ -185,9 +273,25 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Sets ignore how often a concept appears, which is exactly what the shipping chunk exploited."
       },
       {
-        "title": "Score a pair",
-        "instruction": "Define `pair_score(query, text)`: the number of the query's concepts also found in the text, divided by the number of query concepts; 0.0 when the query has no concepts.",
-        "code": "def pair_score(query, text):\n    wanted = concepts(query)\n    if not wanted:\n        return 0.0\n    return len(wanted & concepts(text)) / len(wanted)",
+        "title": "Score one pair",
+        "instruction": "Set `query` to `My delivery is lost, how many days do I have?` and `text` to the text of chunk 2. Create `wanted` with the query's concepts, and `score`: the number of them also among the text's concepts, divided by the number of query concepts.",
+        "code": "query, text = \"My delivery is lost, how many days do I have?\", CHUNKS[2][\"text\"]\nwanted = concepts(query)\nscore = len(wanted & concepts(text)) / len(wanted)",
+        "check": "test(\"Score one pair\", lambda: abs(score - 2 / 3) < 1e-9, \"score is 2/3: the shipping chunk covers two of the question's three concepts.\")",
+        "expected": "score is 2/3: the shipping chunk covers two of the question's three concepts.",
+        "reassurance": ""
+      },
+      {
+        "title": "Wrap it as pair_score",
+        "instruction": "Define `pair_score(query, text)` from those lines, returning the score.",
+        "code": "def pair_score(query, text):\n    wanted = concepts(query)\n    score = len(wanted & concepts(text)) / len(wanted)\n    return score",
+        "check": "test(\"Wrap it as pair_score\", lambda: pair_score(query, CHUNKS[4][\"text\"]) == 1.0 and abs(pair_score(query, CHUNKS[2][\"text\"]) - 2 / 3) < 1e-9, \"The lost-package chunk covers all three concepts; the shipping chunk only two.\")",
+        "expected": "The lost-package chunk covers all three concepts; the shipping chunk only two.",
+        "reassurance": ""
+      },
+      {
+        "title": "Guard empty queries",
+        "instruction": "Update `pair_score` so it returns 0.0 right away when the query has no concepts, instead of dividing by zero. Write the whole updated definition.",
+        "code": "def pair_score(query, text):\n    wanted = concepts(query)\n    if not wanted:\n        return 0.0\n    score = len(wanted & concepts(text)) / len(wanted)\n    return score",
         "check": "_q = \"My delivery is lost, how many days do I have?\"\ntest(\"Score a pair\", lambda: pair_score(_q, CHUNKS[4][\"text\"]) == 1.0 and abs(pair_score(_q, CHUNKS[2][\"text\"]) - 2 / 3) < 1e-9 and pair_score(\"hello\", CHUNKS[0][\"text\"]) == 0.0, \"The lost-package chunk covers all three concepts of the question; the shipping chunk only two.\")",
         "expected": "The lost-package chunk covers all three concepts of the question; the shipping chunk only two.",
         "reassurance": ""
@@ -230,8 +334,32 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Set up the budget",
+        "instruction": "Set `ids` to `[0, 3, 1]` and `max_words` to 30, and start an empty `kept` list with a `used` word count of 0.",
+        "code": "ids, max_words = [0, 3, 1], 30\nkept, used = [], 0",
+        "check": "test(\"Set up the budget\", lambda: (ids, max_words, kept, used) == ([0, 3, 1], 30, [], 0), \"Nothing is kept yet and no words are used.\")",
+        "expected": "Nothing is kept yet and no words are used.",
+        "reassurance": ""
+      },
+      {
+        "title": "Count every chunk",
+        "instruction": "Reset `kept` and `used` as before, then loop over `ids`: count the words of each chunk's text, append the id to `kept` and add the count to `used`.",
+        "code": "kept, used = [], 0\nfor i in ids:\n    n = len(CHUNKS[i][\"text\"].split())\n    kept, used = kept + [i], used + n",
+        "check": "test(\"Count every chunk\", lambda: kept == [0, 3, 1] and used == 35, \"All three chunks are kept, using 35 words: too many for the budget.\")",
+        "expected": "All three chunks are kept, using 35 words: too many for the budget.",
+        "reassurance": ""
+      },
+      {
+        "title": "Stop at the budget",
+        "instruction": "Run the loop again, but leave it at the first chunk that would push `used` past `max_words`.",
+        "code": "kept, used = [], 0\nfor i in ids:\n    n = len(CHUNKS[i][\"text\"].split())\n    if used + n > max_words:\n        break\n    kept, used = kept + [i], used + n",
+        "check": "test(\"Stop at the budget\", lambda: kept == [0, 3] and used == 25, \"kept is [0, 3]: 14 + 11 words fit in 30, the next 10 do not.\")",
+        "expected": "kept is [0, 3]: 14 + 11 words fit in 30, the next 10 do not.",
+        "reassurance": ""
+      },
+      {
         "title": "Respect the budget",
-        "instruction": "Define `fit_budget(ids, max_words)`: keep chunk ids in order while their total word count stays within `max_words`, and stop at the first chunk that would overflow.",
+        "instruction": "Define `fit_budget(ids, max_words)` from your loop, returning the ids kept.",
         "code": "def fit_budget(ids, max_words):\n    kept, used = [], 0\n    for i in ids:\n        n = len(CHUNKS[i][\"text\"].split())\n        if used + n > max_words:\n            break\n        kept, used = kept + [i], used + n\n    return kept",
         "check": "test(\"Respect the budget\", lambda: fit_budget([0, 3, 1], 30) == [0, 3] and fit_budget([0, 3, 1], 40) == [0, 3, 1] and fit_budget([0, 2], 5) == [] and fit_budget([0, 6, 1], 25) == [0], \"14 + 11 words fit in 30, the next 10 do not; a short later chunk never jumps ahead.\")",
         "expected": "14 + 11 words fit in 30, the next 10 do not; a short later chunk never jumps ahead.",
@@ -254,17 +382,41 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
-        "title": "Check grounding",
-        "instruction": "Define `grounded(answer, n_blocks)`: True when the answer contains `I don't know`; otherwise True only if it cites at least one block and every citation is between 1 and `n_blocks`.",
-        "code": "def grounded(answer, n_blocks):\n    cited = citations(answer)\n    if \"I don't know\" in answer:\n        return True\n    return len(cited) > 0 and all(1 <= n <= n_blocks for n in cited)",
-        "check": "test(\"Check grounding\", lambda: grounded(\"Yes [1].\", 2) and not grounded(\"Yes [3].\", 2) and not grounded(\"Yes.\", 2) and not grounded(\"Yes [0].\", 2) and grounded(\"I don't know.\", 0), \"A valid citation passes; a missing, invented or zero citation fails; an honest refusal passes.\")",
+        "title": "Check one answer",
+        "instruction": "Set `answer` to `Yes [1].` and `n_blocks` to 2. Create `cited` with the answer's citations, and `ok`: True only when there is at least one citation and every one is between 1 and `n_blocks`.",
+        "code": "answer, n_blocks = \"Yes [1].\", 2\ncited = citations(answer)\nok = len(cited) > 0 and all(1 <= n <= n_blocks for n in cited)",
+        "check": "test(\"Check one answer\", lambda: cited == [1] and ok is True, \"cited is [1] and ok is True.\")",
+        "expected": "cited is [1] and ok is True.",
+        "reassurance": ""
+      },
+      {
+        "title": "Wrap it as grounded",
+        "instruction": "Define `grounded(answer, n_blocks)` from those lines, returning `ok`.",
+        "code": "def grounded(answer, n_blocks):\n    cited = citations(answer)\n    ok = len(cited) > 0 and all(1 <= n <= n_blocks for n in cited)\n    return ok",
+        "check": "test(\"Wrap it as grounded\", lambda: grounded(\"Yes [1].\", 2) and not grounded(\"Yes [3].\", 2) and not grounded(\"Yes.\", 2) and not grounded(\"Yes [0].\", 2), \"A valid citation passes; a missing, invented or zero citation fails.\")",
+        "expected": "A valid citation passes; a missing, invented or zero citation fails.",
+        "reassurance": ""
+      },
+      {
+        "title": "Accept an honest refusal",
+        "instruction": "Update `grounded` so an answer containing `I don't know` returns True right away: an honest refusal is grounded. Write the whole updated definition.",
+        "code": "def grounded(answer, n_blocks):\n    if \"I don't know\" in answer:\n        return True\n    cited = citations(answer)\n    ok = len(cited) > 0 and all(1 <= n <= n_blocks for n in cited)\n    return ok",
+        "check": "test(\"Accept an honest refusal\", lambda: grounded(\"Yes [1].\", 2) and not grounded(\"Yes [3].\", 2) and not grounded(\"Yes.\", 2) and not grounded(\"Yes [0].\", 2) and grounded(\"I don't know.\", 0), \"A valid citation passes; a missing, invented or zero citation fails; an honest refusal passes.\")",
         "expected": "A valid citation passes; a missing, invented or zero citation fails; an honest refusal passes.",
         "reassurance": "A refusal beats a confident answer with no evidence."
       },
       {
-        "title": "Generate and verify",
-        "instruction": "Fit chunks `[0, 3, 1]` into 30 words as `ids`, build the prompt for `How fast are refunds?`, pass it to `fake_llm`, and print the answer after `answer:` and its grounding after `grounded:`. Then run the check.",
-        "code": "ids = fit_budget([0, 3, 1], 30)\nanswer = fake_llm(build_prompt(\"How fast are refunds?\", ids))\nprint(\"answer:\", answer)\nprint(\"grounded:\", grounded(answer, len(ids)))",
+        "title": "Generate an answer",
+        "instruction": "Fit chunks `[0, 3, 1]` into 30 words as `ids`, build the prompt for `How fast are refunds?`, and store `fake_llm`'s reply to that prompt in `answer`.",
+        "code": "ids = fit_budget([0, 3, 1], 30)\nanswer = fake_llm(build_prompt(\"How fast are refunds?\", ids))",
+        "check": "test(\"Generate an answer\", lambda: ids == [0, 3] and answer.startswith(\"Refunds\") and answer.endswith(\"[1]\"), \"The answer repeats the refunds chunk and cites [1].\")",
+        "expected": "The answer repeats the refunds chunk and cites [1].",
+        "reassurance": ""
+      },
+      {
+        "title": "Print and verify",
+        "instruction": "Print the answer after `answer:` and its grounding after `grounded:`. Then run the check.",
+        "code": "print(\"answer:\", answer)\nprint(\"grounded:\", grounded(answer, len(ids)))",
         "check": "",
         "expected": "The refund chunk comes back with [1] at the end, and grounded: True.",
         "reassurance": "The complete check verifies numbering, the budget, the prompt, citations, grounding and the printout."
@@ -312,24 +464,64 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Drafts are cheap to read: look at one before trusting it."
       },
       {
+        "title": "Average the vectors",
+        "instruction": "Set `question` to the first question in `EVAL` and `n` to 2. Create `vecs`: the embedding of each of the question's `n` drafts, followed by the embedding of the question itself. Then create `v`, their element-wise mean.",
+        "code": "question, n = EVAL[0][0], 2\nvecs = [embed(d) for d in drafts(question, n)] + [embed(question)]\nv = np.mean(vecs, axis=0)",
+        "check": "_q = EVAL[0][0]\n_m = np.mean([embed(draft_answer(_q, 0)), embed(draft_answer(_q, 1)), embed(_q)], axis=0)\ntest(\"Average the vectors\", lambda: len(vecs) == 3 and np.allclose(v, _m), \"v is the mean of three vectors: two drafts and the question.\")",
+        "expected": "v is the mean of three vectors: two drafts and the question.",
+        "reassurance": ""
+      },
+      {
         "title": "One HyDE vector",
-        "instruction": "Define `hyde_vector(question, n=2)`: embed each draft and the question itself, average those vectors element-wise, and rescale the mean to unit length, leaving a zero mean as zeros.",
+        "instruction": "Define `hyde_vector(question, n=2)` from those lines, then rescale the mean to unit length, leaving a zero mean as zeros.",
         "code": "def hyde_vector(question, n=2):\n    vecs = [embed(d) for d in drafts(question, n)] + [embed(question)]\n    v = np.mean(vecs, axis=0)\n    norm = np.linalg.norm(v)\n    return v / norm if norm > 0 else v",
         "check": "_q = EVAL[0][0]\n_m = np.mean([embed(draft_answer(_q, 0)), embed(draft_answer(_q, 1)), embed(_q)], axis=0)\ntest(\"One HyDE vector\", lambda: np.allclose(hyde_vector(_q), _m / np.linalg.norm(_m)) and all(np.isclose(np.linalg.norm(hyde_vector(question)), 1.0) for question, _ in EVAL) and np.array_equal(hyde_vector(\"Zxq?\"), np.zeros(DIM)), \"The mean of two drafts and the question, at unit length; an unknown question stays the zero vector.\")",
         "expected": "The mean of two drafts and the question, at unit length; an unknown question stays the zero vector.",
         "reassurance": "The question keeps a vote, so a draft that wanders off topic cannot take over."
       },
       {
+        "title": "Find the best chunk",
+        "instruction": "Set `vector` to the embedding of `reset password`, score every chunk against it as `scores`, and store the index of the highest score, as an int, in `best`.",
+        "code": "vector = embed(\"reset password\")\nscores = CHUNK_VECS @ vector\nbest = int(np.argmax(scores))",
+        "check": "test(\"Find the best chunk\", lambda: best == 6 and isinstance(best, int), \"best is 6, the password chunk.\")",
+        "expected": "best is 6, the password chunk.",
+        "reassurance": ""
+      },
+      {
         "title": "Search with any vector",
-        "instruction": "Define `top1(vector)`: score every chunk against the vector, and return the index of the best one as an int, or `None` when the best score is not above 0.",
+        "instruction": "Define `top1(vector)` from those lines: return the best index, or `None` when the best score is not above 0.",
         "code": "def top1(vector):\n    scores = CHUNK_VECS @ vector\n    best = int(np.argmax(scores))\n    return best if scores[best] > 0 else None",
         "check": "test(\"Search with any vector\", lambda: top1(embed(\"reset password\")) == 6 and top1(np.zeros(DIM)) is None, \"The password chunk for a password vector; None when nothing matches.\")",
         "expected": "The password chunk for a password vector; None when nothing matches.",
         "reassurance": ""
       },
       {
+        "title": "Score one question",
+        "instruction": "Set `to_vector` to the `embed` function and `hits` to 0. Take the first `(question, source)` pair from `EVAL` and store the top chunk of `to_vector(question)` in `best`.",
+        "code": "to_vector, hits = embed, 0\nquestion, source = EVAL[0]\nbest = top1(to_vector(question))",
+        "check": "test(\"Score one question\", lambda: to_vector is embed and hits == 0 and best == top1(embed(EVAL[0][0])), \"best is the top chunk for the first question.\")",
+        "expected": "best is the top chunk for the first question.",
+        "reassurance": ""
+      },
+      {
+        "title": "Count a hit",
+        "instruction": "Add one to `hits` when `best` is not None and that chunk's source matches `source`.",
+        "code": "hits += best is not None and CHUNKS[best][\"source\"] == source",
+        "check": "test(\"Count a hit\", lambda: hits == int(best is not None and CHUNKS[best][\"source\"] == source), \"hits is 1 if the first question found its source, else 0.\")",
+        "expected": "hits is 1 if the first question found its source, else 0.",
+        "reassurance": ""
+      },
+      {
+        "title": "Loop over every question",
+        "instruction": "Set `hits` back to 0 and repeat the lookup and the count for every `(question, source)` pair in `EVAL`.",
+        "code": "hits = 0\nfor question, source in EVAL:\n    best = top1(to_vector(question))\n    hits += best is not None and CHUNKS[best][\"source\"] == source",
+        "check": "test(\"Loop over every question\", lambda: hits == sum(top1(embed(q)) is not None and CHUNKS[top1(embed(q))][\"source\"] == s for q, s in EVAL), \"hits counts how many of the four questions plain embed answers from the right file.\")",
+        "expected": "hits counts how many of the four questions plain embed answers from the right file.",
+        "reassurance": ""
+      },
+      {
         "title": "Measure the hit rate",
-        "instruction": "Define `hit_rate(to_vector)`: for each `(question, source)` in `EVAL`, find the top chunk of `to_vector(question)`, count a hit when there is one and its source matches, and return hits divided by the number of questions.",
+        "instruction": "Define `hit_rate(to_vector)` from your loop, returning hits divided by the number of questions.",
         "code": "def hit_rate(to_vector):\n    hits = 0\n    for question, source in EVAL:\n        best = top1(to_vector(question))\n        hits += best is not None and CHUNKS[best][\"source\"] == source\n    return hits / len(EVAL)",
         "check": "test(\"Measure the hit rate\", lambda: hit_rate(lambda question: embed(\"refund\")) == 0.25 and hit_rate(lambda question: np.zeros(DIM)) == 0.0, \"A function that always searches for refunds hits only the first question; one that finds nothing scores 0.\")",
         "expected": "A function that always searches for refunds hits only the first question; one that finds nothing scores 0.",

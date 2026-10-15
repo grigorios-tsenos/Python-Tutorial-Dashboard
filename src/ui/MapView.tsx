@@ -80,6 +80,8 @@ export function MapView() {
   const wrap = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [cam, setCam] = useState({ x: 0, y: 0, k: 1 })
+  // the hero already lists every chapter, so the full legend opens on demand
+  const [legendOpen, setLegendOpen] = useState(false)
   const [animating, setAnimating] = useState(false)
   const animationTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [hover, setHover] = useState<string | null>(null)
@@ -340,15 +342,22 @@ export function MapView() {
         </div>
       </div>
 
-      <div className="map-legend glass" role="list" aria-label="Tracks">
-        {progress.map(({ track: t, done, total }) => (
-          <button key={t.id} role="listitem" className="legend-item" style={{ ['--tc' as string]: t.color }} onClick={() => focusPoint(t.x, t.y)} title={t.blurb}>
-            <span className="legend-glyph" aria-hidden>{t.glyph}</span>
-            <span className="legend-name">{t.name}</span>
-            <span className="legend-bar"><i style={{ width: `${(done / total) * 100}%` }} /></span>
-            <span className="legend-count">{done}/{total}</span>
-          </button>
-        ))}
+      <div className={`map-legend glass ${legendOpen ? 'open' : ''}`}>
+        <button className="legend-toggle" aria-expanded={legendOpen} onClick={() => setLegendOpen(o => !o)}>
+          <span>Chapters</span>
+          <span className="legend-count">{totalDone}/{LESSONS.length}</span>
+          <span aria-hidden>{legendOpen ? '▾' : '▴'}</span>
+        </button>
+        <div className="legend-items" role="list" aria-label="Tracks">
+          {progress.map(({ track: t, done, total }) => (
+            <button key={t.id} role="listitem" className="legend-item" style={{ ['--tc' as string]: t.color }} onClick={() => focusPoint(t.x, t.y)} title={t.blurb}>
+              <span className="legend-glyph" aria-hidden>{t.glyph}</span>
+              <span className="legend-name">{t.name}</span>
+              <span className="legend-bar"><i style={{ width: `${(done / total) * 100}%` }} /></span>
+              <span className="legend-count">{done}/{total}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="map-controls glass">

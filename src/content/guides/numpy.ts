@@ -180,9 +180,17 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Wrap the column means",
+        "instruction": "Define `column_means(values, missing)`. Inside it, repeat your steps from counting the observed cells to the safe division on its two arguments, keeping the same names for the in-between results, and return the column means.",
+        "code": "def column_means(values, missing):\n    observed = (~missing).sum(axis=0)\n    observed_only = np.where(missing, 0.0, values)\n    totals = observed_only.sum(axis=0)\n    fallback = np.zeros(values.shape[1])\n    means = np.divide(totals, observed, out=fallback, where=observed > 0)\n    return means",
+        "check": "test(\"Wrap the column means\", lambda: np.allclose(column_means(values, missing), means) and np.isnan(values).sum() == 3, \"column_means(values, missing) returns [34, 55000, 7]; values keeps its gaps.\")",
+        "expected": "column_means(values, missing) returns [34, 55000, 7]; values keeps its gaps.",
+        "reassurance": ""
+      },
+      {
         "title": "Wrap the steps in a function",
-        "instruction": "Define `impute_columns(values)`. Inside it, repeat your steps on the `values` it receives: find the gaps, count and total the observed cells, divide safely, fill. Return two results in order: the filled matrix and the number of missing cells in each column. For now you can assume a two-dimensional float matrix.",
-        "code": "def impute_columns(values):\n    missing = np.isnan(values)\n    observed = (~missing).sum(axis=0)\n    totals = np.where(missing, 0.0, values).sum(axis=0)\n    means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)\n    return np.where(missing, means, values), missing.sum(axis=0)",
+        "instruction": "Define `impute_columns(values)`. Inside it, find the gaps in the `values` it receives, get the means from `column_means`, and fill the gaps. Return two results in order: the filled matrix and the number of missing cells in each column. For now you can assume a two-dimensional float matrix.",
+        "code": "def impute_columns(values):\n    missing = np.isnan(values)\n    means = column_means(values, missing)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "test(\"Wrap the steps in a function\", lambda: np.allclose(impute_columns(values)[0], filled) and impute_columns(values)[1].tolist() == [1, 1, 1] and np.isnan(values).sum() == 3, \"impute_columns(values) returns your filled matrix and the counts [1, 1, 1]; values keeps its gaps.\")",
         "expected": "impute_columns(values) returns your filled matrix and the counts [1, 1, 1]; values keeps its gaps.",
         "reassurance": ""
@@ -190,7 +198,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
       {
         "title": "Accept any numeric matrix",
         "instruction": "Update `impute_columns` so it first converts whatever it receives into a floating-point NumPy array. Lists of lists and integer matrices should then work as well. Write the whole updated definition.",
-        "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    missing = np.isnan(values)\n    observed = (~missing).sum(axis=0)\n    totals = np.where(missing, 0.0, values).sum(axis=0)\n    means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)\n    return np.where(missing, means, values), missing.sum(axis=0)",
+        "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    missing = np.isnan(values)\n    means = column_means(values, missing)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "test(\"Accept any numeric matrix\", lambda: np.issubdtype(impute_columns([[1, 2], [3, 4]])[0].dtype, np.floating) and impute_columns([[1, 2], [3, 4]])[0].tolist() == [[1, 2], [3, 4]], \"A list of integer lists comes back as the same numbers in a float array.\")",
         "expected": "A list of integer lists comes back as the same numbers in a float array.",
         "reassurance": ""
@@ -198,7 +206,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
       {
         "title": "Reject the wrong shape",
         "instruction": "Update `impute_columns` once more: after converting the input, if it is not two-dimensional, stop with a `ValueError` carrying a short message instead of computing anything. Then run Check for the full exercise.",
-        "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    missing = np.isnan(values)\n    observed = (~missing).sum(axis=0)\n    totals = np.where(missing, 0.0, values).sum(axis=0)\n    means = np.divide(totals, observed, out=np.zeros(values.shape[1]), where=observed > 0)\n    return np.where(missing, means, values), missing.sum(axis=0)",
+        "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    missing = np.isnan(values)\n    means = column_means(values, missing)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "",
         "expected": "The full check covers integer input, an all-missing column, an empty matrix and one-dimensional input.",
         "reassurance": ""
@@ -318,9 +326,25 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Count the classes",
+        "instruction": "Create `n_classes`: the number of classes, which is the number of columns of `W`. Use NumPy's shape function rather than the `.shape` attribute, so a plain list of lists works too.",
+        "code": "n_classes = np.shape(W)[1]",
+        "check": "test(\"Count the classes\", lambda: n_classes == 3, \"n_classes is 3.\")",
+        "expected": "n_classes is 3.",
+        "reassurance": ""
+      },
+      {
         "title": "Build predict_labels",
-        "instruction": "Implement `predict_labels(X, W, b, labels)`, with parameters in that order, using your probability function. Return one label per row as a list, choosing the first label on ties. Require exactly one label per class or raise `ValueError`; an empty batch returns an empty list. Keep inputs unchanged.",
-        "code": "def predict_labels(X, W, b, labels):\n    if len(labels) != np.shape(W)[1]:\n        raise ValueError(\"need exactly one label per class\")\n    return [labels[i] for i in predict_proba(X, W, b).argmax(axis=1)]",
+        "instruction": "Define `predict_labels(X, W, b, labels)`, with parameters in that order. Using your probability function, choose one label per row (the first label on ties) and return them as a list.",
+        "code": "def predict_labels(X, W, b, labels):\n    winners = [labels[i] for i in predict_proba(X, W, b).argmax(axis=1)]\n    return winners",
+        "check": "test(\"Build predict_labels\", lambda: predict_labels(X, W, b, labels) == [\"billing\", \"bug\", \"feature\"] and predict_labels(np.zeros((0, 3)), W, b, labels) == [], \"It returns [\\\"billing\\\", \\\"bug\\\", \\\"feature\\\"], and an empty batch gives [].\")",
+        "expected": "It returns [\"billing\", \"bug\", \"feature\"], and an empty batch gives [].",
+        "reassurance": ""
+      },
+      {
+        "title": "Require one label per class",
+        "instruction": "Update `predict_labels` so that, before predicting anything, it raises a `ValueError` unless there is exactly one label per class of `W`. Keep inputs unchanged. Write the whole updated definition, then run Check.",
+        "code": "def predict_labels(X, W, b, labels):\n    n_classes = np.shape(W)[1]\n    if len(labels) != n_classes:\n        raise ValueError(\"need exactly one label per class\")\n    winners = [labels[i] for i in predict_proba(X, W, b).argmax(axis=1)]\n    return winners",
         "check": "",
         "expected": "The full check includes huge logits, empty batches, tied classes, malformed shapes and unchanged inputs.",
         "reassurance": ""
@@ -356,8 +380,8 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Wrap it in a function",
-        "instruction": "Define `pairwise_squared(left, right)`, with parameters in that order. It converts both inputs to floating-point arrays, builds the broadcast differences and returns the matrix of squared distances, as your three steps did.",
-        "code": "def pairwise_squared(left, right):\n    left = np.asarray(left, dtype=float)\n    right = np.asarray(right, dtype=float)\n    differences = left[:, None, :] - right[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
+        "instruction": "Define `pairwise_squared(left, right)`, with parameters in that order. Inside it, repeat your three steps on its own arguments, keeping the same names for the in-between results, and return the matrix of squared distances.",
+        "code": "def pairwise_squared(left, right):\n    left_float = np.asarray(left, dtype=float)\n    right_float = np.asarray(right, dtype=float)\n    differences = left_float[:, None, :] - right_float[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
         "check": "test(\"Wrap it in a function\", lambda: np.allclose(pairwise_squared(left, right), distances) and np.allclose(pairwise_squared([[50000]], [[-50000]]), [[1e10]]), \"The function matches distances and handles large integers without overflow.\")",
         "expected": "The function matches distances and handles large integers without overflow.",
         "reassurance": ""
@@ -365,7 +389,7 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
       {
         "title": "Reject mismatched shapes",
         "instruction": "Update `pairwise_squared` so that, after converting, it raises a `ValueError` unless both inputs are two-dimensional and have the same number of feature columns. Then run Check.",
-        "code": "def pairwise_squared(left, right):\n    left = np.asarray(left, dtype=float)\n    right = np.asarray(right, dtype=float)\n    if left.ndim != 2 or right.ndim != 2 or left.shape[1] != right.shape[1]:\n        raise ValueError(\"expected matrices with matching feature counts\")\n    # ponytail: n*m*d temporary values; chunk rows when vector collections outgrow memory.\n    differences = left[:, None, :] - right[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
+        "code": "def pairwise_squared(left, right):\n    left_float = np.asarray(left, dtype=float)\n    right_float = np.asarray(right, dtype=float)\n    if left_float.ndim != 2 or right_float.ndim != 2 or left_float.shape[1] != right_float.shape[1]:\n        raise ValueError(\"expected matrices with matching feature counts\")\n    # ponytail: n*m*d temporary values; chunk rows when vector collections outgrow memory.\n    differences = left_float[:, None, :] - right_float[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
         "check": "",
         "expected": "The full check includes swapped inputs, empty collections, large integers, invalid shapes and unchanged inputs.",
         "reassurance": ""
@@ -408,9 +432,17 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Score any matrix",
+        "instruction": "Define `cosine_scores(query, matrix)`: the cosine score of `query` against every row of `matrix`, computed the way you built `scores`, with zero where a row or the query has zero length.",
+        "code": "def cosine_scores(query, matrix):\n    norms = np.linalg.norm(matrix, axis=1) * np.linalg.norm(query)\n    return np.divide(matrix @ query, norms, out=np.zeros(len(matrix)), where=norms != 0)",
+        "check": "test(\"Score any matrix\", lambda: np.allclose(cosine_scores(query, docs), scores), \"cosine_scores(query, docs) matches scores.\")",
+        "expected": "cosine_scores(query, docs) matches scores.",
+        "reassurance": ""
+      },
+      {
         "title": "Finish top_k",
-        "instruction": "Implement `top_k(query, matrix, k)`, with parameters in that order, returning the row indices of the most cosine-similar rows, best first. Work on all rows without Python loops; zero vectors receive score zero and ties keep row order. Return no indices for non-positive k or an empty matrix, and all available rows if k is too large. Preserve inputs.",
-        "code": "def top_k(query, matrix, k):\n    \"\"\"Indices of the k rows of `matrix` most cosine-similar to `query`, best first.\"\"\"\n    norms = np.linalg.norm(matrix, axis=1) * np.linalg.norm(query)\n    scores = np.divide(matrix @ query, norms, out=np.zeros(len(matrix)), where=norms != 0)\n    return np.argsort(-scores, kind=\"stable\")[:max(0, k)]",
+        "instruction": "Implement `top_k(query, matrix, k)`, with parameters in that order: score the rows with `cosine_scores`, then return the row indices of the best ones, best first, with ties in row order. Return no indices for non-positive k or an empty matrix, and all available rows if k is too large. Preserve inputs.",
+        "code": "def top_k(query, matrix, k):\n    scores = cosine_scores(query, matrix)\n    return np.argsort(-scores, kind=\"stable\")[:max(0, k)]",
         "check": "",
         "expected": "The complete check includes zero vectors, a zero query, tied scores, empty data and non-positive k.",
         "reassurance": ""
