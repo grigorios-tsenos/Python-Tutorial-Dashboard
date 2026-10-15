@@ -36,12 +36,12 @@ from langchain_core.documents import Document
 def split_documents(docs, chunk_size, overlap):
     """Overlapping word windows; each chunk keeps its source metadata plus its position."""
     # TODO: one Document per window, with chunk and start_word metadata
-    return [Document(doc.page_content, doc.metadata) for doc in docs]
+    return [Document(doc.page_content, metadata=doc.metadata) for doc in docs]
 
 runbook = Document(
     "If the nightly job fails, check the Delta table history first. "
     "Restore the last good version before rerunning the pipeline.",
-    {"source": "runbook.md"},
+    metadata={"source": "runbook.md"},
 )
 for chunk in split_documents([runbook], chunk_size=8, overlap=2):
     print(chunk.metadata, "|", chunk.page_content)
@@ -58,7 +58,7 @@ def split_documents(docs, chunk_size, overlap):
         start, number = 0, 0
         while start < len(words):
             text = " ".join(words[start:start + chunk_size])
-            chunks.append(Document(text, {**doc.metadata, "chunk": number, "start_word": start}))
+            chunks.append(Document(text, metadata={**doc.metadata, "chunk": number, "start_word": start}))
             if start + chunk_size >= len(words):
                 break
             start += chunk_size - overlap
@@ -68,28 +68,28 @@ def split_documents(docs, chunk_size, overlap):
 runbook = Document(
     "If the nightly job fails, check the Delta table history first. "
     "Restore the last good version before rerunning the pipeline.",
-    {"source": "runbook.md"},
+    metadata={"source": "runbook.md"},
 )
 for chunk in split_documents([runbook], chunk_size=8, overlap=2):
     print(chunk.metadata, "|", chunk.page_content)
 @@check
-ten = Document(" ".join(f"w{i}" for i in range(10)), {"source": "a.md"})
+ten = Document(" ".join(f"w{i}" for i in range(10)), metadata={"source": "a.md"})
 parts = split_documents([ten], 4, 1)
 test("windows overlap by exactly `overlap` words", lambda: [c.page_content for c in parts] == ["w0 w1 w2 w3", "w3 w4 w5 w6", "w6 w7 w8 w9"])
 test("chunks record their number and first word", lambda: [(c.metadata["chunk"], c.metadata["start_word"]) for c in parts] == [(0, 0), (1, 3), (2, 6)])
 test("chunks are Documents that keep the source", lambda: all(isinstance(c, Document) and c.metadata["source"] == "a.md" for c in parts))
-seven = Document("a b c d e f g", {"source": "b.md"})
+seven = Document("a b c d e f g", metadata={"source": "b.md"})
 test("no trailing chunk that only repeats overlap", lambda: [c.page_content for c in split_documents([seven], 4, 1)] == ["a b c d", "d e f g"])
 test("zero overlap tiles the words", lambda: [c.page_content for c in split_documents([ten], 5, 0)] == ["w0 w1 w2 w3 w4", "w5 w6 w7 w8 w9"])
-test("a short document becomes one chunk with normalized spacing", lambda: [c.page_content for c in split_documents([Document("one\n\n two\tthree ", {})], 8, 2)] == ["one two three"])
+test("a short document becomes one chunk with normalized spacing", lambda: [c.page_content for c in split_documents([Document("one\n\n two\tthree ", metadata={})], 8, 2)] == ["one two three"])
 meta = {"source": "c.md", "team": "data"}
-docs = [Document("x y z", meta), Document("   ", {"source": "blank.md"}), Document("p q r s t", {"source": "d.md"})]
+docs = [Document("x y z", metadata=meta), Document("   ", metadata={"source": "blank.md"}), Document("p q r s t", metadata={"source": "d.md"})]
 many = split_documents(docs, 3, 1)
 test("numbering restarts per document and blank documents are skipped", lambda: [(c.metadata["source"], c.metadata["chunk"]) for c in many] == [("c.md", 0), ("d.md", 0), ("d.md", 1)])
 test("metadata is copied, never shared or modified", lambda: meta == {"source": "c.md", "team": "data"} and many[0].metadata is not meta and many[0].metadata["team"] == "data")
 test("source text is unchanged", lambda: docs[2].page_content == "p q r s t" and ten.metadata == {"source": "a.md"})
 def covers(words, size, overlap):
-    chunks = split_documents([Document(" ".join(words), {})], size, overlap)
+    chunks = split_documents([Document(" ".join(words), metadata={})], size, overlap)
     seen = set()
     for c in chunks:
         seen.update(range(c.metadata["start_word"], c.metadata["start_word"] + len(c.page_content.split())))

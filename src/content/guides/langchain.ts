@@ -116,20 +116,44 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
   "lc-history": {
     "steps": [
       {
+        "title": "Start the prompt with a system message",
+        "instruction": "Create `prompt` with `ChatPromptTemplate.from_messages`, holding one system message for now. System text: “You are a support assistant for {product}.” The setup provides `history` and a recording model named `llm`.",
+        "code": "prompt = ChatPromptTemplate.from_messages([\n    (\"system\", \"You are a support assistant for {product}.\"),\n])",
+        "check": "test(\"Start the prompt with a system message\", lambda: [m.content for m in prompt.invoke({\"product\":\"Orbit\"}).to_messages()] == [\"You are a support assistant for Orbit.\"], \"The prompt renders one system message for Orbit.\")",
+        "expected": "The prompt renders one system message for Orbit.",
+        "reassurance": ""
+      },
+      {
         "title": "Place history in the prompt",
-        "instruction": "Create `prompt` with `ChatPromptTemplate.from_messages`. It needs a system message, a `MessagesPlaceholder` named `history`, and a human message for the new question, in that order. System text: “You are a support assistant for {product}.” Human template: “{question}”. The setup provides `history` and a recording model named `llm`.",
+        "instruction": "Recreate `prompt` with two more entries after the system message: a `MessagesPlaceholder` named `history`, then a human message with the template “{question}”.",
         "code": "prompt = ChatPromptTemplate.from_messages([\n    (\"system\", \"You are a support assistant for {product}.\"),\n    MessagesPlaceholder(\"history\"),\n    (\"human\", \"{question}\"),\n])",
         "check": "test(\"Place history in the prompt\", lambda: [m.type for m in prompt.invoke({\"product\":\"Orbit\", \"history\":[HumanMessage(\"earlier\")], \"question\":\"now\"}).to_messages()] == [\"system\", \"human\", \"human\"], \"The prompt contains system, earlier human, then newest human.\")",
         "expected": "The prompt contains system, earlier human, then newest human.",
-        "reassurance": "The history is in the right position; trimming is the next separate job."
+        "reassurance": "The placeholder expands into however many messages you pass; trimming is the next job."
+      },
+      {
+        "title": "Find where turns start",
+        "instruction": "Create `starts`, the positions in `history` of every message whose `type` is `human`. Use `enumerate` to get each position next to its message.",
+        "code": "starts = [i for i, m in enumerate(history) if m.type == \"human\"]",
+        "check": "test(\"Find where turns start\", lambda: starts == [1, 3, 5], \"The human messages sit at positions 1, 3 and 5.\")",
+        "expected": "The human messages sit at positions 1, 3 and 5.",
+        "reassurance": ""
+      },
+      {
+        "title": "Cut from a turn start",
+        "instruction": "Define `trim_history(messages, max_turns)`. Keep only the last `max_turns` turn starts, and return a new list of every message from the oldest kept start to the end.",
+        "code": "def trim_history(messages, max_turns):\n    starts = [i for i, m in enumerate(messages) if m.type == \"human\"][-max_turns:]\n    return list(messages[starts[0]:])",
+        "check": "test(\"Cut from a turn start\", lambda: [m.content for m in trim_history(history, 1)] == [\"Also my login fails\", \"Try the reset link.\"] and len(trim_history(history, 2)) == 4, \"One turn keeps the newest question and its reply; two turns keep four messages.\")",
+        "expected": "One turn keeps the newest question and its reply; two turns keep four messages.",
+        "reassurance": ""
       },
       {
         "title": "Keep complete recent turns",
-        "instruction": "Define `trim_history` with parameters `messages` and `max_turns`, in that order. Return a new list containing the most recent human-started turns and every following reply, including consecutive AI replies. A turn starts at a message whose `type` is `human`. Ignore messages before the oldest retained human message. Non-positive windows, empty histories, and histories without human messages should give an empty list; leave the original list unchanged.",
-        "code": "def trim_history(messages, max_turns):\n    \"\"\"The last max_turns turns, starting on a human message.\"\"\"\n    if max_turns <= 0:\n        return []\n    starts = [i for i, m in enumerate(messages) if m.type == \"human\"][-max_turns:]\n    return list(messages[starts[0]:]) if starts else []",
-        "check": "test(\"Keep complete recent turns\", lambda: [m.content for m in trim_history(history, 1)] == [\"Also my login fails\", \"Try the reset link.\"] and trim_history(history, 0) == [] and trim_history([AIMessage(\"hi\")], 2) == [], \"One turn keeps the newest question and reply. A zero window or no human messages gives [].\")",
+        "instruction": "Rewrite `trim_history` so a window of zero or less returns `[]` straight away, and a history with no human message also gives `[]` instead of failing. Leave the original list unchanged.",
+        "code": "def trim_history(messages, max_turns):\n    if max_turns <= 0:\n        return []\n    starts = [i for i, m in enumerate(messages) if m.type == \"human\"][-max_turns:]\n    return list(messages[starts[0]:]) if starts else []",
+        "check": "test(\"Keep complete recent turns\", lambda: [m.content for m in trim_history(history, 1)] == [\"Also my login fails\", \"Try the reset link.\"] and trim_history(history, 0) == [] and trim_history([AIMessage(\"hi\")], 2) == [] and trim_history([], 2) == [], \"One turn keeps the newest question and reply. A zero window or no human messages gives [].\")",
         "expected": "One turn keeps the newest question and reply. A zero window or no human messages gives [].",
-        "reassurance": "Your window starts on a human message and keeps its reply together."
+        "reassurance": ""
       },
       {
         "title": "Connect trimming to the chain",
@@ -161,20 +185,44 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
   "lc-tools": {
     "steps": [
       {
-        "title": "Turn a counter into a tool",
-        "instruction": "Define a tool named `word_count` with one parameter, `text`, annotated as `str`, and an `int` return annotation. Apply the imported `tool` decorator and give it a descriptive docstring containing the words “Count the words”. It should count whitespace-separated words, including tabs and newlines, and give zero for empty or whitespace-only text. The setup also provides a `shout` tool and a message named `msg` requesting both tools.",
-        "code": "@tool\ndef word_count(text: str) -> int:\n    \"\"\"Count the words in a piece of text.\"\"\"\n    return len(text.split())",
-        "check": "test(\"Turn a counter into a tool\", lambda: word_count.invoke({\"text\":\"  one\\ttwo\\nthree  \"}) == 3 and word_count.invoke({\"text\":\"\"}) == 0 and word_count.name == \"word_count\", \"Three words are counted across mixed whitespace; an empty string gives 0.\")",
+        "title": "Count words in text",
+        "instruction": "Define a plain function `word_count` with one parameter, `text`, annotated as `str`, and an `int` return annotation. Return the number of whitespace-separated words; tabs and newlines count as whitespace, and blank text has zero words. The setup also provides a `shout` tool and a message named `msg` requesting both tools.",
+        "code": "def word_count(text: str) -> int:\n    return len(text.split())",
+        "check": "test(\"Count words in text\", lambda: word_count(\"  one\\ttwo\\nthree  \") == 3 and word_count(\"\") == 0, \"Three words are counted across mixed whitespace; an empty string gives 0.\")",
         "expected": "Three words are counted across mixed whitespace; an empty string gives 0.",
-        "reassurance": "split handles repeated spaces for you, and the docstring supplies the tool description."
+        "reassurance": ""
+      },
+      {
+        "title": "Turn a counter into a tool",
+        "instruction": "Redefine `word_count` as a tool: apply the imported `tool` decorator and add a docstring containing the words “Count the words”. A tool is called with `invoke` and a dictionary of arguments.",
+        "code": "@tool\ndef word_count(text: str) -> int:\n    \"\"\"Count the words in a piece of text.\"\"\"\n    return len(text.split())",
+        "check": "test(\"Turn a counter into a tool\", lambda: word_count.invoke({\"text\":\"  one\\ttwo\\nthree  \"}) == 3 and word_count.name == \"word_count\" and \"Count the words\" in word_count.description, \"word_count is now a tool named word_count that still counts 3 words.\")",
+        "expected": "word_count is now a tool named word_count that still counts 3 words.",
+        "reassurance": "The function name becomes the tool name and the docstring becomes its description."
+      },
+      {
+        "title": "Look up tools by name",
+        "instruction": "Define `tools_by_name(tools)` that returns a dictionary mapping each tool’s `name` to the tool itself.",
+        "code": "def tools_by_name(tools):\n    return {t.name: t for t in tools}",
+        "check": "test(\"Look up tools by name\", lambda: tools_by_name([shout, word_count]) == {\"shout\": shout, \"word_count\": word_count}, \"The dictionary maps shout and word_count to their tools.\")",
+        "expected": "The dictionary maps shout and word_count to their tools.",
+        "reassurance": ""
+      },
+      {
+        "title": "Read one tool request",
+        "instruction": "Save the first entry of `msg.tool_calls` in `first`. Each entry is a dictionary with a `name` and an `args` dictionary.",
+        "code": "first = msg.tool_calls[0]",
+        "check": "test(\"Read one tool request\", lambda: first[\"name\"] == \"word_count\" and first[\"args\"] == {\"text\": \"tools make agents useful\"}, \"The first request asks word_count to count “tools make agents useful”.\")",
+        "expected": "The first request asks word_count to count “tools make agents useful”.",
+        "reassurance": ""
       },
       {
         "title": "Dispatch requests by name",
-        "instruction": "Define `run_tool_calls` with parameters `ai_message` and `tools`, in that order. Each entry in `ai_message.tool_calls` has a `name` and an `args` dictionary. Match the name to the corresponding tool’s `name` field, invoke that tool with the arguments, and collect the results as strings in request order. Repeated requests must all run, regardless of tool-list order; a message with no calls should give an empty list.",
-        "code": "def run_tool_calls(ai_message, tools):\n    by_name = {t.name: t for t in tools}\n    return [str(by_name[call[\"name\"]].invoke(call[\"args\"])) for call in ai_message.tool_calls]",
+        "instruction": "Define `run_tool_calls(ai_message, tools)`. For every entry in `ai_message.tool_calls`, find the tool by name with `tools_by_name`, invoke it with the entry’s arguments, and collect each result as a string, in request order. A message with no calls gives an empty list.",
+        "code": "def run_tool_calls(ai_message, tools):\n    by_name = tools_by_name(tools)\n    return [str(by_name[call[\"name\"]].invoke(call[\"args\"])) for call in ai_message.tool_calls]",
         "check": "test(\"Dispatch requests by name\", lambda: run_tool_calls(msg, [shout, word_count]) == [\"4\", \"ORBIT\"] and run_tool_calls(AIMessage(\"hello\"), [word_count]) == [], \"The two calls produce [\\\"4\\\", \\\"ORBIT\\\"] even when the tools list has a different order. No calls gives [].\")",
         "expected": "The two calls produce [\"4\", \"ORBIT\"] even when the tools list has a different order. No calls gives [].",
-        "reassurance": "Your dispatcher uses names correctly and handles an empty batch."
+        "reassurance": ""
       },
       {
         "title": "Print the tool results",
@@ -198,20 +246,52 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Parsing works. We still need to validate which fields are acceptable."
       },
       {
+        "title": "Reject a non-list",
+        "instruction": "Define `validate_sources(sources)` that raises `ValueError` with the text “sources must be a list of strings” when `sources` is not a list.",
+        "code": "def validate_sources(sources):\n    if not isinstance(sources, list):\n        raise ValueError(\"sources must be a list of strings\")",
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Reject a non-list\", lambda: _rejects(lambda: validate_sources(\"guide\")) and validate_sources([\"guide\"]) is None, \"A plain string is rejected with ValueError; a list passes.\")",
+        "expected": "A plain string is rejected with ValueError; a list passes.",
+        "reassurance": ""
+      },
+      {
         "title": "Validate source citations",
-        "instruction": "Define `validate_sources` with one parameter, `sources`. Accept a list containing only strings, including an empty list, and return the accepted list unchanged. Reject any other shape with `ValueError`. Error text: “sources must be a list of strings”.",
+        "instruction": "Rewrite `validate_sources` so it also rejects a list containing anything other than strings, and returns the accepted list unchanged. An empty list is valid.",
         "code": "def validate_sources(sources):\n    if not isinstance(sources, list) or any(not isinstance(source, str) for source in sources):\n        raise ValueError(\"sources must be a list of strings\")\n    return sources",
-        "check": "test(\"Validate source citations\", lambda: validate_sources([\"guide\"]) == [\"guide\"] and validate_sources([]) == [], \"A list of strings and an empty list are valid sources.\")",
-        "expected": "A list of strings and an empty list are valid sources.",
-        "reassurance": "The citation check is ready to use in the answer parser."
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate source citations\", lambda: validate_sources([\"guide\"]) == [\"guide\"] and validate_sources([]) == [] and _rejects(lambda: validate_sources([\"guide\", 3])), \"A list of strings and an empty list are valid; a list containing 3 is rejected.\")",
+        "expected": "A list of strings and an empty list are valid; a list containing 3 is rejected.",
+        "reassurance": ""
+      },
+      {
+        "title": "Parse the reply",
+        "instruction": "Define `parse_answer(message)`. Parse `message` with `parser`, then return a dictionary with only the parsed `answer` and `sources` values.",
+        "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    return {\"answer\": data[\"answer\"], \"sources\": data[\"sources\"]}",
+        "check": "test(\"Parse the reply\", lambda: parse_answer(message) == {\"answer\":\"  Delta remembers versions.  \", \"sources\":[\"guide\"]}, \"The fenced reply becomes a dictionary; the answer is still padded.\")",
+        "expected": "The fenced reply becomes a dictionary; the answer is still padded.",
+        "reassurance": ""
+      },
+      {
+        "title": "Trim the answer and check citations",
+        "instruction": "Rewrite `parse_answer` to read both fields with the dictionary `get` method, trim surrounding whitespace from the answer, and pass the sources through `validate_sources`.",
+        "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    answer = data.get(\"answer\")\n    return {\"answer\": answer.strip(), \"sources\": validate_sources(data.get(\"sources\"))}",
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Trim the answer and check citations\", lambda: parse_answer(message) == {\"answer\":\"Delta remembers versions.\", \"sources\":[\"guide\"]} and _rejects(lambda: parse_answer(AIMessage('{\"answer\":\"ok\"}'))), \"The answer is trimmed, and missing sources raise ValueError.\")",
+        "expected": "The answer is trimmed, and missing sources raise ValueError.",
+        "reassurance": ""
+      },
+      {
+        "title": "Require a JSON object",
+        "instruction": "Rewrite `parse_answer` so parsed data that is not a dictionary raises `ValueError` with the text “answer must be a JSON object”, before any field is read.",
+        "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    if not isinstance(data, dict):\n        raise ValueError(\"answer must be a JSON object\")\n    answer = data.get(\"answer\")\n    return {\"answer\": answer.strip(), \"sources\": validate_sources(data.get(\"sources\"))}",
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Require a JSON object\", lambda: parse_answer(message)[\"answer\"] == \"Delta remembers versions.\" and _rejects(lambda: parse_answer(AIMessage(\"[1, 2]\"))), \"A JSON list is rejected with ValueError; the example still parses.\")",
+        "expected": "A JSON list is rejected with ValueError; the example still parses.",
+        "reassurance": ""
       },
       {
         "title": "Validate the answer shape",
-        "instruction": "Define `parse_answer` with one parameter, `message`. Use `parser` to parse it, then require a dictionary with a non-blank string `answer` and a valid `sources` field. Trim surrounding whitespace from the answer, use `validate_sources` for citations, and return only those two fields. Invalid JSON and missing or invalid fields must raise `ValueError`; extra fields should be ignored. Error texts for a non-object and invalid answer are “answer must be a JSON object” and “answer must be non-empty text”.",
+        "instruction": "Rewrite `parse_answer` so an answer that is missing, not a string, or blank raises `ValueError` with the text “answer must be non-empty text”. Extra fields are still ignored.",
         "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    if not isinstance(data, dict):\n        raise ValueError(\"answer must be a JSON object\")\n    answer = data.get(\"answer\")\n    if not isinstance(answer, str) or not answer.strip():\n        raise ValueError(\"answer must be non-empty text\")\n    return {\"answer\": answer.strip(), \"sources\": validate_sources(data.get(\"sources\"))}",
-        "check": "test(\"Validate the answer shape\", lambda: parse_answer(message) == {\"answer\":\"Delta remembers versions.\", \"sources\":[\"guide\"]}, \"The fenced reply becomes a trimmed answer with the guide source.\")",
-        "expected": "The fenced reply becomes a trimmed answer with the guide source.",
-        "reassurance": "The valid example works; the final checks will also try malformed JSON and invalid fields."
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate the answer shape\", lambda: parse_answer(message) == {\"answer\":\"Delta remembers versions.\", \"sources\":[\"guide\"]} and _rejects(lambda: parse_answer(AIMessage('{\"answer\":\" \",\"sources\":[]}'))) and _rejects(lambda: parse_answer(AIMessage('{\"answer\":12,\"sources\":[]}'))), \"The fenced reply becomes a trimmed answer; blank or numeric answers are rejected.\")",
+        "expected": "The fenced reply becomes a trimmed answer; blank or numeric answers are rejected.",
+        "reassurance": ""
       },
       {
         "title": "Show the structured result",
@@ -251,20 +331,60 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "You have the stride right. Overlap is counted in words, not characters."
       },
       {
+        "title": "List the window starts",
+        "instruction": "Set `chunk_size` to 8 and `overlap` to 2 in one line. Then create `starts`, a list of the word indices where windows begin: from 0, below `len(words)`, stepping by the number of new words per window. Use `range`.",
+        "code": "chunk_size, overlap = 8, 2\nstarts = list(range(0, len(words), chunk_size - overlap))",
+        "check": "test(\"List the window starts\", lambda: starts == [0, 6, 12, 18], \"The 20 words give window starts 0, 6, 12 and 18.\")",
+        "expected": "The 20 words give window starts 0, 6, 12 and 18.",
+        "reassurance": ""
+      },
+      {
+        "title": "Collect the window texts",
+        "instruction": "Create an empty list `chunks`. Loop over the same starts with `enumerate`, naming the loop variables `number` and `start`, and append each window’s text (up to `chunk_size` words joined by single spaces).",
+        "code": "chunks = []\nfor number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n    chunks.append(\" \".join(words[start:start + chunk_size]))",
+        "check": "test(\"Collect the window texts\", lambda: len(chunks) == 4 and chunks[0] == first_window and chunks[-1] == \"the pipeline.\", \"Four windows; the last one, “the pipeline.”, only repeats overlap.\")",
+        "expected": "Four windows; the last one, “the pipeline.”, only repeats overlap.",
+        "reassurance": ""
+      },
+      {
+        "title": "Stop at the end",
+        "instruction": "Rebuild `chunks` with the same loop, but stop before appending a window (other than the first) whose new words would start past the end, so no window is pure overlap.",
+        "code": "chunks = []\nfor number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n    if number and start + overlap >= len(words):\n        break\n    chunks.append(\" \".join(words[start:start + chunk_size]))",
+        "check": "test(\"Stop at the end\", lambda: len(chunks) == 3 and chunks[-1] == \"the last good version before rerunning the pipeline.\", \"Three windows; the last one ends on “pipeline.”.\")",
+        "expected": "Three windows; the last one ends on “pipeline.”.",
+        "reassurance": ""
+      },
+      {
+        "title": "Wrap windows in a function",
+        "instruction": "Define `chunk_document(doc, chunk_size, overlap)` that reads the words of `doc`, runs your loop, and returns `chunks`.",
+        "code": "def chunk_document(doc, chunk_size, overlap):\n    words = doc.page_content.split()\n    chunks = []\n    for number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n        if number and start + overlap >= len(words):\n            break\n        chunks.append(\" \".join(words[start:start + chunk_size]))\n    return chunks",
+        "check": "test(\"Wrap windows in a function\", lambda: chunk_document(Document(\"a b c d e f g\"), 4, 1) == [\"a b c d\", \"d e f g\"] and chunk_document(Document(\"  \"), 4, 1) == [], \"Seven words give two four-word windows; a blank document gives [].\")",
+        "expected": "Seven words give two four-word windows; a blank document gives [].",
+        "reassurance": ""
+      },
+      {
         "title": "Build windows for one document",
-        "instruction": "Define `chunk_document` with parameters `doc`, `chunk_size`, and `overlap`, in that order. Return a list of new `Document` objects containing word windows, normalized to single spaces. Advance by the number of new words per window and omit a final window that would contain only repeated overlap. Copy each chunk’s source metadata and add zero-based `chunk` and `start_word` fields; numbering restarts for each document. Include all source words, skip blank documents, and leave source text and metadata unchanged.",
-        "code": "def chunk_document(doc, chunk_size, overlap):\n    words = doc.page_content.split()\n    chunks = []\n    for number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n        if number and start + overlap >= len(words):\n            break\n        chunks.append(Document(\" \".join(words[start:start + chunk_size]), {**doc.metadata, \"chunk\": number, \"start_word\": start}))\n    return chunks",
-        "check": "test(\"Build windows for one document\", lambda: [c.page_content for c in chunk_document(Document(\"a b c d e f g\", {\"source\":\"a\"}), 4, 1)] == [\"a b c d\", \"d e f g\"], \"Seven words produce two four-word windows with one overlapping word.\")",
-        "expected": "Seven words produce two four-word windows with one overlapping word.",
-        "reassurance": "The per-document loop avoids an extra chunk containing only overlap."
+        "instruction": "Change `chunk_document` so each chunk is a new `Document`: the window text as content, and as metadata a copy of the source metadata plus `chunk` (the window number) and `start_word`. Pass metadata by keyword.",
+        "code": "def chunk_document(doc, chunk_size, overlap):\n    words = doc.page_content.split()\n    chunks = []\n    for number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n        if number and start + overlap >= len(words):\n            break\n        chunks.append(Document(\" \".join(words[start:start + chunk_size]), metadata={**doc.metadata, \"chunk\": number, \"start_word\": start}))\n    return chunks",
+        "check": "test(\"Build windows for one document\", lambda: [(c.page_content, c.metadata) for c in chunk_document(Document(\"a b c d e f g\", metadata={\"source\":\"a\"}), 4, 1)] == [(\"a b c d\", {\"source\":\"a\", \"chunk\":0, \"start_word\":0}), (\"d e f g\", {\"source\":\"a\", \"chunk\":1, \"start_word\":3})], \"Two Documents keep source a and record chunk 0 at word 0, chunk 1 at word 3.\")",
+        "expected": "Two Documents keep source a and record chunk 0 at word 0, chunk 1 at word 3.",
+        "reassurance": "{**doc.metadata, ...} builds a fresh dictionary, so the source metadata is never shared or changed."
+      },
+      {
+        "title": "Combine documents",
+        "instruction": "Define `split_documents(docs, chunk_size, overlap)` that returns the chunks of every document in `docs`, in document order, using `chunk_document`.",
+        "code": "def split_documents(docs, chunk_size, overlap):\n    return [chunk for doc in docs for chunk in chunk_document(doc, chunk_size, overlap)]",
+        "check": "test(\"Combine documents\", lambda: split_documents([], 4, 1) == [] and len(split_documents([Document(\"a b c d e f g\", metadata={}), Document(\"x y\")], 4, 1)) == 3, \"An empty collection gives []; two documents give three chunks.\")",
+        "expected": "An empty collection gives []; two documents give three chunks.",
+        "reassurance": ""
       },
       {
         "title": "Validate sizes and combine documents",
-        "instruction": "Define `split_documents` with parameters `docs`, `chunk_size`, and `overlap`, in that order. Require a size of at least 1 and a non-negative overlap smaller than that size; reject invalid values with `ValueError`. Use `chunk_document` for each document and combine its results in document order. An empty collection should give an empty list. Error text: “need chunk_size >= 1 and 0 <= overlap < chunk_size”.",
+        "instruction": "Rewrite `split_documents` to first require a size of at least 1 and an overlap that is non-negative and smaller than the size; otherwise raise `ValueError` with the text “need chunk_size >= 1 and 0 <= overlap < chunk_size”.",
         "code": "def split_documents(docs, chunk_size, overlap):\n    if chunk_size < 1 or not 0 <= overlap < chunk_size:\n        raise ValueError(\"need chunk_size >= 1 and 0 <= overlap < chunk_size\")\n    return [chunk for doc in docs for chunk in chunk_document(doc, chunk_size, overlap)]",
-        "check": "test(\"Validate sizes and combine documents\", lambda: split_documents([], 4, 1) == [] and len(split_documents([Document(\"a b c d e f g\", {})], 4, 1)) == 2, \"An empty collection gives []; the seven-word example still gives two chunks.\")",
-        "expected": "An empty collection gives []; the seven-word example still gives two chunks.",
-        "reassurance": "The public splitter now validates its inputs before doing any work."
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate sizes and combine documents\", lambda: _rejects(lambda: split_documents([], 0, 0)) and _rejects(lambda: split_documents([], 4, 4)) and _rejects(lambda: split_documents([], 4, -1)) and len(split_documents([Document(\"a b c d e f g\", metadata={})], 4, 1)) == 2, \"Size 0, overlap 4 of 4 and overlap -1 raise ValueError; the seven-word example still gives two chunks.\")",
+        "expected": "Size 0, overlap 4 of 4 and overlap -1 raise ValueError; the seven-word example still gives two chunks.",
+        "reassurance": ""
       },
       {
         "title": "Inspect every chunk",
@@ -275,25 +395,65 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The printed positions make it easy to trace where each passage came from."
       }
     ],
-    "setup": "from langchain_core.documents import Document\n\nrunbook = Document(\n    \"If the nightly job fails, check the Delta table history first. \"\n    \"Restore the last good version before rerunning the pipeline.\",\n    {\"source\": \"runbook.md\"},\n)"
+    "setup": "from langchain_core.documents import Document\n\nrunbook = Document(\n    \"If the nightly job fails, check the Delta table history first. \"\n    \"Restore the last good version before rerunning the pipeline.\",\n    metadata={\"source\": \"runbook.md\"},\n)"
   },
   "lc-context-budget": {
     "steps": [
       {
+        "title": "Append one passage",
+        "instruction": "Define `add_passage(context, used, document, max_chars)`. Strip `document` into `passage`, and return a pair: `context` followed by two newlines and the passage, and `used` plus the passage length plus 2 for the separator. Ignore the budget for now.",
+        "code": "def add_passage(context, used, document, max_chars):\n    passage = document.strip()\n    return context + \"\\n\\n\" + passage, used + len(passage) + 2",
+        "check": "test(\"Append one passage\", lambda: add_passage(\"ok\", 2, \" go \", 6) == (\"ok\\n\\ngo\", 6), \"Adding go to ok gives ok, two newlines, go, and a count of 6.\")",
+        "expected": "Adding go to ok gives ok, two newlines, go, and a count of 6.",
+        "reassurance": ""
+      },
+      {
+        "title": "Separate only when needed",
+        "instruction": "Rewrite `add_passage` to compute `size`, the passage length plus 2 only when `context` is non-empty, and to add the two-newline separator only in that case too.",
+        "code": "def add_passage(context, used, document, max_chars):\n    passage = document.strip()\n    size = len(passage) + (2 if context else 0)\n    return context + (\"\\n\\n\" if context else \"\") + passage, used + size",
+        "check": "test(\"Separate only when needed\", lambda: add_passage(\"\", 0, \" go \", 9) == (\"go\", 2) and add_passage(\"ok\", 2, \"go\", 6) == (\"ok\\n\\ngo\", 6), \"The first passage has no separator and counts 2; the second counts its separator.\")",
+        "expected": "The first passage has no separator and counts 2; the second counts its separator.",
+        "reassurance": ""
+      },
+      {
         "title": "Try one whole passage",
-        "instruction": "Define `add_passage` with parameters `context`, `used`, `document`, and `max_chars`, in that order. Return a pair containing the resulting context string and character count. Strip the candidate passage, skip it if blank or too large, and include it whole only when it fits. Separate it from any existing context with exactly two newlines and count those characters too. A skipped passage must leave both values unchanged.",
+        "instruction": "Rewrite `add_passage` so the passage is added only when it is not blank and `used + size` stays within `max_chars`. Otherwise return `context` and `used` unchanged.",
         "code": "def add_passage(context, used, document, max_chars):\n    passage = document.strip()\n    size = len(passage) + (2 if context else 0)\n    if passage and used + size <= max_chars:\n        return context + (\"\\n\\n\" if context else \"\") + passage, used + size\n    return context, used",
-        "check": "test(\"Try one whole passage\", lambda: add_passage(\"ok\", 2, \"go\", 6) == (\"ok\\n\\ngo\", 6) and add_passage(\"ok\", 2, \"go\", 5) == (\"ok\", 2), \"Budget 6 includes go and its separator; budget 5 preserves only ok.\")",
-        "expected": "Budget 6 includes go and its separator; budget 5 preserves only ok.",
-        "reassurance": "The helper keeps a whole passage or skips it, with no partial text."
+        "check": "test(\"Try one whole passage\", lambda: add_passage(\"ok\", 2, \"go\", 6) == (\"ok\\n\\ngo\", 6) and add_passage(\"ok\", 2, \"go\", 5) == (\"ok\", 2) and add_passage(\"ok\", 2, \"  \", 9) == (\"ok\", 2), \"Budget 6 includes go and its separator; budget 5 or a blank passage leaves only ok.\")",
+        "expected": "Budget 6 includes go and its separator; budget 5 or a blank passage leaves only ok.",
+        "reassurance": "The helper keeps a whole passage or skips it, never partial text."
+      },
+      {
+        "title": "Start an empty context",
+        "instruction": "In one line, set `documents` to the list “too long to fit”, “ok”, “go” and `max_chars` to 6. Then set `context` to an empty string and `used` to 0 in one line.",
+        "code": "documents, max_chars = [\"too long to fit\", \"ok\", \"go\"], 6\ncontext, used = \"\", 0",
+        "check": "test(\"Start an empty context\", lambda: context == \"\" and used == 0 and len(documents) == 3 and max_chars == 6, \"An empty context with nothing used, and three sample passages.\")",
+        "expected": "An empty context with nothing used, and three sample passages.",
+        "reassurance": ""
+      },
+      {
+        "title": "Add each passage in turn",
+        "instruction": "Loop over `documents` and update `context` and `used` with `add_passage` for each one, using `max_chars` as the budget.",
+        "code": "for document in documents:\n    context, used = add_passage(context, used, document, max_chars)",
+        "check": "test(\"Add each passage in turn\", lambda: context == \"ok\\n\\ngo\" and used == 6, \"The long passage is skipped; ok and go fill exactly 6 characters.\")",
+        "expected": "The long passage is skipped; ok and go fill exactly 6 characters.",
+        "reassurance": ""
+      },
+      {
+        "title": "Wrap the scan in a function",
+        "instruction": "Define `pack_context(documents, max_chars)`: start empty, run your loop, and return only the final context string.",
+        "code": "def pack_context(documents, max_chars):\n    context, used = \"\", 0\n    for document in documents:\n        context, used = add_passage(context, used, document, max_chars)\n    return context",
+        "check": "test(\"Wrap the scan in a function\", lambda: pack_context([\"too long to fit\", \"ok\", \"go\"], 6) == \"ok\\n\\ngo\" and pack_context([\"ok\", \"go\"], 5) == \"ok\" and pack_context([], 5) == \"\", \"Budget 6 packs ok and go; budget 5 packs only ok; no documents gives \\\"\\\".\")",
+        "expected": "Budget 6 packs ok and go; budget 5 packs only ok; no documents gives \"\".",
+        "reassurance": ""
       },
       {
         "title": "Scan every passage within the budget",
-        "instruction": "Define `pack_context` with parameters `documents` and `max_chars`, in that order. Start with an empty context and use `add_passage` to consider every passage in input order. Skip oversized or blank passages while continuing to later ones, keep included passages whole, and return only the final context string. Empty input or a non-positive budget should give an empty string; do not modify the input collection.",
+        "instruction": "Rewrite `pack_context` so a budget of zero or less returns an empty string straight away.",
         "code": "def pack_context(documents, max_chars):\n    if max_chars <= 0:\n        return \"\"\n    context, used = \"\", 0\n    for document in documents:\n        context, used = add_passage(context, used, document, max_chars)\n    return context",
-        "check": "test(\"Scan every passage within the budget\", lambda: pack_context([\"too long to fit\", \"ok\", \"go\"], 6) == \"ok\\n\\ngo\" and pack_context([\"ok\",\"go\"], 5) == \"ok\", \"The oversized first passage is skipped; ok and go fit in a six-character context.\")",
-        "expected": "The oversized first passage is skipped; ok and go fit in a six-character context.",
-        "reassurance": "Your packing function includes separators and keeps looking for useful later text."
+        "check": "test(\"Scan every passage within the budget\", lambda: pack_context([\"text\"], 0) == \"\" and pack_context([\"text\"], -2) == \"\" and pack_context([\"too long to fit\", \"ok\", \"go\"], 6) == \"ok\\n\\ngo\", \"Budgets of 0 and -2 give \\\"\\\"; the six-character example still packs ok and go.\")",
+        "expected": "Budgets of 0 and -2 give \"\"; the six-character example still packs ok and go.",
+        "reassurance": ""
       },
       {
         "title": "Create the context prompt",
@@ -357,12 +517,28 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The sample ranking is correct, with safe handling for zero vectors."
       },
       {
+        "title": "Rank documents by score",
+        "instruction": "Create `order`, the document indices sorted from highest to lowest score in `sims`. Use `np.argsort` with a stable sort so tied scores keep document order.",
+        "code": "order = np.argsort(-sims, kind=\"stable\")",
+        "check": "test(\"Rank documents by score\", lambda: list(order)[0] == 0 and sorted(order.tolist()) == [0, 1, 2, 3], \"The MLflow document (index 0) ranks first.\")",
+        "expected": "The MLflow document (index 0) ranks first.",
+        "reassurance": ""
+      },
+      {
+        "title": "Wrap retrieval in a function",
+        "instruction": "Define `retrieve(question, k=1)`: embed the question into `q`, compute `norms` and `sims` as before, and return the `k` best document strings from `DOCS` in ranked order.",
+        "code": "def retrieve(question, k=1):\n    q = embed(question)\n    norms = np.linalg.norm(DOC_VECS, axis=1) * np.linalg.norm(q)\n    sims = np.divide(DOC_VECS @ q, norms, out=np.zeros(len(DOCS)), where=norms != 0)\n    return [DOCS[i] for i in np.argsort(-sims, kind=\"stable\")[:k]]",
+        "check": "test(\"Wrap retrieval in a function\", lambda: retrieve(\"How does MLflow track experiments and metrics?\") == [DOCS[0]] and len(retrieve(\"MLflow\", 2)) == 2, \"The MLflow question retrieves its document; k=2 returns two documents.\")",
+        "expected": "The MLflow question retrieves its document; k=2 returns two documents.",
+        "reassurance": ""
+      },
+      {
         "title": "Package the reusable retriever",
-        "instruction": "Define `retrieve` with parameters `question` and `k`, defaulting `k` to 1. Use `embed`, the current `DOCS`, and the current `DOC_VECS` to rank documents by decreasing cosine similarity, then return at most `k` document strings. Tied scores must keep document order and zero vectors must not create invalid scores. Blank questions, empty collections, and non-positive `k` should give an empty list; an oversized `k` should return the whole collection in ranked order.",
-        "code": "def retrieve(question, k=1):\n    \"\"\"Return the k documents most cosine-similar to the question.\"\"\"\n    if not question.strip() or not DOCS or k <= 0:\n        return []\n    q = embed(question)\n    norms = np.linalg.norm(DOC_VECS, axis=1) * np.linalg.norm(q)\n    sims = np.divide(DOC_VECS @ q, norms, out=np.zeros(len(DOCS)), where=norms != 0)\n    return [DOCS[i] for i in np.argsort(-sims, kind=\"stable\")[:k]]",
+        "instruction": "Rewrite `retrieve` so a blank question, an empty `DOCS`, or a non-positive `k` returns `[]` before any work is done.",
+        "code": "def retrieve(question, k=1):\n    if not question.strip() or not DOCS or k <= 0:\n        return []\n    q = embed(question)\n    norms = np.linalg.norm(DOC_VECS, axis=1) * np.linalg.norm(q)\n    sims = np.divide(DOC_VECS @ q, norms, out=np.zeros(len(DOCS)), where=norms != 0)\n    return [DOCS[i] for i in np.argsort(-sims, kind=\"stable\")[:k]]",
         "check": "test(\"Package the reusable retriever\", lambda: retrieve(\"How does MLflow track experiments and metrics?\")[0] == DOCS[0] and retrieve(\"  \") == [] and retrieve(\"MLflow\", 0) == [], \"The MLflow question retrieves its document; blank queries and zero k return [].\")",
         "expected": "The MLflow question retrieves its document; blank queries and zero k return [].",
-        "reassurance": "The reusable retriever handles the main result and its empty-input guards."
+        "reassurance": ""
       },
       {
         "title": "Create the RAG prompt",

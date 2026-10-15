@@ -116,9 +116,17 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
     "setup": "from pyspark.sql import SparkSession\nimport pyspark.sql.functions as F\n\nspark = SparkSession.builder.getOrCreate()\n\ngood = spark.createDataFrame([(1, \"draft\"), (2, \"draft\")], [\"id\", \"status\"])\ngood.write.format(\"delta\").mode(\"overwrite\").saveAsTable(\"main.demo.docs\")    # version 0\n\napproved = spark.createDataFrame([(1, \"approved\"), (2, \"approved\")], [\"id\", \"status\"])\napproved.write.format(\"delta\").mode(\"overwrite\").saveAsTable(\"main.demo.docs\")  # version 1\n\nbad = spark.createDataFrame([(1, \"DELETED\"), (2, \"DELETED\")], [\"id\", \"status\"])\nbad.write.format(\"delta\").mode(\"overwrite\").saveAsTable(\"main.demo.docs\")     # version 2: oops\n\nspark.sql(\"DESCRIBE HISTORY main.demo.docs\").show()",
     "steps": [
       {
+        "title": "Ask for version 1",
+        "instruction": "Build a reader named `reader` from the session's `read` property and give it the `versionAsOf` option set to `1`. Nothing is read yet.",
+        "code": "reader = spark.read.option(\"versionAsOf\", 1)",
+        "check": "test(\"Ask for version 1\", lambda: reader._opts == {\"versionAsOf\": 1}, \"reader is configured for version 1.\")",
+        "expected": "reader is configured for version 1.",
+        "reassurance": "A reader collects options first; the table name comes last."
+      },
+      {
         "title": "Read the approved snapshot",
-        "instruction": "Read version `1` of Delta table `main.demo.docs` into `recovered`. Use the reader's `versionAsOf` option for a historical snapshot; the live table must retain its later contents.",
-        "code": "recovered = spark.read.option(\"versionAsOf\", 1).table(\"main.demo.docs\")",
+        "instruction": "Use `reader` to read the Delta table `main.demo.docs` into `recovered` with the reader's `table` method. The live table keeps its later contents.",
+        "code": "recovered = reader.table(\"main.demo.docs\")",
         "check": "test(\"Read the approved snapshot\", lambda: [row[\"status\"] for row in recovered.collect()] == [\"approved\", \"approved\"], \"Both recovered statuses are approved.\")",
         "expected": "Both recovered statuses are approved.",
         "reassurance": "Version 1 contains the approvals. The live table still contains the later deleted statuses."
@@ -153,28 +161,52 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
     "setup": "from pyspark.sql import SparkSession\nimport pyspark.sql.functions as F\n\nspark = SparkSession.builder.getOrCreate()\nSCHEMA = \"region string, user_id string, latency_ms double\"\nevents = spark.createDataFrame([\n    (\"EU\", \"u1\", 100.0),\n    (\"US\", \"u2\", 70.0),\n    (\"EU\", \"u1\", 140.0),\n    (\"EU\", \"u3\", None),\n    (\"US\", None, 90.0),\n], SCHEMA)",
     "steps": [
       {
+        "title": "Build a request counter",
+        "instruction": "Create `requests`: an aggregate expression that counts every row (`F.count` with `\"*\"`), named `requests` with `alias`.",
+        "code": "requests = F.count(\"*\").alias(\"requests\")",
+        "check": "test(\"Build a request counter\", lambda: events.groupBy(\"region\").agg(requests).columns == [\"region\", \"requests\"], \"requests is a counting expression named requests.\")",
+        "expected": "requests is a counting expression named requests.",
+        "reassurance": "Counting \"*\" counts rows, so a missing latency still counts as a request."
+      },
+      {
         "title": "Count requests per region",
-        "instruction": "Create `summary` with one row per `region` and a `requests` column counting every event in that region. Requests with missing latency still count.",
-        "code": "summary = events.groupBy(\"region\").agg(F.count(\"*\").alias(\"requests\"))",
+        "instruction": "Group `events` by `region` into `grouped` with `groupBy`, then apply `requests` with the grouped data's `agg` method to make `summary`.",
+        "code": "grouped = events.groupBy(\"region\")\nsummary = grouped.agg(requests)",
         "check": "test(\"Count requests per region\", lambda: {row[\"region\"]: row[\"requests\"] for row in summary.collect()} == {\"EU\": 3, \"US\": 2}, \"EU has 3 requests; US has 2.\")",
         "expected": "EU has 3 requests; US has 2.",
-        "reassurance": "All requests are counted. Next distinguish requests from actual measurements."
+        "reassurance": ""
       },
       {
         "title": "Count measured latencies",
-        "instruction": "Extend the regional `summary` with `measured`, counting only non-null `latency_ms` values. Preserve `requests` as the count of all events so the two totals can differ.",
-        "code": "summary = events.groupBy(\"region\").agg(F.count(\"*\").alias(\"requests\"), F.count(\"latency_ms\").alias(\"measured\"))",
+        "instruction": "Create `measured`: a count of non-null `latency_ms` values named `measured`. Rebuild `summary` from `grouped` with both `requests` and `measured`.",
+        "code": "measured = F.count(\"latency_ms\").alias(\"measured\")\nsummary = grouped.agg(requests, measured)",
         "check": "test(\"Count measured latencies\", lambda: {row[\"region\"]: row[\"measured\"] for row in summary.collect()} == {\"EU\": 2, \"US\": 2}, \"Both regions have 2 measured latencies.\")",
         "expected": "Both regions have 2 measured latencies.",
-        "reassurance": "The missing EU latency is excluded from measured, but its request still counts."
+        "reassurance": "Counting a column skips its nulls, so measured can be smaller than requests."
       },
       {
-        "title": "Add users and average latency",
-        "instruction": "Define `service_metrics(events)` returning columns `region`, `requests`, `measured`, `users`, `avg_latency_ms`, in that order. Group by region, count all requests, count non-null latencies and distinct non-null user IDs, and round the average non-null latency to one decimal. Sort by region. A group with no measurements has a null average; empty input retains the report schema.",
-        "code": "def service_metrics(events):\n    return events.groupBy(\"region\").agg(\n        F.count(\"*\").alias(\"requests\"),\n        F.count(\"latency_ms\").alias(\"measured\"),\n        F.countDistinct(\"user_id\").alias(\"users\"),\n        F.round(F.avg(\"latency_ms\"), 1).alias(\"avg_latency_ms\"),\n    ).orderBy(\"region\")",
-        "check": "test(\"Add users and average latency\", lambda: [tuple(row) for row in service_metrics(events).collect()] == [(\"EU\", 3, 2, 2, 120.0), (\"US\", 2, 2, 1, 80.0)], \"EU: 3 requests, 2 measured, 2 users, 120.0 ms. US: 2, 2, 1, 80.0 ms.\")",
+        "title": "Count users and average latency",
+        "instruction": "Create `users` (distinct non-null `user_id` values, via `F.countDistinct`) and `avg_latency` (the mean `latency_ms`, via `F.avg`), named `users` and `avg_latency_ms`.",
+        "code": "users = F.countDistinct(\"user_id\").alias(\"users\")\navg_latency = F.avg(\"latency_ms\").alias(\"avg_latency_ms\")",
+        "check": "test(\"Count users and average latency\", lambda: {row[\"region\"]: (row[\"users\"], row[\"avg_latency_ms\"]) for row in grouped.agg(users, avg_latency).collect()} == {\"EU\": (2, 120.0), \"US\": (1, 80.0)}, \"EU: 2 users, 120.0 ms. US: 1 user, 80.0 ms.\")",
+        "expected": "EU: 2 users, 120.0 ms. US: 1 user, 80.0 ms.",
+        "reassurance": "Both functions ignore nulls: the missing user and the missing latency are skipped."
+      },
+      {
+        "title": "Round the average",
+        "instruction": "Redefine `avg_latency` so the average is rounded to one decimal with `F.round`, still named `avg_latency_ms`. Rebuild `summary` from `grouped` with all four expressions in the order requests, measured, users, avg_latency.",
+        "code": "avg_latency = F.round(F.avg(\"latency_ms\"), 1).alias(\"avg_latency_ms\")\nsummary = grouped.agg(requests, measured, users, avg_latency)",
+        "check": "test(\"Round the average\", lambda: summary.columns == [\"region\", \"requests\", \"measured\", \"users\", \"avg_latency_ms\"], \"summary has region, requests, measured, users, avg_latency_ms.\")",
+        "expected": "summary has region, requests, measured, users, avg_latency_ms.",
+        "reassurance": "Rounding wraps the aggregate, so name the outer expression."
+      },
+      {
+        "title": "Sort and wrap in a function",
+        "instruction": "Define `service_metrics(events)`: inside it, repeat your lines from `grouped` through `summary` for its `events` argument, then return `summary` sorted by region with `orderBy`.",
+        "code": "def service_metrics(events):\n    grouped = events.groupBy(\"region\")\n    requests = F.count(\"*\").alias(\"requests\")\n    measured = F.count(\"latency_ms\").alias(\"measured\")\n    users = F.countDistinct(\"user_id\").alias(\"users\")\n    avg_latency = F.round(F.avg(\"latency_ms\"), 1).alias(\"avg_latency_ms\")\n    summary = grouped.agg(requests, measured, users, avg_latency)\n    return summary.orderBy(\"region\")",
+        "check": "test(\"Sort and wrap in a function\", lambda: [tuple(row) for row in service_metrics(events).collect()] == [(\"EU\", 3, 2, 2, 120.0), (\"US\", 2, 2, 1, 80.0)], \"EU: 3 requests, 2 measured, 2 users, 120.0 ms. US: 2, 2, 1, 80.0 ms.\")",
         "expected": "EU: 3 requests, 2 measured, 2 users, 120.0 ms. US: 2, 2, 1, 80.0 ms.",
-        "reassurance": "All four aggregates agree on the sample. The last check adds null-only groups and empty data."
+        "reassurance": "The last check adds null-only groups and empty data."
       },
       {
         "title": "Inspect the regional report",
@@ -260,19 +292,35 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Build reasons for any country list",
-        "instruction": "Define `expectation_reason(countries)` to build the same ordered Spark expression using its permitted-country argument. Country membership must be case-sensitive, preserving the original country text. Return only the first failure: `missing_user`, then `bad_amount`, then `unknown_country`. An empty country list permits no countries.",
-        "code": "def expectation_reason(countries):\n    return (F.when(F.col(\"user\").isNull() | (F.trim(F.col(\"user\")) == \"\"), \"missing_user\")\n        .when(F.col(\"amount\").try_cast(\"double\").isNull(), \"bad_amount\")\n        .when(F.col(\"country\").isNull() | ~F.col(\"country\").isin(countries), \"unknown_country\"))",
+        "instruction": "Define `expectation_reason(countries)`: repeat your three `reason` lines inside it, use the `countries` argument instead of `COUNTRIES`, and return `reason`. An empty list permits no countries.",
+        "code": "def expectation_reason(countries):\n    reason = F.when(F.col(\"user\").isNull() | (F.trim(F.col(\"user\")) == \"\"), \"missing_user\")\n    reason = reason.when(F.col(\"amount\").try_cast(\"double\").isNull(), \"bad_amount\")\n    reason = reason.when(F.col(\"country\").isNull() | ~F.col(\"country\").isin(countries), \"unknown_country\")\n    return reason",
         "check": "test(\"Build reasons for any country list\", lambda: orders.withColumn(\"reason\", expectation_reason([])).filter(F.col(\"reason\").isNull()).count() == 0, \"With no permitted countries, no row passes all rules.\")",
         "expected": "With no permitted countries, no row passes all rules.",
-        "reassurance": "The country list is now an input. Next split tagged rows without losing raw failures."
+        "reassurance": "The country list is now an input."
+      },
+      {
+        "title": "Tag and quarantine rows",
+        "instruction": "Add a `reason` column to `orders` from `expectation_reason(COUNTRIES)`, storing the result in `tagged`. Then keep the rows that have a reason in `quarantine`.",
+        "code": "tagged = orders.withColumn(\"reason\", expectation_reason(COUNTRIES))\nquarantine = tagged.filter(F.col(\"reason\").isNotNull())",
+        "check": "test(\"Tag and quarantine rows\", lambda: sorted(row[\"order_id\"] for row in quarantine.collect()) == [\"o2\", \"o3\", \"o5\", \"o6\"], \"quarantine holds o2, o3, o5 and o6, with their raw amount text.\")",
+        "expected": "quarantine holds o2, o3, o5 and o6, with their raw amount text.",
+        "reassurance": ""
+      },
+      {
+        "title": "Clean the valid rows",
+        "instruction": "Create `valid` from `tagged`: keep rows with no reason, remove the `reason` column with `drop`, and convert `amount` to double. Do it in one chain.",
+        "code": "valid = tagged.filter(F.col(\"reason\").isNull()).drop(\"reason\").withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))",
+        "check": "test(\"Clean the valid rows\", lambda: valid.columns == [\"order_id\", \"user\", \"amount\", \"country\"] and dict(valid.dtypes)[\"amount\"] == \"double\" and valid.count() == 2, \"Two valid rows, no reason column, amount is double.\")",
+        "expected": "Two valid rows, no reason column, amount is double.",
+        "reassurance": ""
       },
       {
         "title": "Split valid and quarantined rows",
-        "instruction": "Define `apply_expectations(df, countries)` to return the valid and quarantine DataFrames, in that order. Valid rows pass every rule, omit `reason` and have `amount` converted to double. Quarantine rows retain their original columns and amount text plus the first-failure `reason`. Every input row belongs to exactly one output; leave the input unchanged.",
+        "instruction": "Define `apply_expectations(df, countries)`: build `tagged` from `df` and `countries`, repeat your `valid` and `quarantine` lines, and return `valid, quarantine` in that order.",
         "code": "def apply_expectations(df, countries):\n    tagged = df.withColumn(\"reason\", expectation_reason(countries))\n    valid = tagged.filter(F.col(\"reason\").isNull()).drop(\"reason\").withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))\n    quarantine = tagged.filter(F.col(\"reason\").isNotNull())\n    return valid, quarantine",
         "check": "test(\"Split valid and quarantined rows\", lambda: apply_expectations(orders, COUNTRIES)[0].count() == 2 and apply_expectations(orders, COUNTRIES)[1].count() == 4, \"Two valid rows and four quarantined rows.\")",
         "expected": "Two valid rows and four quarantined rows.",
-        "reassurance": "Every sample row is accounted for. The full checks inspect reasons, schemas and raw values."
+        "reassurance": "The full checks inspect reasons, schemas and raw values."
       },
       {
         "title": "Inspect both outputs",
@@ -296,32 +344,72 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Bronze preserves the input and can handle an empty run. Next make writes safe to repeat."
       },
       {
+        "title": "Build a Delta writer",
+        "instruction": "Create `bronze` from `bronze_frame(spark, RAW)`. Then take its `write` property and set the format to `\"delta\"`, storing the writer in `writer`. Nothing is saved yet.",
+        "code": "bronze = bronze_frame(spark, RAW)\nwriter = bronze.write.format(\"delta\")",
+        "check": "test(\"Build a Delta writer\", lambda: writer._format == \"delta\" and bronze.count() == 7, \"writer is a Delta writer for the seven bronze rows.\")",
+        "expected": "writer is a Delta writer for the seven bronze rows.",
+        "reassurance": ""
+      },
+      {
         "title": "Save a Delta layer",
-        "instruction": "Define `save_layer(df, name)` to save the frame as a Delta table under the provided name. Replace that layer's previous contents so reruns do not accumulate duplicates; no return value is needed.",
+        "instruction": "Define `save_layer(df, name)` to write the frame as a Delta table under `name`, with `mode` set to `\"overwrite\"` so reruns replace the layer, and `saveAsTable` to save. No return value.",
         "code": "def save_layer(df, name):\n    df.write.format(\"delta\").mode(\"overwrite\").saveAsTable(name)",
-        "check": "test(\"Save a Delta layer\", lambda: save_layer(bronze_frame(spark, RAW), \"main.shop.bronze\") is None and spark.table(\"main.shop.bronze\").count() == 7, \"The bronze table contains all seven raw rows.\")",
+        "check": "test(\"Save a Delta layer\", lambda: save_layer(bronze, \"main.shop.bronze\") is None and spark.table(\"main.shop.bronze\").count() == 7, \"The bronze table contains all seven raw rows.\")",
         "expected": "The bronze table contains all seven raw rows.",
-        "reassurance": "The save operation is verified. Silver will clean a new frame while bronze stays raw."
+        "reassurance": "Without overwrite, a second save to the same name raises an error."
+      },
+      {
+        "title": "Keep rows with a user",
+        "instruction": "Create `named` from `bronze`, keeping only rows whose `user` is not null and not empty after trimming.",
+        "code": "named = bronze.filter(F.col(\"user\").isNotNull() & (F.trim(F.col(\"user\")) != \"\"))",
+        "check": "test(\"Keep rows with a user\", lambda: sorted(row[\"order_id\"] for row in named.collect()) == [\"o1\", \"o2\", \"o2\", \"o4\", \"o5\", \"o6\"], \"Six rows remain; o3 (no user) is gone.\")",
+        "expected": "Six rows remain; o3 (no user) is gone.",
+        "reassurance": ""
+      },
+      {
+        "title": "Convert and filter amounts",
+        "instruction": "Create `typed` from `named` with `amount` safely converted to double, then `priced` from `typed` keeping only rows where the conversion worked.",
+        "code": "typed = named.withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))\npriced = typed.filter(F.col(\"amount\").isNotNull())",
+        "check": "test(\"Convert and filter amounts\", lambda: priced.count() == 5 and dict(priced.dtypes)[\"amount\"] == \"double\", \"Five rows with double amounts; o4 (n/a) is gone.\")",
+        "expected": "Five rows with double amounts; o4 (n/a) is gone.",
+        "reassurance": "Negative numbers convert fine, so refunds stay."
       },
       {
         "title": "Clean silver rows",
-        "instruction": "Define `silver_frame(bronze)` to return cleaned orders: exclude null, empty and whitespace-only users, safely convert `amount` to double, discard failed conversions and retain one row per `order_id`. Keep numeric refunds and the original column order; leave bronze unchanged.",
-        "code": "def silver_frame(bronze):\n    return (bronze.filter(F.col(\"user\").isNotNull() & (F.trim(F.col(\"user\")) != \"\"))\n        .withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))\n        .filter(F.col(\"amount\").isNotNull())\n        .dropDuplicates([\"order_id\"]))",
-        "check": "test(\"Clean silver rows\", lambda: silver_frame(bronze_frame(spark, RAW)).count() == 4 and dict(silver_frame(bronze_frame(spark, RAW)).dtypes)[\"amount\"] == \"double\", \"Four valid unique orders with double amounts.\")",
+        "instruction": "Define `silver_frame(bronze)`: repeat your `named`, `typed` and `priced` lines inside it and return `priced` with one row per `order_id`. Then store `silver_frame(bronze)` in `silver`.",
+        "code": "def silver_frame(bronze):\n    named = bronze.filter(F.col(\"user\").isNotNull() & (F.trim(F.col(\"user\")) != \"\"))\n    typed = named.withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))\n    priced = typed.filter(F.col(\"amount\").isNotNull())\n    return priced.dropDuplicates([\"order_id\"])\nsilver = silver_frame(bronze)",
+        "check": "test(\"Clean silver rows\", lambda: silver.count() == 4 and dict(silver.dtypes)[\"amount\"] == \"double\", \"Four valid unique orders with double amounts.\")",
         "expected": "Four valid unique orders with double amounts.",
-        "reassurance": "Silver passes the sample quality rules. Negative numeric amounts are retained for refunds."
+        "reassurance": ""
+      },
+      {
+        "title": "Total revenue per city",
+        "instruction": "Create `revenue` (sum of `amount` with `F.sum`, rounded to two decimals, named `revenue`) and `orders` (row count named `orders`). Group `silver` by `city` and apply both into `totals`.",
+        "code": "revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")\norders = F.count(\"*\").alias(\"orders\")\ntotals = silver.groupBy(\"city\").agg(revenue, orders)",
+        "check": "test(\"Total revenue per city\", lambda: {row[\"city\"]: (row[\"revenue\"], row[\"orders\"]) for row in totals.collect()} == {\"NYC\": (50.0, 2), \"LA\": (12.0, 1), \"SF\": (5.0, 1)}, \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
+        "expected": "NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.",
+        "reassurance": ""
       },
       {
         "title": "Aggregate gold revenue",
-        "instruction": "Define `gold_frame(silver)` to return one row per city with columns `city`, `revenue`, `orders`. Revenue is the sum of cleaned amounts rounded to two decimals, and orders counts the rows. Order by decreasing revenue with ascending city names breaking ties; empty input should retain the output schema.",
-        "code": "def gold_frame(silver):\n    return (silver.groupBy(\"city\")\n        .agg(F.round(F.sum(\"amount\"), 2).alias(\"revenue\"), F.count(\"*\").alias(\"orders\"))\n        .orderBy(F.desc(\"revenue\"), \"city\"))",
-        "check": "test(\"Aggregate gold revenue\", lambda: [tuple(row) for row in gold_frame(silver_frame(bronze_frame(spark, RAW))).collect()] == [(\"NYC\", 50.0, 2), (\"LA\", 12.0, 1), (\"SF\", 5.0, 1)], \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
+        "instruction": "Define `gold_frame(silver)`: repeat your three lines inside it and return `totals` ordered by decreasing revenue (`F.desc`) with `city` breaking ties. Then store `gold_frame(silver)` in `gold`.",
+        "code": "def gold_frame(silver):\n    revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")\n    orders = F.count(\"*\").alias(\"orders\")\n    totals = silver.groupBy(\"city\").agg(revenue, orders)\n    return totals.orderBy(F.desc(\"revenue\"), \"city\")\ngold = gold_frame(silver)",
+        "check": "test(\"Aggregate gold revenue\", lambda: [tuple(row) for row in gold.collect()] == [(\"NYC\", 50.0, 2), (\"LA\", 12.0, 1), (\"SF\", 5.0, 1)], \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
         "expected": "NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.",
-        "reassurance": "The business totals are right. Now connect the three verified layers and their saves."
+        "reassurance": ""
+      },
+      {
+        "title": "Save all three layers",
+        "instruction": "Use `save_layer` to save `bronze` to `main.shop.bronze`, `silver` to `main.shop.silver` and `gold` to `main.shop.gold_revenue`.",
+        "code": "save_layer(bronze, \"main.shop.bronze\")\nsave_layer(silver, \"main.shop.silver\")\nsave_layer(gold, \"main.shop.gold_revenue\")",
+        "check": "test(\"Save all three layers\", lambda: spark.table(\"main.shop.silver\").count() == 4 and spark.table(\"main.shop.gold_revenue\").count() == 3, \"Silver has 4 rows and gold has 3.\")",
+        "expected": "Silver has 4 rows and gold has 3.",
+        "reassurance": ""
       },
       {
         "title": "Run and save all three stages",
-        "instruction": "Define `run_pipeline(spark, raw_rows)` using your stage and save helpers. Save raw bronze to `main.shop.bronze`, cleaned silver to `main.shop.silver`, and aggregated gold to `main.shop.gold_revenue`, then return that gold frame. Each run replaces all three tables, including for empty input; preserve caller data.",
+        "instruction": "Define `run_pipeline(spark, raw_rows)`: build `bronze` from `raw_rows`, then repeat your stage and save lines in order and return `gold`. Each run replaces all three tables.",
         "code": "def run_pipeline(spark, raw_rows):\n    bronze = bronze_frame(spark, raw_rows)\n    save_layer(bronze, \"main.shop.bronze\")\n    silver = silver_frame(bronze)\n    save_layer(silver, \"main.shop.silver\")\n    gold = gold_frame(silver)\n    save_layer(gold, \"main.shop.gold_revenue\")\n    return gold",
         "check": "",
         "expected": "Three Delta tables are saved and the gold DataFrame is returned.",

@@ -35,7 +35,8 @@ const READING_GUIDES: Record<string, string[]> = {
   'db-nulls': [
     'Import the Spark session class. This is setup; it does not filter any rows.',
     'Import column expressions as `F`. A column expression describes a calculation on each row.',
-    'Create the session that will build the small example table.',
+    'Get the session builder from the class. Nothing is created yet.',
+    'Create (or reuse) the session that will build the small example table.',
     'Read each row separately. Note which tag is a string and which tag is missing (`None`, or SQL NULL).',
     'For each row, classify `tag != "a"` as true, false, or unknown. A filter keeps only true. Count those rows, then choose below.',
   ],
