@@ -270,6 +270,19 @@ export const STDLIB_CARDS: CommandCard[] = [
     returns: 'The matched substring, or None if that group did not take part in the match; a tuple when several groups are requested. IndexError for a group that does not exist.',
   },
   {
+    keys: ['re.Pattern.fullmatch'],
+    name: 'pattern.fullmatch',
+    kind: 'method',
+    signature: 'pattern.fullmatch(string, pos=0, endpos=len(string))',
+    summary: 'Tries a compiled pattern against the whole string: it matches only if the expression covers every character from start to end.',
+    params: [
+      { name: 'string', text: 'The text to test.' },
+      { name: 'pos', text: 'Index where matching starts. Default 0.' },
+      { name: 'endpos', text: 'Index where matching must end. Default is the end of the string.' },
+    ],
+    returns: 'A Match object (read its groups with `group`), or None when the whole string does not match.',
+  },
+  {
     keys: ['re.Pattern.sub'],
     name: 'pattern.sub',
     kind: 'method',

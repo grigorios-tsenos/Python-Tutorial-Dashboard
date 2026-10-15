@@ -19,7 +19,8 @@ One row has a missing `tag`. How many rows survive `tag != "a"`?
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 
-spark = SparkSession.builder.getOrCreate()
+builder = SparkSession.builder
+spark = builder.getOrCreate()
 df = spark.createDataFrame([(1, "a"), (2, None), (3, "c")], ["id", "tag"])
 print(df.filter(F.col("tag") != "a").count())
 @@choice

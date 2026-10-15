@@ -126,8 +126,16 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
   "lg-loop": {
     "steps": [
       {
+        "title": "Route on approval",
+        "instruction": "Define `route` with one parameter, `state`. Return `END` when the state's `approved` flag is true, otherwise the node name `write`.",
+        "code": "def route(state):\n    return END if state[\"approved\"] else \"write\"",
+        "check": "test(\"Route on approval\", lambda: route({\"approved\": True, \"attempts\": 1}) == END and route({\"approved\": False, \"attempts\": 2}) == \"write\", \"Approved routes to END; unapproved routes back to write.\")",
+        "expected": "Approved routes to END; unapproved routes back to write.",
+        "reassurance": "This loop could still run forever if the reviewer never approves. Add a cap next."
+      },
+      {
         "title": "Stop after approval",
-        "instruction": "Define `route` with one parameter, `state`. Approved drafts select `END`. Unapproved drafts select the node name `write`, unless `attempts` has reached 5: then give up and select `END` so the loop can never run forever. The setup writer increments `attempts`; the reviewer approves the third attempt and later.",
+        "instruction": "Rewrite `route` so it also selects `END` once `attempts` has reached 5, even without approval, so the loop can never run forever. The setup writer increments `attempts`; the reviewer approves the third attempt and later.",
         "code": "def route(state):\n    if state[\"approved\"] or state[\"attempts\"] >= 5:\n        return END\n    return \"write\"",
         "check": "test(\"Stop after approval\", lambda: route({\"approved\": True, \"attempts\": 1}) == END and route({\"approved\": False, \"attempts\": 2}) == \"write\" and route({\"approved\": False, \"attempts\": 5}) == END, \"Approved routes to END; unapproved routes back to write until the fifth attempt, which also ends.\")",
         "expected": "Approved routes to END; unapproved routes back to write until the fifth attempt, which also ends.",
@@ -663,8 +671,16 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Feedback and attempt counting are verified without consuming the demonstration model."
       },
       {
+        "title": "Accept a valid reply",
+        "instruction": "Define `validate` with one parameter, `state`. Parse its `raw` reply with `parse_order` and return an update with the parsed `order`, `status` set to “ok”, and `error` cleared to `None`. Failures are handled in the next step.",
+        "code": "def validate(state):\n    return {\"order\": parse_order(state[\"raw\"]), \"status\": \"ok\", \"error\": None}",
+        "check": "test(\"Accept a valid reply\", lambda: validate({\"raw\":'{\"sku\":\"A\",\"quantity\":1}'}) == {\"order\": {\"sku\":\"A\", \"quantity\":1}, \"status\":\"ok\", \"error\":None}, \"A valid reply gives the order, status ok and no error.\")",
+        "expected": "A valid reply gives the order, status ok and no error.",
+        "reassurance": "Right now an invalid reply would crash the graph. Next, turn that crash into an update."
+      },
+      {
         "title": "Turn validation into state updates",
-        "instruction": "Define `validate` with one parameter, `state`. Validate its `raw` reply with `parse_order`. On success, produce `order`, `status` set to “ok”, and `error` cleared to `None`. Catch `ValueError` on failure and produce only an `error` update containing the exception text, so the graph can retry without losing the reason for failure.",
+        "instruction": "Rewrite `validate` so a `ValueError` from parsing is caught and becomes an update with only `error` set to the exception text. The graph can then retry without losing the reason for failure.",
         "code": "def validate(state):\n    try:\n        return {\"order\": parse_order(state[\"raw\"]), \"status\": \"ok\", \"error\": None}\n    except ValueError as error:\n        return {\"error\": str(error)}",
         "check": "test(\"Turn validation into state updates\", lambda: validate({\"raw\":\"not json\"}) == {\"error\":\"reply must be valid JSON\"} and validate({\"raw\":'{\"sku\":\"A\",\"quantity\":1}'})[\"status\"] == \"ok\", \"Invalid JSON becomes an error update; a valid order sets status to ok.\")",
         "expected": "Invalid JSON becomes an error update; a valid order sets status to ok.",
@@ -679,8 +695,16 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "There is a clear stopping path for persistent validation failures."
       },
       {
+        "title": "Retry within a budget",
+        "instruction": "Define `route` with parameters `state` and `max_attempts`, in that order. Select `generate` while the state's `attempts` is below `max_attempts`, and `fallback` once the budget is used up.",
+        "code": "def route(state, max_attempts):\n    return \"generate\" if state[\"attempts\"] < max_attempts else \"fallback\"",
+        "check": "test(\"Retry within a budget\", lambda: route({\"attempts\":1}, 3) == \"generate\" and route({\"attempts\":3}, 3) == \"fallback\", \"Attempt 1 of 3 retries; attempt 3 of 3 falls back.\")",
+        "expected": "Attempt 1 of 3 retries; attempt 3 of 3 falls back.",
+        "reassurance": "This router never finishes on success yet. Add that exit next."
+      },
+      {
         "title": "Route with an explicit budget",
-        "instruction": "Define `route` with parameters `state` and `max_attempts`, in that order. A status of “ok” should select `END` regardless of attempt count. Otherwise, select `generate` while the attempt count is below the budget and `fallback` once the budget is exhausted.",
+        "instruction": "Rewrite `route` so a `status` of “ok” selects `END` first, regardless of the attempt count. Read the status safely: it is missing until validation succeeds.",
         "code": "def route(state, max_attempts):\n    if state.get(\"status\") == \"ok\":\n        return END\n    return \"generate\" if state[\"attempts\"] < max_attempts else \"fallback\"",
         "check": "test(\"Route with an explicit budget\", lambda: route({\"status\":\"ok\", \"attempts\":1}, 3) == END and route({\"attempts\":1}, 3) == \"generate\" and route({\"attempts\":3}, 3) == \"fallback\", \"Success ends; attempt 1 of 3 retries; attempt 3 of 3 falls back.\")",
         "expected": "Success ends; attempt 1 of 3 retries; attempt 3 of 3 falls back.",
@@ -759,11 +783,27 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The reusable wiring keeps the chosen model inside the generation node."
       },
       {
-        "title": "Build with a validated attempt budget",
-        "instruction": "Define `build_extractor` with parameters `model` and `max_attempts`, defaulting `max_attempts` to 3. Reject budgets below 1 with `ValueError`; error text: “max_attempts must be at least 1”. Obtain a fresh graph from `extraction_graph`, attach the validation route using this budget, connect fallback to `END`, and return the compiled runnable. Each new invocation should begin its own attempt count.",
-        "code": "def build_extractor(model, max_attempts=3):\n    if max_attempts < 1:\n        raise ValueError(\"max_attempts must be at least 1\")\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, max_attempts), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
-        "check": "test(\"Build with a validated attempt budget\", lambda: build_extractor(scripted('{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"one item\"})[\"attempts\"] == 1, \"A valid first reply finishes after exactly one attempt.\")",
+        "title": "Build a fixed-budget extractor",
+        "instruction": "Define `build_extractor` with one parameter, `model`. Get a fresh graph from `extraction_graph`, then repeat your practice wiring on it: the conditional route after `validate` with a budget of 3, and the edge from `fallback` to `END`. Return the compiled runnable.",
+        "code": "def build_extractor(model):\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, 3), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
+        "check": "test(\"Build a fixed-budget extractor\", lambda: build_extractor(scripted('{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"one item\"})[\"attempts\"] == 1, \"A valid first reply finishes after exactly one attempt.\")",
         "expected": "A valid first reply finishes after exactly one attempt.",
+        "reassurance": "The wiring works. Next let the caller choose the budget."
+      },
+      {
+        "title": "Let the caller set the budget",
+        "instruction": "Rewrite `build_extractor` with a second parameter, `max_attempts`, defaulting to 3, and use it in the route instead of the fixed 3.",
+        "code": "def build_extractor(model, max_attempts=3):\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, max_attempts), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
+        "check": "test(\"Let the caller set the budget\", lambda: build_extractor(scripted(\"not json\"), 1).invoke({\"message\":\"x\"})[\"status\"] == \"needs_human\" and build_extractor(scripted(\"bad\", '{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"x\"})[\"attempts\"] == 2, \"A budget of 1 falls back after one bad reply; the default budget retries.\")",
+        "expected": "A budget of 1 falls back after one bad reply; the default budget retries.",
+        "reassurance": "A budget of 0 would still make no sense. Reject it next."
+      },
+      {
+        "title": "Build with a validated attempt budget",
+        "instruction": "Rewrite `build_extractor` so it rejects budgets below 1 with `ValueError` before building anything; error text: “max_attempts must be at least 1”.",
+        "code": "def build_extractor(model, max_attempts=3):\n    if max_attempts < 1:\n        raise ValueError(\"max_attempts must be at least 1\")\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, max_attempts), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
+        "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Build with a validated attempt budget\", lambda: _rejects(lambda: build_extractor(scripted(), 0)) and build_extractor(scripted('{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"one item\"})[\"attempts\"] == 1, \"A budget of 0 raises ValueError; a valid first reply still finishes after one attempt.\")",
+        "expected": "A budget of 0 raises ValueError; a valid first reply still finishes after one attempt.",
         "reassurance": "The builder now combines the verified nodes, routing budget, and fallback exit."
       },
       {
@@ -804,9 +844,17 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Your agent forwards the conversation and returns the expected message update. The graph demonstration still has both scripted replies available."
       },
       {
+        "title": "Run one tool call",
+        "instruction": "Define `run_call` with one parameter, `call`: a tool-call dictionary with `name`, `args` and `id`. Look up the tool by `name` in the setup `TOOLS` registry and invoke it with the `args`. Return a `ToolMessage` whose `content` is the output as text and whose `tool_call_id` is the call's `id`.",
+        "code": "def run_call(call):\n    output = TOOLS[call[\"name\"]].invoke(call[\"args\"])\n    return ToolMessage(content=str(output), tool_call_id=call[\"id\"])",
+        "check": "test(\"Run one tool call\", lambda: (lambda m: (m.content, m.tool_call_id))(run_call({\"name\":\"multiply\", \"args\":{\"a\":2,\"b\":3}, \"id\":\"probe\"})) == (\"6\",\"probe\"), \"The probe call gives text \\\"6\\\" with call ID probe.\")",
+        "expected": "The probe call gives text \"6\" with call ID probe.",
+        "reassurance": "The ID ties the result back to the request that asked for it."
+      },
+      {
         "title": "Run every requested tool",
-        "instruction": "Define `tools` with one parameter, `state`, annotated as `MessagesState`. Read every tool call from the latest message, look up its `name` in the setup `TOOLS` registry, and invoke that tool with its `args`. For each output, create a `ToolMessage` with string `content` and the matching call `id` as `tool_call_id`. Return these messages as a `messages` update in request order; no calls should give an empty list. Preserve the existing history.",
-        "code": "def tools(state: MessagesState):\n    results = []\n    for call in state[\"messages\"][-1].tool_calls:\n        output = TOOLS[call[\"name\"]].invoke(call[\"args\"])\n        results.append(ToolMessage(content=str(output), tool_call_id=call[\"id\"]))\n    return {\"messages\": results}",
+        "instruction": "Define `tools` with one parameter, `state`, annotated as `MessagesState`. Use `run_call` on every tool call of the latest message and return the results as a `messages` update, in request order. No calls should give an empty list.",
+        "code": "def tools(state: MessagesState):\n    return {\"messages\": [run_call(call) for call in state[\"messages\"][-1].tool_calls]}",
         "check": "test(\"Run every requested tool\", lambda: [(m.content, m.tool_call_id) for m in tools({\"messages\":[AIMessage(\"\", tool_calls=[{\"name\":\"multiply\", \"args\":{\"a\":2,\"b\":3}, \"id\":\"probe\"}]) ]})[\"messages\"]] == [(\"6\",\"probe\")], \"The probe tool result is text \\\"6\\\" with call ID probe.\")",
         "expected": "The probe tool result is text \"6\" with call ID probe.",
         "reassurance": "Tool execution and ID preservation work without calling the model."
