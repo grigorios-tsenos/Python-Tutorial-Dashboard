@@ -204,7 +204,7 @@ try {
   await page.locator('.workbench').evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)))
   await page.screenshot({ path: `${shots}/02-mobile.png`, fullPage: true })
   assert.deepEqual(errors, [], 'no browser errors')
-  console.log('✓ Guided keyboard focus, Vim, editing during checks, hover context, retries, persistence, grading and all 108 mobile layouts')
+  console.log('✓ Guided keyboard focus, Vim, editing during checks, hover context, retries, persistence, grading and all 117 mobile layouts')
 } finally {
   await browser?.close()
   server.kill()

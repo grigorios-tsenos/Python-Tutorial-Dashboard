@@ -299,6 +299,20 @@ export const NUMPY_CARDS: CommandCard[] = [
     returns: 'An integer array of indices with the same shape as `a`.',
   },
   {
+    keys: ['numpy.argmax'],
+    name: 'np.argmax',
+    kind: 'function',
+    signature: 'np.argmax(a, axis=None, out=None, *, keepdims=False)',
+    summary: 'Returns the position of the largest value instead of the value itself. When the maximum occurs more than once, the first position wins.',
+    params: [
+      { name: 'a', text: 'The array (or array-like) to search.' },
+      { name: 'axis', text: '`None` (default) searches the flattened array and returns one index; an integer returns one index per slice along that axis.' },
+      { name: 'out', text: 'Optional existing array to write the result into.' },
+      { name: 'keepdims', text: 'If `True`, the searched axis is kept with length 1 so the result broadcasts against `a`. Default `False`.' },
+    ],
+    returns: 'A NumPy integer index when `axis` is `None`, otherwise an integer array of indices.',
+  },
+  {
     keys: ['numpy.mean'],
     name: 'np.mean',
     kind: 'function',

@@ -1,6 +1,6 @@
 # Orbit — learn AI and data science by doing
 
-A local-first tutorial dashboard: 108 hands-on lessons in 12 chapters, running **real Python in your browser** (Pyodide). No backend, no API keys, no setup. Progress stays on your device.
+A local-first tutorial dashboard: 117 hands-on lessons in 13 chapters, running **real Python in your browser** (Pyodide). No backend, no API keys, no setup. Progress stays on your device.
 
 ```
 npm install
@@ -18,7 +18,7 @@ First load fetches the Python runtime (~15 MB from jsDelivr); the browser caches
 
 ## What's inside
 
-- **Map:** 12 constellations × 9 stars, in learning order: NumPy · Pandas · Statistics · Visualization · Machine Learning · Neural Nets · Python for AI · LangChain · LangGraph · MLflow · Databricks · Claude Code. Each chapter climbs Basics → Guided → Practice → Challenge → Applied → Advanced → Production → Expert → Boss and builds like one project (impute → standardize → classify → search; split → metrics → pipeline → cross-validate → ship; neuron → forward → backprop → attention → train).
+- **Map:** 13 constellations × 9 stars, in learning order: NumPy · Pandas · Statistics · Visualization · Machine Learning · Neural Nets · Python for AI · LangChain · RAG Techniques · LangGraph · MLflow · Databricks · Claude Code. Each chapter climbs Basics → Guided → Practice → Challenge → Applied → Advanced → Production → Expert → Boss and builds like one project (impute → standardize → classify → search; split → metrics → pipeline → cross-validate → ship; neuron → forward → backprop → attention → train; chunk → embed → search → rerank → generate → HyDE).
 - **Lesson kinds:** Run & Tweak · Visual Lab · Predict · Bug Hunt · Parsons puzzle · Build (auto-graded) · Boss.
 - **Line by line practice:** every lesson opens with small guided goals, without showing the solution to type. Write your own approach, check its behavior, compare the expected result, and continue after it passes. Each step names its inputs and required outputs and has verification guidance and supportive feedback; the last step runs the original exercise checks. Prediction lessons trace one line at a time before choosing an answer. Guided drafts are saved separately from the full exercise editor, which is one click away.
 - **New-command cards:** the first time a step (or a traced line) needs a command you have not met, a reference card names it and gives its signature, what it does, each parameter and what it returns, never how to use it for the step. Commands met in earlier lessons fold into a one-click refresher. Basics (`print`, `len`, `range`, the built-in types) are assumed.

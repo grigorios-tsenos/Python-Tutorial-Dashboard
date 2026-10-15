@@ -1,6 +1,7 @@
 import { area, step, walk, type Walkthrough } from './introKit'
 import { WALKTHROUGHS_ML } from './intros/ml'
 import { WALKTHROUGHS_NN } from './intros/nn'
+import { WALKTHROUGHS_RAG } from './intros/rag'
 import { WALKTHROUGHS_STATS } from './intros/stats'
 import { WALKTHROUGHS_VIZ } from './intros/viz'
 
@@ -372,4 +373,4 @@ const BASE: Record<string, Walkthrough> = {
     step('Return the complete report', 'No hook blocks were in this example, so blocked is zero. Each invocation starts its own counters.', 'return {"tools": tools, "errors": errors, "blocked": blocked, "tokens": tokens, "skipped": skipped}', area('Report', [[['a','Read calls: 1']],[['b','errors: 1']],[['blocked','blocked: 0']],[['c','tokens: 13']],[['d','skipped: 1']]]))),
 }
 
-export const WALKTHROUGHS: Record<string, Walkthrough> = { ...BASE, ...WALKTHROUGHS_STATS, ...WALKTHROUGHS_VIZ, ...WALKTHROUGHS_ML, ...WALKTHROUGHS_NN }
+export const WALKTHROUGHS: Record<string, Walkthrough> = { ...BASE, ...WALKTHROUGHS_STATS, ...WALKTHROUGHS_VIZ, ...WALKTHROUGHS_ML, ...WALKTHROUGHS_NN, ...WALKTHROUGHS_RAG }
