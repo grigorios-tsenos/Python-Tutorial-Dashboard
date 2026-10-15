@@ -13,7 +13,7 @@ interface Item {
   keywords?: string
   run: () => void
   icon: string
-  /** multiplies the match score: the 108 hand-built lessons outrank the 523 course lessons on a similar match */
+  /** multiplies the match score: the 117 hand-built lessons outrank the 523 course lessons on a similar match */
   weight?: number
 }
 

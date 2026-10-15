@@ -113,6 +113,20 @@ export const STDLIB_CARDS: CommandCard[] = [
     returns: 'A list of strings: the whole matches if the pattern has no capturing groups, the group\'s text if it has one, or tuples of group texts if it has several. Empty if nothing matches.',
   },
   {
+    keys: ['re.split'],
+    name: 're.split',
+    kind: 'function',
+    signature: 're.split(pattern, string, maxsplit=0, flags=0)',
+    summary: 'Splits a string wherever a regular expression matches, like `str.split` but with a pattern as the separator. A zero-width pattern (such as a lookbehind) splits without removing any characters.',
+    params: [
+      { name: 'pattern', text: 'The regular expression that marks each split point, as a string (usually a raw string `r"..."`) or a compiled Pattern. Text matched by capturing groups is kept in the result.' },
+      { name: 'string', text: 'The text to split.' },
+      { name: 'maxsplit', text: 'Maximum number of splits; the rest of the string stays in the last piece. Default 0 (no limit).' },
+      { name: 'flags', text: 'Option flags such as `re.IGNORECASE`, combined with `|`. Default 0 (none).' },
+    ],
+    returns: 'A list of strings: the pieces between matches. Leading or trailing matches produce empty strings at the ends.',
+  },
+  {
     keys: ['json.dumps'],
     name: 'json.dumps',
     kind: 'function',

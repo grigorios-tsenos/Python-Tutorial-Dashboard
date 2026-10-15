@@ -1,4 +1,4 @@
-export type TrackId = 'numpy' | 'pandas' | 'stats' | 'viz' | 'ml' | 'nn' | 'python' | 'langchain' | 'langgraph' | 'mlflow' | 'databricks' | 'claude'
+export type TrackId = 'numpy' | 'pandas' | 'stats' | 'viz' | 'ml' | 'nn' | 'python' | 'langchain' | 'rag' | 'langgraph' | 'mlflow' | 'databricks' | 'claude'
 
 export type LessonKind = 'run' | 'lab' | 'predict' | 'bug' | 'parsons' | 'build' | 'boss'
 

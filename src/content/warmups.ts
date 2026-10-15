@@ -1,6 +1,7 @@
 import { area, small, warmup, type Warmup } from './introKit'
 import { WARMUPS_ML } from './intros/ml'
 import { WARMUPS_NN } from './intros/nn'
+import { WARMUPS_RAG } from './intros/rag'
 import { WARMUPS_STATS } from './intros/stats'
 import { WARMUPS_VIZ } from './intros/viz'
 
@@ -306,4 +307,4 @@ const BASE: Record<string, Warmup> = {
     small("Increment the matching counter", "For each eligible shell event, add one to shell’s count. Keep other tool counts separate.", area("Follow the stages", [[["item-0", "shell: 2"]], [["item-1", "other: 1"]]]))),
 }
 
-export const WARMUPS: Record<string, Warmup> = { ...BASE, ...WARMUPS_STATS, ...WARMUPS_VIZ, ...WARMUPS_ML, ...WARMUPS_NN }
+export const WARMUPS: Record<string, Warmup> = { ...BASE, ...WARMUPS_STATS, ...WARMUPS_VIZ, ...WARMUPS_ML, ...WARMUPS_NN, ...WARMUPS_RAG }
