@@ -278,9 +278,17 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Wrap the per-request steps",
+        "instruction": "Define `error_window(logs, days)`. Inside it, repeat steps 3 to 6 on its arguments, keeping the same names: parse the timestamps, find each request's day, flag the errors and keep the requested window. Return the window.",
+        "code": "def error_window(logs, days):\n    parsed = pd.to_datetime(logs[\"at\"], utc=True)\n    day = parsed.dt.floor(\"D\")\n    flagged = logs.assign(day=day, errors=logs[\"status\"] >= 500)\n    window = flagged[day.between(days[0], days[-1])]\n    return window",
+        "check": "test(\"Wrap the per-request steps\", lambda: error_window(logs, days).equals(window) and \"day\" not in logs.columns, \"error_window(logs, days) returns the same five rows as window, and logs is unchanged.\")",
+        "expected": "error_window(logs, days) returns the same five rows as window, and logs is unchanged.",
+        "reassurance": ""
+      },
+      {
         "title": "Wrap the pipeline in a function",
-        "instruction": "Define `daily_errors(logs, start, end)`, with parameters in that order. Inside it, repeat your steps on its own arguments and return the integer table with one row per day and one column per endpoint.",
-        "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    day = pd.to_datetime(logs[\"at\"], utc=True).dt.floor(\"D\")\n    window = logs.assign(day=day, errors=logs[\"status\"] >= 500)[day.between(days[0], days[-1])]\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    return table.reindex(days, fill_value=0).astype(int)",
+        "instruction": "Define `daily_errors(logs, start, end)`, with parameters in that order. Inside it, build the calendar, get the window from `error_window`, then repeat your pivot, reindex and integer steps. Return the integer table with one row per day and one column per endpoint.",
+        "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    window = error_window(logs, days)\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    aligned = table.reindex(days, fill_value=0)\n    daily = aligned.astype(int)\n    return daily",
         "check": "test(\"Wrap the pipeline in a function\", lambda: daily_errors(logs, start, end).equals(daily) and \"day\" not in logs.columns, \"daily_errors(logs, start, end) returns the same table as daily, and logs is unchanged.\")",
         "expected": "daily_errors(logs, start, end) returns the same table as daily, and logs is unchanged.",
         "reassurance": ""
@@ -288,7 +296,7 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
       {
         "title": "Reject reversed dates",
         "instruction": "Update `daily_errors` so that, right after building the calendar, it raises a `ValueError` when the calendar is empty, which happens when `end` comes before `start`. Then run Check.",
-        "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    if days.empty: raise ValueError(\"end must not be before start\")\n    day = pd.to_datetime(logs[\"at\"], utc=True).dt.floor(\"D\")\n    window = logs.assign(day=day, errors=logs[\"status\"] >= 500)[day.between(days[0], days[-1])]\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    return table.reindex(days, fill_value=0).astype(int)",
+        "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    if days.empty: raise ValueError(\"end must not be before start\")\n    window = error_window(logs, days)\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    aligned = table.reindex(days, fill_value=0)\n    daily = aligned.astype(int)\n    return daily",
         "check": "",
         "expected": "The complete check covers UTC offsets, healthy endpoints, outside-window traffic, empty windows and reversed dates.",
         "reassurance": ""
@@ -355,9 +363,17 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Wrap the cleaning",
+        "instruction": "Define `clean_events(events)`. Inside it, repeat your two cleaning steps on the `events` it receives: parse the timestamps, then convert the amounts. Return the cleaned frame.",
+        "code": "def clean_events(events):\n    clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"))\n    clean = clean.assign(amount=pd.to_numeric(clean[\"amount\"], errors=\"coerce\").fillna(0))\n    return clean",
+        "check": "test(\"Wrap the cleaning\", lambda: clean_events(events).equals(clean) and events[\"amount\"].tolist() == [\"5\", \"12\", \"100\"], \"clean_events(events) matches clean, and events still holds the original strings.\")",
+        "expected": "clean_events(events) matches clean, and events still holds the original strings.",
+        "reassurance": ""
+      },
+      {
         "title": "Wrap the pipeline in a function",
-        "instruction": "Define `recent_features(events, as_of, days=7)`, with parameters in that order and a default of seven days. Repeat your steps on its own arguments: the cutoff, the cleaned frame, the window and the per-user features.",
-        "code": "def recent_features(events, as_of, days=7):\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"), amount=pd.to_numeric(events[\"amount\"], errors=\"coerce\").fillna(0))\n    window = clean[(clean[\"at\"] > cutoff - pd.Timedelta(days=days)) & (clean[\"at\"] <= cutoff)]\n    return window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\")).reset_index()",
+        "instruction": "Define `recent_features(events, as_of, days=7)`, with parameters in that order and a default of seven days. Repeat your steps on its own arguments: the cutoff, the cleaned frame from `clean_events`, the window start, the window and the per-user aggregates. Return them with `user` as a normal column.",
+        "code": "def recent_features(events, as_of, days=7):\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = clean_events(events)\n    window_start = cutoff - pd.Timedelta(days=days)\n    window = clean[(clean[\"at\"] > window_start) & (clean[\"at\"] <= cutoff)]\n    per_user = window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\"))\n    return per_user.reset_index()",
         "check": "test(\"Wrap the pipeline in a function\", lambda: recent_features(events, as_of).equals(features) and recent_features(events, as_of, days=1)[\"n_events\"].tolist() == [1], \"recent_features(events, as_of) matches features, and a one-day window keeps one event.\")",
         "expected": "recent_features(events, as_of) matches features, and a one-day window keeps one event.",
         "reassurance": ""
@@ -365,7 +381,7 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
       {
         "title": "Reject empty windows",
         "instruction": "Update `recent_features` so it raises a `ValueError` before doing anything else when `days` is less than one. Then run Check.",
-        "code": "def recent_features(events, as_of, days=7):\n    if days < 1: raise ValueError(\"days must be positive\")\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"), amount=pd.to_numeric(events[\"amount\"], errors=\"coerce\").fillna(0))\n    window = clean[(clean[\"at\"] > cutoff - pd.Timedelta(days=days)) & (clean[\"at\"] <= cutoff)]\n    return window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\")).reset_index()",
+        "code": "def recent_features(events, as_of, days=7):\n    if days < 1: raise ValueError(\"days must be positive\")\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = clean_events(events)\n    window_start = cutoff - pd.Timedelta(days=days)\n    window = clean[(clean[\"at\"] > window_start) & (clean[\"at\"] <= cutoff)]\n    per_user = window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\"))\n    return per_user.reset_index()",
         "check": "",
         "expected": "The full check covers exact boundaries, invalid values, UTC offsets, empty data, shorter windows and input preservation.",
         "reassurance": ""
@@ -373,7 +389,7 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
     ]
   },
   "pd-encode": {
-    "setup": "import pandas as pd\ntrain = pd.DataFrame({\"user\": [\"a\", \"b\", \"c\", \"d\", \"e\"], \"plan\": [\"pro\", \"free\", \"team\", \"free\", \"pro\"], \"sessions\": [12, 3, 8, 1, 20]})\ncolumn = \"plan\"",
+    "setup": "import pandas as pd\ntrain = pd.DataFrame({\"user\": [\"a\", \"b\", \"c\", \"d\", \"e\"], \"plan\": [\"pro\", \"free\", \"team\", \"free\", \"pro\"], \"sessions\": [12, 3, 8, 1, 20]})\ncolumn = \"plan\"\nmin_count = 1",
     "steps": [
       {
         "title": "Drop the missing values",
@@ -393,10 +409,10 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Keep the frequent categories",
-        "instruction": "Create `frequent` with only the entries of `counts` whose count is at least 1.",
-        "code": "frequent = counts[counts >= 1]",
-        "check": "test(\"Keep the frequent categories\", lambda: frequent.to_dict() == {\"pro\": 2, \"free\": 2, \"team\": 1}, \"All three categories pass a threshold of 1.\")",
-        "expected": "All three categories pass a threshold of 1.",
+        "instruction": "Create `frequent` with only the entries of `counts` whose count is at least `min_count`.",
+        "code": "frequent = counts[counts >= min_count]",
+        "check": "test(\"Keep the frequent categories\", lambda: frequent.to_dict() == {\"pro\": 2, \"free\": 2, \"team\": 1}, \"All three categories pass a min_count of 1.\")",
+        "expected": "All three categories pass a min_count of 1.",
         "reassurance": ""
       },
       {
@@ -417,8 +433,8 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Make vocabulary fitting reusable",
-        "instruction": "Implement `fit_vocabulary(values, min_count=1)`, with parameters in that order and a default threshold of one. Return a sorted list of categories seen at least `min_count` times, ignoring missing values. Empty input returns an empty list.",
-        "code": "def fit_vocabulary(values, min_count=1):\n    \"\"\"Sorted categories seen at least min_count times (missing values ignored).\"\"\"\n    counts = pd.Series(values).dropna().value_counts()\n    return sorted(counts[counts >= min_count].index.tolist())",
+        "instruction": "Implement `fit_vocabulary(values, min_count=1)`, with parameters in that order and a default threshold of one. Turn `values` into a Series first, so a plain list works too, then repeat steps 1 to 5 and return the sorted list of categories seen at least `min_count` times. Missing values are ignored; empty input returns an empty list.",
+        "code": "def fit_vocabulary(values, min_count=1):\n    observed = pd.Series(values).dropna()\n    counts = observed.value_counts()\n    frequent = counts[counts >= min_count]\n    labels = frequent.index.tolist()\n    return sorted(labels)",
         "check": "test('Make vocabulary fitting reusable', lambda: fit_vocabulary([\"b\", \"a\", \"b\", None], 2) == [\"b\"] and fit_vocabulary([]) == [], 'A threshold of 2 keeps only b in [b, a, b, missing]; empty input returns [].')",
         "expected": "A threshold of 2 keeps only b in [b, a, b, missing]; empty input returns [].",
         "reassurance": ""
@@ -464,9 +480,17 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Encode one column",
+        "instruction": "Define `indicators_for(values, column, vocabulary)`: given one column's `values` as a Series and its name, repeat your steps for the names, the known values, the dummies and the aligned indicators, and return the aligned indicators.",
+        "code": "def indicators_for(values, column, vocabulary):\n    names = [f\"{column}={value}\" for value in vocabulary] + [f\"{column}=other\"]\n    known = values.where(values.isin(vocabulary), \"other\")\n    dummies = pd.get_dummies(known, prefix=column, prefix_sep=\"=\", dtype=int)\n    indicators = dummies.reindex(columns=names, fill_value=0)\n    return indicators",
+        "check": "test(\"Encode one column\", lambda: indicators_for(train[column], column, vocabulary).equals(indicators) and indicators_for(pd.Series([\"enterprise\"]), \"plan\", vocabulary)[\"plan=other\"].tolist() == [1], \"It matches indicators for train, and an unseen plan lands in plan=other.\")",
+        "expected": "It matches indicators for train, and an unseen plan lands in plan=other.",
+        "reassurance": ""
+      },
+      {
         "title": "Build the reusable encoder",
-        "instruction": "Implement `encode(frame, column, vocabulary)`, with parameters in that order, repeating your steps on its own arguments: the names, the known values, the aligned indicators and the swapped columns. Unknown or missing categories map to `other`. Then run Check.",
-        "code": "def encode(frame, column, vocabulary):\n    \"\"\"Replace column with one indicator per vocabulary entry, plus column=other.\"\"\"\n    names = [f\"{column}={value}\" for value in vocabulary] + [f\"{column}=other\"]\n    known = frame[column].where(frame[column].isin(vocabulary), \"other\")\n    indicators = pd.get_dummies(known, prefix=column, prefix_sep=\"=\", dtype=int).reindex(columns=names, fill_value=0)\n    return pd.concat([frame.drop(columns=column), indicators], axis=1)",
+        "instruction": "Implement `encode(frame, column, vocabulary)`, with parameters in that order: swap `column` in `frame` for its indicators from `indicators_for`, the way you built `encoded`. Unknown or missing categories map to `other`. Then run Check.",
+        "code": "def encode(frame, column, vocabulary):\n    indicators = indicators_for(frame[column], column, vocabulary)\n    return pd.concat([frame.drop(columns=column), indicators], axis=1)",
         "check": "",
         "expected": "The full check includes one-row requests, unseen and missing categories, custom index, vocabulary order, empty batches and unchanged inputs.",
         "reassurance": ""
@@ -485,10 +509,26 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
-        "title": "Aggregate one row per user",
-        "instruction": "Create `per_user` with one row per user, sorted by user, and four named results: `n_events` counting all events, `n_views` and `n_purchases` counting their flags, and `revenue` summing `value` while ignoring missing values. The users stay in the index for now.",
+        "title": "Count events per user",
+        "instruction": "Create `per_user` with one row per user, sorted by user, and one named result: `n_events`, counting all events. The users stay in the index for now. Put each named result on its own line inside the aggregation call, so you can add more next.",
+        "code": "per_user = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n)",
+        "check": "test(\"Count events per user\", lambda: per_user.index.tolist() == [\"a\", \"b\", \"c\"] and per_user[\"n_events\"].tolist() == [3, 2, 1], \"Users a, b, c have 3, 2 and 1 events.\")",
+        "expected": "Users a, b, c have 3, 2 and 1 events.",
+        "reassurance": ""
+      },
+      {
+        "title": "Count the flags",
+        "instruction": "Recreate `per_user` with two more named results after `n_events`: `n_views` and `n_purchases`, each counting the True values of its flag.",
+        "code": "per_user = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n    n_views=(\"is_view\", \"sum\"),\n    n_purchases=(\"is_purchase\", \"sum\"),\n)",
+        "check": "test(\"Count the flags\", lambda: per_user[\"n_views\"].tolist() == [2, 1, 0] and per_user[\"n_purchases\"].tolist() == [1, 0, 0], \"Views are [2, 1, 0] and purchases [1, 0, 0].\")",
+        "expected": "Views are [2, 1, 0] and purchases [1, 0, 0].",
+        "reassurance": ""
+      },
+      {
+        "title": "Add the revenue",
+        "instruction": "Recreate `per_user` once more, adding `revenue` last: the sum of `value` for each user, ignoring missing values.",
         "code": "per_user = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n    n_views=(\"is_view\", \"sum\"),\n    n_purchases=(\"is_purchase\", \"sum\"),\n    revenue=(\"value\", \"sum\"),\n)",
-        "check": "test(\"Aggregate one row per user\", lambda: per_user.index.tolist() == [\"a\", \"b\", \"c\"] and per_user[\"n_events\"].tolist() == [3, 2, 1] and per_user[\"revenue\"].tolist() == [30.0, 0.0, 0.0], \"Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].\")",
+        "check": "test(\"Add the revenue\", lambda: per_user.index.tolist() == [\"a\", \"b\", \"c\"] and per_user[\"n_events\"].tolist() == [3, 2, 1] and per_user[\"revenue\"].tolist() == [30.0, 0.0, 0.0], \"Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].\")",
         "expected": "Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].",
         "reassurance": ""
       },
