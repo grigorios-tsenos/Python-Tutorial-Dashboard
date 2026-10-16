@@ -148,12 +148,23 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "All nine combinations are present. Recording is checked; selection comes next."
       },
       {
+        "title": "Pick the top row",
+        "instruction": "Search the runs of the selected experiment ordered by highest `accuracy` first, and store the first row of that table in `best`. Use the table's `iloc` position indexer to take row 0.",
+        "code": "best = mlflow.search_runs(order_by=[\"metrics.accuracy DESC\"]).iloc[0]",
+        "check": "test(\"Pick the top row\", lambda: best[\"metrics.accuracy\"] == 1.0 and best[\"params.lr\"] == \"0.1\", \"best is the lr 0.1 run with accuracy 1.0.\")",
+        "expected": "best is the lr 0.1 run with accuracy 1.0.",
+        "reassurance": ""
+      },
+      {
         "title": "Read the best params",
         "instruction": "Define `best_params()` to find the run with the highest `accuracy` in the selected experiment. Return a dictionary with keys `lr` and `depth`, using the winning parameter values in their stored string form.",
         "code": "def best_params():\n    best = mlflow.search_runs(order_by=[\"metrics.accuracy DESC\"]).iloc[0]\n    return {\"lr\": best[\"params.lr\"], \"depth\": best[\"params.depth\"]}",
         "check": "test(\"Read the best params\", lambda: best_params() == {\"lr\": \"0.1\", \"depth\": \"4\"}, \"The best parameters are lr \\\"0.1\\\" and depth \\\"4\\\".\")",
         "expected": "The best parameters are lr \"0.1\" and depth \"4\".",
-        "reassurance": "The table identifies the peak correctly. Now join the tested pieces into the requested function."
+        "reassurance": "The table identifies the peak correctly. Now join the tested pieces into the requested function.",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Assemble the sweep",
@@ -185,6 +196,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The row is decoded correctly. Empty searches still need a safe result."
       },
       {
+        "title": "Spot an empty result",
+        "instruction": "Run `eligible_runs` for experiment `ticket-classifier` with a budget of `5` ms, which no run meets, and store whether the resulting table is empty in `no_match`. Use the table's `empty` property.",
+        "code": "no_match = eligible_runs(\"ticket-classifier\", 5).empty",
+        "check": "test(\"Spot an empty result\", lambda: no_match is True, \"no_match is True for a 5 ms budget.\")",
+        "expected": "no_match is True for a 5 ms budget.",
+        "reassurance": ""
+      },
+      {
         "title": "Handle an empty search",
         "instruction": "Define `best_within_budget(experiment, max_latency_ms)` using your search and row helpers. Return the best qualifying run as that dictionary, or `None` when the search is empty. Respect the named experiment even when another experiment is active, and leave the history unchanged.",
         "code": "def best_within_budget(experiment, max_latency_ms):\n    runs = eligible_runs(experiment, max_latency_ms)\n    return None if runs.empty else unpack_run(runs.iloc[0])",
@@ -205,12 +224,23 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "You are ready to define the smallest possible model."
       },
       {
+        "title": "Start the model class",
+        "instruction": "Define class `Echo` as a subclass of `mlflow.pyfunc.PythonModel`, with only `pass` in its body for now. The next step gives it a `predict` method.",
+        "code": "class Echo(mlflow.pyfunc.PythonModel):\n    pass",
+        "check": "test(\"Start the model class\", lambda: issubclass(Echo, mlflow.pyfunc.PythonModel), \"Echo is an MLflow Python model class.\")",
+        "expected": "Echo is an MLflow Python model class.",
+        "reassurance": ""
+      },
+      {
         "title": "Define the echo model",
         "instruction": "Define class `Echo` as an MLflow Python model. Its `predict(self, context, model_input, params=None)` method should return the input unchanged, including inputs other than the sample string.",
         "code": "class Echo(mlflow.pyfunc.PythonModel):\n    def predict(self, context, model_input, params=None):\n        return model_input",
         "check": "test(\"Define the echo model\", lambda: Echo().predict(None, \"hi\") == \"hi\", \"The model returns hi for hi.\")",
         "expected": "The model returns hi for hi.",
-        "reassurance": "The prediction behavior is verified before it enters the registry."
+        "reassurance": "The prediction behavior is verified before it enters the registry.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Log the artifact",
@@ -414,6 +444,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Tag one run",
+        "instruction": "Open a run named `tag-demo`, keeping its handle as `demo`, and inside it set the tag `dataset_digest` to the `dataset_digest` of the one-row dataset `[{\"input\": \"a\", \"label\": \"x\"}]` with `mlflow.set_tag`. The run should be closed afterwards.",
+        "code": "with mlflow.start_run(run_name=\"tag-demo\") as demo:\n    mlflow.set_tag(\"dataset_digest\", dataset_digest([{\"input\": \"a\", \"label\": \"x\"}]))",
+        "check": "test(\"Tag one run\", lambda: mlflow.get_run(demo.info.run_id).data.tags[\"dataset_digest\"] == dataset_digest([{\"input\": \"a\", \"label\": \"x\"}]) and mlflow.active_run() is None, \"The closed tag-demo run carries the dataset_digest tag.\")",
+        "expected": "The closed tag-demo run carries the dataset_digest tag.",
+        "reassurance": ""
+      },
+      {
         "title": "Log one evaluation",
         "instruction": "Update `log_eval` so the run also stores the dataset fingerprint as tag `dataset_digest` and the row count as parameter `n_examples`. After the run closes, return its run ID. Preserve the dataset.",
         "code": "def log_eval(run_name, predict, rows):\n    accuracy = eval_accuracy(predict, rows)\n    mlflow.set_experiment(\"eval\")\n    with mlflow.start_run(run_name=run_name) as run:\n        mlflow.set_tag(\"dataset_digest\", dataset_digest(rows))\n        mlflow.log_param(\"n_examples\", len(rows))\n        mlflow.log_metric(\"accuracy\", accuracy)\n    return run.info.run_id",
@@ -423,6 +461,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "startFrom": [
           6
         ]
+      },
+      {
+        "title": "Walk the run rows",
+        "instruction": "Search the runs of the current experiment, which holds your `tag-demo` run, and build `names`: a list of each row's `tags.mlflow.runName`. Loop over the table's rows with its `iterrows` method, which yields index/row pairs.",
+        "code": "names = [row[\"tags.mlflow.runName\"] for _, row in mlflow.search_runs().iterrows()]",
+        "check": "test(\"Walk the run rows\", lambda: names == [\"tag-demo\"], \"names is [\\\"tag-demo\\\"].\")",
+        "expected": "names is [\"tag-demo\"].",
+        "reassurance": ""
       },
       {
         "title": "Find runs on the same data",
@@ -440,7 +486,7 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "expected": "Only finished evaluations on the same digest appear; unknown digests give [].",
         "reassurance": "The full chapter checks dataset stability, matching leaderboards and rejection before logging.",
         "startFrom": [
-          8
+          10
         ]
       }
     ]
@@ -457,12 +503,28 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "There is an existing champion to compare against. A later version alone will not justify promotion."
       },
       {
+        "title": "Look up one version",
+        "instruction": "Use a client to fetch the `demo-model` version that `champion` refers to, storing it in `mv`. Then store the ID of the tracking run that produced it, the version's `run_id`, in `source_run`.",
+        "code": "mv = mlflow.MlflowClient().get_model_version(\"demo-model\", champion.version)\nsource_run = mv.run_id",
+        "check": "test(\"Look up one version\", lambda: mv.version == champion.version and mlflow.get_run(source_run).data.metrics[\"quality\"] == 0.8, \"source_run is the run that logged quality 0.8.\")",
+        "expected": "source_run is the run that logged quality 0.8.",
+        "reassurance": ""
+      },
+      {
         "title": "Read stored quality",
         "instruction": "Define `quality_of(name, version)` to retrieve the `quality` metric from the tracking run behind a registered model version. Look the version up with the client, then use its recorded run ID rather than inferring quality from the version number.",
         "code": "def quality_of(name, version):\n    mv = mlflow.MlflowClient().get_model_version(name, version)\n    return mlflow.get_run(mv.run_id).data.metrics[\"quality\"]",
         "check": "test(\"Read stored quality\", lambda: quality_of(\"demo-model\", champion.version) == 0.8, \"The tracked quality is 0.8.\")",
         "expected": "The tracked quality is 0.8.",
         "reassurance": "The score comes from tracking data. The promotion rule can now compare measured values."
+      },
+      {
+        "title": "Follow the champion alias",
+        "instruction": "Use a client to look up the `demo-model` version that the `champion` alias points to, and store it in `current`. Only read the registry; change nothing.",
+        "code": "current = mlflow.MlflowClient().get_model_version_by_alias(\"demo-model\", \"champion\")",
+        "check": "test(\"Follow the champion alias\", lambda: current.version == champion.version, \"current is the champion version.\")",
+        "expected": "current is the champion version.",
+        "reassurance": ""
       },
       {
         "title": "Compare with the champion",
@@ -488,7 +550,7 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
         "expected": "Comparing the champion with itself returns False.",
         "reassurance": "Ties correctly keep the alias. The complete check also tests wins, losses and invalid versions.",
         "startFrom": [
-          3
+          5
         ]
       },
       {

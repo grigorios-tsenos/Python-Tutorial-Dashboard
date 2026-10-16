@@ -519,6 +519,14 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Find the strongest concept",
+        "instruction": "Create `top_dim`, the index of the largest entry in `v` (the averaged vector), as an int.",
+        "code": "top_dim = int(np.argmax(v))",
+        "check": "test(\"Find the strongest concept\", lambda: top_dim == int(np.argmax(v)) and type(top_dim) is int and v[top_dim] == v.max(), \"top_dim is the concept dimension where v is largest.\")",
+        "expected": "top_dim is the concept dimension where v is largest.",
+        "reassurance": ""
+      },
+      {
         "title": "Find the best chunk",
         "instruction": "Set `vector` to the embedding of `reset password`, score every chunk against it as `scores`, and store the index of the highest score, as an int, in `best`.",
         "code": "vector = embed(\"reset password\")\nscores = CHUNK_VECS @ vector\nbest = int(np.argmax(scores))",
@@ -534,7 +542,7 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "expected": "The password chunk for a password vector; None when nothing matches.",
         "reassurance": "",
         "startFrom": [
-          3
+          4
         ]
       },
       {
@@ -561,7 +569,7 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "expected": "hits counts how many of the four questions plain embed answers from the right file.",
         "reassurance": "",
         "startFrom": [
-          6
+          7
         ]
       },
       {
@@ -572,7 +580,7 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "expected": "A function that always searches for refunds hits only the first question; one that finds nothing scores 0.",
         "reassurance": "Any retrieval idea can now be compared with one number.",
         "startFrom": [
-          7
+          8
         ]
       },
       {

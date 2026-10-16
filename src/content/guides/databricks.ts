@@ -405,22 +405,39 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Define the revenue column",
+        "instruction": "Create `revenue`: the sum of `amount` with `F.sum`, rounded to two decimals and named `revenue`. It is a column expression, so nothing is computed until a frame uses it.",
+        "code": "revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")",
+        "check": "test(\"Define the revenue column\", lambda: silver.agg(revenue).collect()[0][\"revenue\"] == 67.0, \"Applied to all of silver, revenue totals 67.0.\")",
+        "expected": "Applied to all of silver, revenue totals 67.0.",
+        "reassurance": ""
+      },
+      {
         "title": "Total revenue per city",
-        "instruction": "Create `revenue` (sum of `amount` with `F.sum`, rounded to two decimals, named `revenue`) and `orders` (row count named `orders`). Group `silver` by `city` and apply both into `totals`.",
-        "code": "revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")\norders = F.count(\"*\").alias(\"orders\")\ntotals = silver.groupBy(\"city\").agg(revenue, orders)",
+        "instruction": "Create `orders` (row count named `orders`). Group `silver` by `city` and apply your `revenue` and `orders` into `totals`.",
+        "code": "orders = F.count(\"*\").alias(\"orders\")\ntotals = silver.groupBy(\"city\").agg(revenue, orders)",
         "check": "test(\"Total revenue per city\", lambda: {row[\"city\"]: (row[\"revenue\"], row[\"orders\"]) for row in totals.collect()} == {\"NYC\": (50.0, 2), \"LA\": (12.0, 1), \"SF\": (5.0, 1)}, \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
         "expected": "NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.",
         "reassurance": ""
       },
       {
+        "title": "Sort by revenue",
+        "instruction": "Create `ranked` from `totals`, ordered by decreasing `revenue`. Use `F.desc` to mark the column as descending.",
+        "code": "ranked = totals.orderBy(F.desc(\"revenue\"))",
+        "check": "test(\"Sort by revenue\", lambda: [row[\"city\"] for row in ranked.collect()] == [\"NYC\", \"LA\", \"SF\"], \"ranked lists NYC, LA, SF.\")",
+        "expected": "ranked lists NYC, LA, SF.",
+        "reassurance": ""
+      },
+      {
         "title": "Aggregate gold revenue",
-        "instruction": "Define `gold_frame(silver)`: repeat your three lines inside it and return `totals` ordered by decreasing revenue (`F.desc`) with `city` breaking ties. Then store `gold_frame(silver)` in `gold`.",
+        "instruction": "Define `gold_frame(silver)`: repeat your `revenue`, `orders` and `totals` lines inside it and return `totals` ordered by decreasing revenue (`F.desc`) with `city` breaking ties. Then store `gold_frame(silver)` in `gold`.",
         "code": "def gold_frame(silver):\n    revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")\n    orders = F.count(\"*\").alias(\"orders\")\n    totals = silver.groupBy(\"city\").agg(revenue, orders)\n    return totals.orderBy(F.desc(\"revenue\"), \"city\")\ngold = gold_frame(silver)",
         "check": "test(\"Aggregate gold revenue\", lambda: [tuple(row) for row in gold.collect()] == [(\"NYC\", 50.0, 2), (\"LA\", 12.0, 1), (\"SF\", 5.0, 1)], \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
         "expected": "NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.",
         "reassurance": "",
         "startFrom": [
-          6
+          6,
+          7
         ]
       },
       {
@@ -439,7 +456,7 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "expected": "Three Delta tables are saved and the gold DataFrame is returned.",
         "reassurance": "The complete boss checks change the data, rerun the pipeline and finish with an empty batch.",
         "startFrom": [
-          8
+          10
         ]
       }
     ]

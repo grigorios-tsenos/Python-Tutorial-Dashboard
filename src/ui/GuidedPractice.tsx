@@ -18,9 +18,12 @@ interface Props {
   onComplete: (tries: number) => void
 }
 
+/** "step 3", "steps 2 and 4", "steps 2 to 6", "steps 1, 3 and 5" */
 const from = (steps: number[]) => {
-  const names = steps.map(i => `step ${i + 1}`)
-  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
+  const n = steps.map(i => i + 1)
+  if (n.length === 1) return `step ${n[0]}`
+  if (n.length > 2 && n[n.length - 1] - n[0] === n.length - 1) return `steps ${n[0]} to ${n[n.length - 1]}`
+  return `steps ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`
 }
 
 export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {

@@ -152,9 +152,17 @@ export const PYTHON_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Name the allowed sentiments",
+        "instruction": "Create `Sentiment`, a type that only allows the exact strings `positive`, `neutral` and `negative`.",
+        "code": "Sentiment = Literal[\"positive\", \"neutral\", \"negative\"]",
+        "check": "test(\"Name the allowed sentiments\", lambda: __import__('typing').get_args(Sentiment) == ('positive', 'neutral', 'negative'), \"Sentiment allows exactly positive, neutral and negative.\")",
+        "expected": "Sentiment allows exactly positive, neutral and negative.",
+        "reassurance": ""
+      },
+      {
         "title": "Restrict the sentiment",
         "instruction": "Define `Review` as a Pydantic model with `sentiment` and `score` fields. Permit only `positive`, `neutral` or `negative` for sentiment; require an integer score while allowing numeric strings to be converted.",
-        "code": "class Review(BaseModel):\n    sentiment: Literal[\"positive\", \"neutral\", \"negative\"]\n    score: int",
+        "code": "class Review(BaseModel):\n    sentiment: Sentiment\n    score: int",
         "check": "try:\n    Review(sentiment=\"meh\", score=3)\n    bad_sentiment_rejected = False\nexcept ValidationError:\n    bad_sentiment_rejected = True\ntest(\"sentiment vocabulary is enforced\", lambda: bad_sentiment_rejected and Review(sentiment=\"neutral\", score=\"4\").score == 4, \"Literal must permit only positive, neutral and negative\")",
         "expected": "A neutral review with score \"4\" becomes an integer score of 4.",
         "reassurance": "Pydantic coerces safe conversions such as \"4\" to 4 but still rejects values outside a Literal."
@@ -167,7 +175,7 @@ export const PYTHON_GUIDES: Record<string, CodingGuide> = {
         "expected": "Both valid boundary scores, 1 and 5, are accepted.",
         "reassurance": "",
         "startFrom": [
-          1
+          2
         ]
       },
       {
@@ -194,7 +202,7 @@ export const PYTHON_GUIDES: Record<string, CodingGuide> = {
         "expected": "The demo prints rejected for sentiment meh and score 9.",
         "reassurance": "",
         "startFrom": [
-          3
+          4
         ]
       }
     ]
@@ -637,6 +645,14 @@ export const PYTHON_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Gather two calls",
+        "instruction": "Create `pair` by awaiting `fake_llm` on `\"a\"` and on `\"b\"` concurrently, gathering both results in one await.",
+        "code": "pair = await asyncio.gather(fake_llm(\"a\"), fake_llm(\"b\"))",
+        "check": "test(\"Gather two calls\", lambda: list(pair) == [\"A\", \"B\"], \"pair is [\\\"A\\\", \\\"B\\\"], in the order the calls were passed.\")",
+        "expected": "pair is [\"A\", \"B\"], in the order the calls were passed.",
+        "reassurance": ""
+      },
+      {
         "title": "Fan out with gather",
         "instruction": "Define async `fetch_all(prompts, call_llm, limit=3, retries=3)`. Create a semaphore with `limit` slots, then run `fetch_one` for every prompt concurrently and return the results in input order. Gathering awaitables does both.",
         "code": "async def fetch_all(prompts, call_llm, limit=3, retries=3):\n    sem = asyncio.Semaphore(limit)\n    return await asyncio.gather(*(fetch_one(p, call_llm, sem, retries) for p in prompts))",
@@ -652,7 +668,7 @@ export const PYTHON_GUIDES: Record<string, CodingGuide> = {
         "expected": "The complete check verifies input order, concurrent execution at the limit, exact retry counts, empty input and rejected invalid settings.",
         "reassurance": "",
         "startFrom": [
-          4
+          5
         ]
       }
     ]

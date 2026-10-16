@@ -102,9 +102,17 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
     "setup": "import numpy as np",
     "steps": [
       {
+        "title": "Make a seeded generator",
+        "instruction": "Store `seed` (0) and create `rng`: a NumPy random generator seeded with `seed`, so every run draws the same numbers.",
+        "code": "seed = 0\nrng = np.random.default_rng(seed)",
+        "check": "test(\"Make a seeded generator\", lambda: seed == 0 and isinstance(rng, np.random.Generator) and rng.bit_generator.state == np.random.default_rng(0).bit_generator.state, \"rng is a NumPy generator seeded with 0.\")",
+        "expected": "rng is a NumPy generator seeded with 0.",
+        "reassurance": ""
+      },
+      {
         "title": "Draw conversion counts",
-        "instruction": "Store the settings `p` (0.12), `n` (50 visitors), `trials` (5) and `seed` (0). Create `rng`, a NumPy random generator seeded with `seed`, and `counts`: `trials` binomial draws, each the number of conversions among `n` visitors who convert with probability `p`.",
-        "code": "p, n, trials, seed = 0.12, 50, 5, 0\nrng = np.random.default_rng(seed)\ncounts = rng.binomial(n, p, size=trials)",
+        "instruction": "Store the settings `p` (0.12), `n` (50 visitors) and `trials` (5). Create `counts`: `trials` binomial draws from `rng`, each the number of conversions among `n` visitors who convert with probability `p`.",
+        "code": "p, n, trials = 0.12, 50, 5\ncounts = rng.binomial(n, p, size=trials)",
         "check": "test('Draw conversion counts', lambda: np.array_equal(counts, np.random.default_rng(0).binomial(50, 0.12, size=5)), 'counts holds five conversion counts out of 50, reproducible from seed 0.')",
         "expected": "counts holds five conversion counts out of 50, reproducible from seed 0.",
         "reassurance": ""
@@ -119,14 +127,13 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Wrap it in a function",
-        "instruction": "Define `simulate_rates(p, n, trials, seed=0)` that repeats your two steps with its own arguments and returns the array of rates.",
+        "instruction": "Define `simulate_rates(p, n, trials, seed=0)` that repeats your generator, draw and rate steps with its own arguments and returns the array of rates.",
         "code": "def simulate_rates(p, n, trials, seed=0):\n    rng = np.random.default_rng(seed)\n    counts = rng.binomial(n, p, size=trials)\n    rates = counts / n\n    return rates",
         "check": "test('Wrap it in a function', lambda: simulate_rates(0.1, 50, 200, seed=3).shape == (200,) and np.allclose(simulate_rates(0.1, 50, 200, seed=3), np.random.default_rng(3).binomial(50, 0.1, size=200) / 50) and not np.array_equal(simulate_rates(0.1, 50, 200, seed=3), simulate_rates(0.1, 50, 200, seed=4)), 'Two hundred rates, multiples of 1/50, identical for the same seed and different for another seed.')",
         "expected": "Two hundred rates, multiples of 1/50, identical for the same seed and different for another seed.",
         "reassurance": "",
         "startFrom": [
-          0,
-          1
+          2
         ]
       },
       {
@@ -137,7 +144,7 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "expected": "Bad p, n or trials raise ValueError; p = 1 still converts everyone.",
         "reassurance": "",
         "startFrom": [
-          2
+          3
         ]
       },
       {
@@ -264,6 +271,14 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Try a shuffle",
+        "instruction": "Create `shuffled`: a shuffled copy of the array `a`, drawn with a NumPy generator seeded with 1. `a` itself must stay in its original order.",
+        "code": "shuffled = np.random.default_rng(1).permutation(a)",
+        "check": "test(\"Try a shuffle\", lambda: sorted(shuffled.tolist()) == sorted(a.tolist()) and shuffled.tolist() != a.tolist() and a.tolist() == control, \"shuffled holds the 20 control values in a new order; a is unchanged.\")",
+        "expected": "shuffled holds the 20 control values in a new order; a is unchanged.",
+        "reassurance": ""
+      },
+      {
         "title": "Shuffle once",
         "instruction": "Store the settings `n_perm` (2000) and `seed` (0), create `rng` seeded with `seed`, and create `s`: a shuffled copy of `pooled` drawn with `rng`.",
         "code": "n_perm, seed = 2000, 0\nrng = np.random.default_rng(seed)\ns = rng.permutation(pooled)",
@@ -295,7 +310,7 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "expected": "Three hundred shuffled gaps, reproducible from the seed; unequal group sizes split at len(a).",
         "reassurance": "",
         "startFrom": [
-          4
+          5
         ]
       },
       {
@@ -314,7 +329,7 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "expected": "Identical groups give exactly 1.0; groups two units apart give a tiny, non-zero, symmetric p-value.",
         "reassurance": "",
         "startFrom": [
-          6
+          7
         ]
       },
       {
@@ -325,7 +340,7 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "expected": "An empty group raises ValueError; the demo groups differ with p below 0.05.",
         "reassurance": "",
         "startFrom": [
-          7
+          8
         ]
       },
       {

@@ -528,14 +528,23 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Find the common path",
+        "instruction": "Using `root` and `path` from your sample, store their shared leading directory in `shared` with `posixpath.commonpath`, which takes a list of paths and compares whole components.",
+        "code": "shared = posixpath.commonpath([root, path])",
+        "check": "test(\"Find the common path\", lambda: shared == \"/workspace/repo\", \"shared is /workspace/repo.\")",
+        "expected": "shared is /workspace/repo.",
+        "reassurance": ""
+      },
+      {
         "title": "Normalize and check project scope",
-        "instruction": "Before classifying, deny with reason `write is outside the project` when the common path of `root` and `path` is not `root`. Use `posixpath.commonpath`, which compares whole components, so a sibling root does not count as inside.",
-        "code": "def classify_hook_path(path, project_dir):\n    root = posixpath.normpath(project_dir)\n    # ponytail: lexical paths only; resolve symlinks before filesystem enforcement.\n    path = posixpath.normpath(posixpath.join(root, path))\n    if posixpath.commonpath([root, path]) != root:\n        return hook_reply(\"deny\", \"write is outside the project\")\n    return classify_hook_parts(posixpath.relpath(path, root).split(\"/\"))",
+        "instruction": "Before classifying, compute `shared` the same way and deny with reason `write is outside the project` when it is not `root`. Because `posixpath.commonpath` compares whole components, a sibling root does not count as inside.",
+        "code": "def classify_hook_path(path, project_dir):\n    root = posixpath.normpath(project_dir)\n    # ponytail: lexical paths only; resolve symlinks before filesystem enforcement.\n    path = posixpath.normpath(posixpath.join(root, path))\n    shared = posixpath.commonpath([root, path])\n    if shared != root:\n        return hook_reply(\"deny\", \"write is outside the project\")\n    return classify_hook_parts(posixpath.relpath(path, root).split(\"/\"))",
         "check": "test(\"Normalize and check project scope\", lambda: classify_hook_path(\"../package.json\", \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"deny\" and classify_hook_path(\"config/../package.json\", \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"ask\", \"Outside writes deny; normalized project dependency files ask.\")",
         "expected": "Outside writes deny; normalized project dependency files ask.",
         "reassurance": "Scope takes precedence over dependency review. Next route validated write tools into this classifier.",
         "startFrom": [
-          8
+          8,
+          9
         ]
       },
       {
@@ -554,7 +563,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "Read returns {}; a Write without a usable path is denied.",
         "reassurance": "",
         "startFrom": [
-          10
+          11
         ]
       },
       {
@@ -565,7 +574,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "Dependencies ask, normal writes and unmanaged tools return {}, and malformed events deny.",
         "reassurance": "The router correctly handles the sample dependency, an ordinary write, an unmanaged tool and malformed input. The final check adds the remaining path cases.",
         "startFrom": [
-          11
+          12
         ]
       },
       {
@@ -677,6 +686,14 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Deep copy the sample",
+        "instruction": "Store an independent deep copy of `CONFIG` in `resolved` with `copy.deepcopy`, so nested dictionaries are copied too.",
+        "code": "resolved = copy.deepcopy(CONFIG)",
+        "check": "test(\"Deep copy the sample\", lambda: resolved == CONFIG and resolved[\"mcpServers\"][\"tracker\"][\"headers\"] is not CONFIG[\"mcpServers\"][\"tracker\"][\"headers\"], \"resolved equals CONFIG but shares no nested dictionaries.\")",
+        "expected": "resolved equals CONFIG but shares no nested dictionaries.",
+        "reassurance": ""
+      },
+      {
         "title": "Copy the configuration",
         "instruction": "Define `resolve_mcp_config(config, env)`. In one line, store an independent deep copy of `config` in `resolved` (use `copy.deepcopy`) and an empty set in `missing`, then return `resolved`.",
         "code": "def resolve_mcp_config(config, env):\n    resolved, missing = copy.deepcopy(config), set()\n    return resolved",
@@ -692,7 +709,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "The result uses Bearer tok-123; CONFIG still holds its placeholder; {} copies to {}.",
         "reassurance": "",
         "startFrom": [
-          10
+          11
         ]
       },
       {
@@ -703,7 +720,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "A complete environment still resolves; an incomplete one now raises ValueError.",
         "reassurance": "Copying preserves the input. The last check adds missing variables, defaults and multiple placeholders.",
         "startFrom": [
-          11
+          12
         ]
       },
       {
@@ -728,6 +745,14 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The report starts clean. Next parse lines without allowing malformed JSON to stop later events."
       },
       {
+        "title": "Decode one line",
+        "instruction": "Store the text `{\"type\": \"tool_use\", \"tool\": \"Bash\"}` in `line`, then turn it into a Python value with `json.loads` and store the result in `event`.",
+        "code": "line = '{\"type\": \"tool_use\", \"tool\": \"Bash\"}'\nevent = json.loads(line)",
+        "check": "test(\"Decode one line\", lambda: event == {\"type\": \"tool_use\", \"tool\": \"Bash\"}, \"event is a dictionary with type tool_use and tool Bash.\")",
+        "expected": "event is a dictionary with type tool_use and tool Bash.",
+        "reassurance": ""
+      },
+      {
         "title": "Parse a JSON line",
         "instruction": "Define `parse_log_event(line)` that turns the line into a Python value with `json.loads`, stores it in `event`, and returns it only when it is a dictionary, otherwise `None`.",
         "code": "def parse_log_event(line):\n    event = json.loads(line)\n    return event if isinstance(event, dict) else None",
@@ -743,7 +768,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "Junk and arrays are rejected; a JSON object is retained.",
         "reassurance": "Bad lines cannot crash the parser. Known event fields still need validation.",
         "startFrom": [
-          1
+          2
         ]
       },
       {
@@ -778,7 +803,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "A blank tool name is skipped and counts no tool; a named one still counts.",
         "reassurance": "",
         "startFrom": [
-          5
+          6
         ]
       },
       {
@@ -789,7 +814,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "A hook_block increases blocked and adds no tool count.",
         "reassurance": "Named actions count correctly. Error flags and usage events have different validation.",
         "startFrom": [
-          6
+          7
         ]
       },
       {
@@ -808,7 +833,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "The string \"true\" is skipped rather than counted as an error.",
         "reassurance": "Malformed error flags are contained. Next total valid usage records.",
         "startFrom": [
-          8
+          9
         ]
       },
       {
@@ -827,7 +852,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "A negative count is skipped and adds no tokens.",
         "reassurance": "Usage totals are verified. Now route the event types to their checked handlers.",
         "startFrom": [
-          10
+          11
         ]
       },
       {
@@ -846,7 +871,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "An unknown future event leaves the report unchanged; a usage event adds its tokens.",
         "reassurance": "Routing preserves forward compatibility. The line loop will now combine parsing and counting.",
         "startFrom": [
-          12
+          13
         ]
       },
       {
@@ -865,7 +890,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "Junk and an array count as 2 skipped; the object is not skipped.",
         "reassurance": "",
         "startFrom": [
-          14
+          15
         ]
       },
       {
@@ -876,7 +901,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "expected": "Sample: Bash 1, Edit 1, errors 1, blocked 1, tokens 2450, skipped 1.",
         "reassurance": "The sample report is correct. The final check adds malformed fields, arrays and independent repeated calls.",
         "startFrom": [
-          15
+          16
         ]
       },
       {

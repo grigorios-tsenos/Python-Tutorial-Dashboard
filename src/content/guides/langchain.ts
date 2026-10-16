@@ -226,6 +226,14 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Invoke one tool",
+        "instruction": "Create `first_result` by invoking the `word_count` tool with the `args` dictionary of `first`.",
+        "code": "first_result = word_count.invoke(first[\"args\"])",
+        "check": "test(\"Invoke one tool\", lambda: first_result == 4, \"first_result is 4: “tools make agents useful” has four words.\")",
+        "expected": "first_result is 4: “tools make agents useful” has four words.",
+        "reassurance": ""
+      },
+      {
         "title": "Dispatch requests by name",
         "instruction": "Define `run_tool_calls(ai_message, tools)`. For every entry in `ai_message.tool_calls`, find the tool by name with `tools_by_name`, invoke it with the entry’s arguments, and collect each result as a string, in request order. A message with no calls gives an empty list.",
         "code": "def run_tool_calls(ai_message, tools):\n    by_name = tools_by_name(tools)\n    return [str(by_name[call[\"name\"]].invoke(call[\"args\"])) for call in ai_message.tool_calls]",
@@ -274,12 +282,23 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "Parse the setup message",
+        "instruction": "Create `data` by passing the setup `message` to `parser`'s `invoke` method.",
+        "code": "data = parser.invoke(message)",
+        "check": "test(\"Parse the setup message\", lambda: data == {\"answer\": \"  Delta remembers versions.  \", \"sources\": [\"guide\"]}, \"data is a dictionary with the padded answer and sources [\\\"guide\\\"].\")",
+        "expected": "data is a dictionary with the padded answer and sources [\"guide\"].",
+        "reassurance": ""
+      },
+      {
         "title": "Parse the reply",
         "instruction": "Define `parse_answer(message)`. Parse `message` with `parser`, then return a dictionary with only the parsed `answer` and `sources` values.",
         "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    return {\"answer\": data[\"answer\"], \"sources\": data[\"sources\"]}",
         "check": "test(\"Parse the reply\", lambda: parse_answer(message) == {\"answer\":\"  Delta remembers versions.  \", \"sources\":[\"guide\"]}, \"The fenced reply becomes a dictionary; the answer is still padded.\")",
         "expected": "The fenced reply becomes a dictionary; the answer is still padded.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Trim the answer and check citations",
@@ -289,7 +308,7 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "expected": "The answer is trimmed, and missing sources raise ValueError.",
         "reassurance": "",
         "startFrom": [
-          3
+          4
         ]
       },
       {
@@ -300,7 +319,7 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "expected": "A JSON list is rejected with ValueError; the example still parses.",
         "reassurance": "",
         "startFrom": [
-          4
+          5
         ]
       },
       {
@@ -311,7 +330,7 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "expected": "The fenced reply becomes a trimmed answer; blank or numeric answers are rejected.",
         "reassurance": "",
         "startFrom": [
-          5
+          6
         ]
       },
       {

@@ -880,6 +880,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Your agent forwards the conversation and returns the expected message update. The graph demonstration still has both scripted replies available."
       },
       {
+        "title": "Build a tool message",
+        "instruction": "Create `reply`, a `ToolMessage` whose `content` is the text `\"6\"` and whose `tool_call_id` is `\"probe\"`.",
+        "code": "reply = ToolMessage(content=\"6\", tool_call_id=\"probe\")",
+        "check": "test(\"Build a tool message\", lambda: isinstance(reply, ToolMessage) and reply.content == \"6\" and reply.tool_call_id == \"probe\", \"reply is a tool message with content 6 for call probe.\")",
+        "expected": "reply is a tool message with content 6 for call probe.",
+        "reassurance": ""
+      },
+      {
         "title": "Run one tool call",
         "instruction": "Define `run_call` with one parameter, `call`: a tool-call dictionary with `name`, `args` and `id`. Look up the tool by `name` in the setup `TOOLS` registry and invoke it with the `args`. Return a `ToolMessage` whose `content` is the output as text and whose `tool_call_id` is the call's `id`.",
         "code": "def run_call(call):\n    output = TOOLS[call[\"name\"]].invoke(call[\"args\"])\n    return ToolMessage(content=str(output), tool_call_id=call[\"id\"])",

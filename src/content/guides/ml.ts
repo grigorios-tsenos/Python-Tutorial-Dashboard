@@ -400,33 +400,42 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         ]
       },
       {
+        "title": "List the distinct probabilities",
+        "instruction": "Create `cutoffs`: each distinct value in `probs` once, sorted from highest to lowest.",
+        "code": "cutoffs = sorted(np.unique(probs), reverse=True)",
+        "check": "test(\"List the distinct probabilities\", lambda: len(cutoffs) == len(set(probs.tolist())) and cutoffs[0] == probs.max() and cutoffs[-1] == probs.min(), \"cutoffs runs from the highest probability to the lowest, without repeats.\")",
+        "expected": "cutoffs runs from the highest probability to the lowest, without repeats.",
+        "reassurance": ""
+      },
+      {
         "title": "Walk the candidate cutoffs",
-        "instruction": "Set `min_recall` to 0.8. Loop `t` over each distinct probability in `probs`, from highest to lowest, and inside the loop unpack `pr_at(probs, y, t)` into `precision` and `recall`.",
-        "code": "min_recall = 0.8\nfor t in sorted(np.unique(probs), reverse=True):\n    precision, recall = pr_at(probs, y, t)",
+        "instruction": "Set `min_recall` to 0.8. Loop `t` over `cutoffs`, and inside the loop unpack `pr_at(probs, y, t)` into `precision` and `recall`.",
+        "code": "min_recall = 0.8\nfor t in cutoffs:\n    precision, recall = pr_at(probs, y, t)",
         "check": "test(\"Walk the candidate cutoffs\", lambda: min_recall == 0.8 and np.isclose(t, probs.min()) and recall == 1.0, \"The loop ends at the lowest probability, where recall is 1.0.\")",
         "expected": "The loop ends at the lowest probability, where recall is 1.0.",
         "reassurance": "Lowering the cutoff flags more rows: recall rises, precision usually falls."
       },
       {
         "title": "Keep the best qualifying cutoff",
-        "instruction": "Start `best` at None and run the loop again. Whenever recall reaches `min_recall` and precision is strictly higher than the best so far (or there is no best yet), set `best` to (t as a plain float, precision, recall).",
-        "code": "best = None\nfor t in sorted(np.unique(probs), reverse=True):\n    precision, recall = pr_at(probs, y, t)\n    if recall >= min_recall and (best is None or precision > best[1]):\n        best = (float(t), precision, recall)",
+        "instruction": "Start `best` at None and run the loop over `cutoffs` again. Whenever recall reaches `min_recall` and precision is strictly higher than the best so far (or there is no best yet), set `best` to (t as a plain float, precision, recall).",
+        "code": "best = None\nfor t in cutoffs:\n    precision, recall = pr_at(probs, y, t)\n    if recall >= min_recall and (best is None or precision > best[1]):\n        best = (float(t), precision, recall)",
         "check": "test(\"Keep the best qualifying cutoff\", lambda: type(best[0]) is float and best[2] >= 0.8 and best[0] < 0.5 and np.isclose(best[1], max(pr_at(probs, y, u)[0] for u in np.unique(probs) if pr_at(probs, y, u)[1] >= 0.8)), \"best has the highest precision of all cutoffs with recall at least 0.8, and its cutoff is below 0.5.\")",
         "expected": "best has the highest precision of all cutoffs with recall at least 0.8, and its cutoff is below 0.5.",
         "reassurance": "",
         "startFrom": [
-          4
+          5
         ]
       },
       {
         "title": "Wrap the scan",
         "instruction": "Define `pick_threshold(probs, y, min_recall=0.8)`: run the same scan and return `best`.",
-        "code": "def pick_threshold(probs, y, min_recall=0.8):\n    best = None\n    for t in sorted(np.unique(probs), reverse=True):\n        precision, recall = pr_at(probs, y, t)\n        if recall >= min_recall and (best is None or precision > best[1]):\n            best = (float(t), precision, recall)\n    return best",
+        "code": "def pick_threshold(probs, y, min_recall=0.8):\n    cutoffs = sorted(np.unique(probs), reverse=True)\n    best = None\n    for t in cutoffs:\n        precision, recall = pr_at(probs, y, t)\n        if recall >= min_recall and (best is None or precision > best[1]):\n            best = (float(t), precision, recall)\n    return best",
         "check": "_P = np.array([0.9, 0.8, 0.7, 0.6, 0.4, 0.3, 0.2, 0.1])\n_Y = np.array([1, 1, 0, 1, 1, 0, 0, 0])\ntest('Wrap the scan', lambda: pick_threshold(_P, _Y, 0.8) == (0.4, 0.8, 1.0) and pick_threshold(_P, _Y, 0.5) == (0.8, 1.0, 0.5) and type(pick_threshold(_P, _Y, 0.8)[0]) is float, 'Recall 0.8 needs the cutoff 0.4 (precision 0.8); recall 0.5 allows 0.8 (precision 1.0); the threshold is a float.')",
         "expected": "Recall 0.8 needs the cutoff 0.4 (precision 0.8); recall 0.5 allows 0.8 (precision 1.0); the threshold is a float.",
         "reassurance": "The business constraint picks the cutoff, not the 0.5 default.",
         "startFrom": [
-          5
+          4,
+          6
         ]
       },
       {
@@ -445,7 +454,7 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "expected": "min_recall of 0 or 1.5 and label-free data raise ValueError; a valid request passes silently.",
         "reassurance": "",
         "startFrom": [
-          7
+          8
         ]
       },
       {
@@ -456,7 +465,7 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "expected": "Bad requests raise ValueError; on the demo data the chosen cutoff is below 0.5 and reaches recall 0.8.",
         "reassurance": "",
         "startFrom": [
-          6
+          7
         ]
       },
       {

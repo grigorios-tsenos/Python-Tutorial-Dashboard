@@ -463,8 +463,16 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "A frozen, ordered list keeps the columns the same for batches that contain fewer categories."
       },
       {
+        "title": "Wrap a list as a Series",
+        "instruction": "Create `values`: the plain list `vocabulary` turned into a pandas Series, so Series methods such as `dropna` work on it.",
+        "code": "values = pd.Series(vocabulary)",
+        "check": "test(\"Wrap a list as a Series\", lambda: isinstance(values, pd.Series) and values.tolist() == [\"free\", \"pro\", \"team\"], \"values is a Series holding free, pro and team.\")",
+        "expected": "values is a Series holding free, pro and team.",
+        "reassurance": ""
+      },
+      {
         "title": "Make vocabulary fitting reusable",
-        "instruction": "Implement `fit_vocabulary(values, min_count=1)`, with parameters in that order and a default threshold of one. Turn `values` into a Series first, so a plain list works too, then repeat steps 1 to 5 and return the sorted list of categories seen at least `min_count` times. Missing values are ignored; empty input returns an empty list.",
+        "instruction": "Implement `fit_vocabulary(values, min_count=1)`, with parameters in that order and a default threshold of one. Turn `values` into a Series first as you just did, so a plain list works too, then repeat steps 1 to 5 and return the sorted list of categories seen at least `min_count` times. Missing values are ignored; empty input returns an empty list.",
         "code": "def fit_vocabulary(values, min_count=1):\n    observed = pd.Series(values).dropna()\n    counts = observed.value_counts()\n    frequent = counts[counts >= min_count]\n    labels = frequent.index.tolist()\n    return sorted(labels)",
         "check": "test('Make vocabulary fitting reusable', lambda: fit_vocabulary([\"b\", \"a\", \"b\", None], 2) == [\"b\"] and fit_vocabulary([]) == [], 'A threshold of 2 keeps only b in [b, a, b, missing]; empty input returns [].')",
         "expected": "A threshold of 2 keeps only b in [b, a, b, missing]; empty input returns [].",
@@ -523,9 +531,9 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "expected": "It matches indicators for train, and an unseen plan lands in plan=other.",
         "reassurance": "",
         "startFrom": [
-          6,
-          8,
-          9
+          7,
+          9,
+          10
         ]
       },
       {
