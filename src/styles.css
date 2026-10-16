@@ -312,6 +312,8 @@ main.route-lesson, main.route-course-lesson, main.route-map { overflow: hidden; 
 .guided-progress { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; color: var(--accent); font-size: 0.8rem; }
 .guided-progress progress { width: 100px; height: 7px; accent-color: var(--accent); }
 .guided-task .prose pre, .prediction-guide .prose pre { max-height: 240px; overflow: auto; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link-btn:disabled { color: var(--text-dim); text-decoration: none; cursor: default; }
 .guided-expected { margin-top: 12px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--panel); border-radius: 0 8px 8px 0; overflow-wrap: anywhere; }
 .guided-expected .prose p { margin: 5px 0; }
 .command-cards { margin: 12px 0; display: grid; gap: 8px; }

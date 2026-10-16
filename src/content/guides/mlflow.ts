@@ -74,11 +74,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Describe one trial",
-        "instruction": "Rewrite `record_temperature` so the same run also logs a `quality` metric: 0.95 minus 0.3 times the temperature.",
+        "instruction": "Update `record_temperature` so the same run also logs a `quality` metric: 0.95 minus 0.3 times the temperature.",
         "code": "def record_temperature(temperature):\n    with mlflow.start_run(run_name=f\"temp-{temperature}\"):\n        mlflow.log_param(\"temperature\", temperature)\n        mlflow.log_metric(\"quality\", 0.95 - 0.3 * temperature)",
         "check": "record_temperature(0.5)\nruns = mlflow.search_runs()\ntest(\"one temperature trial records both values\", lambda: len(runs) == 1 and runs.iloc[0][\"params.temperature\"] == \"0.5\" and abs(runs.iloc[0][\"metrics.quality\"] - 0.8) < 1e-12 and mlflow.active_run() is None, \"One closed run with temperature 0.5 and quality about 0.8.\")",
         "expected": "One finished trial contains temperature \"0.5\" and quality about 0.8.",
-        "reassurance": "The check records one trial and verifies its values. Next you will repeat that tested behavior for three inputs."
+        "reassurance": "The check records one trial and verifies its values. Next you will repeat that tested behavior for three inputs.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Run the three trials",
@@ -111,11 +114,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Record one combination",
-        "instruction": "Rewrite `record_setting` so the run also records `lr` and `depth` as parameters, both in one call with `mlflow.log_params`.",
+        "instruction": "Update `record_setting` so the run also records `lr` and `depth` as parameters, both in one call with `mlflow.log_params`.",
         "code": "def record_setting(lr, depth):\n    with mlflow.start_run():\n        mlflow.log_params({\"lr\": lr, \"depth\": depth})\n        mlflow.log_metric(\"accuracy\", evaluate(lr, depth))",
         "check": "record_setting(0.1, 4)\nruns = mlflow.search_runs()\ntest(\"one setting is recorded\", lambda: len(runs) == 1 and runs.iloc[0][\"params.lr\"] == \"0.1\" and runs.iloc[0][\"params.depth\"] == \"4\" and runs.iloc[0][\"metrics.accuracy\"] == 1.0, \"One run with lr 0.1, depth 4 and accuracy 1.0.\")",
         "expected": "One finished run contains lr 0.1, depth 4 and accuracy 1.0.",
-        "reassurance": "One combination has a clear recording recipe. The next helper supplies the combinations."
+        "reassurance": "One combination has a clear recording recipe. The next helper supplies the combinations.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Visit one row of the grid",
@@ -293,27 +299,36 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Validate and file the trial",
-        "instruction": "Rewrite `record_trial` so it first checks the scores with `require_scores`, then chooses experiment `trial-history`, and inside the run also logs `params` as parameters.",
+        "instruction": "Update `record_trial` so it first checks the scores with `require_scores`, then chooses experiment `trial-history`, and inside the run also logs `params` as parameters.",
         "code": "def record_trial(name, params, scores):\n    require_scores(scores)\n    mlflow.set_experiment(\"trial-history\")\n    with mlflow.start_run(run_name=name):\n        mlflow.log_params(params)\n        log_scores(scores)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\nrecord_trial(\"practice\", {\"temperature\": 0.2}, [0.5])\nruns = mlflow.search_runs(experiment_names=[\"trial-history\"])\ntest(\"Validate and file the trial\", lambda: len(runs) == 1 and runs.iloc[0][\"params.temperature\"] == \"0.2\" and _rejects(lambda: record_trial(\"empty\", {}, [])) and len(mlflow.search_runs(search_all_experiments=True)) == 1, \"One trial-history run with temperature 0.2; empty scores raise ValueError and add no run.\")",
         "expected": "One trial-history run with temperature 0.2; empty scores raise ValueError and add no run.",
-        "reassurance": "Bad input is stopped before any run exists."
+        "reassurance": "Bad input is stopped before any run exists.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Attach the summary",
-        "instruction": "Rewrite `record_trial` so the run also stores the `trial_summary` of the scores as an artifact named `summary.json`, using `mlflow.log_dict`.",
+        "instruction": "Update `record_trial` so the run also stores the `trial_summary` of the scores as an artifact named `summary.json`, using `mlflow.log_dict`.",
         "code": "def record_trial(name, params, scores):\n    require_scores(scores)\n    mlflow.set_experiment(\"trial-history\")\n    with mlflow.start_run(run_name=name):\n        mlflow.log_params(params)\n        log_scores(scores)\n        mlflow.log_dict(trial_summary(scores), \"summary.json\")",
         "check": "record_trial(\"practice\", {}, [0.2, 0.9, 0.4])\nruns = mlflow.search_runs()\ntest(\"Attach the summary\", lambda: mlflow.get_run(runs.iloc[0][\"run_id\"]).artifacts.get(\"summary.json\") == {\"steps\": 3, \"best\": 0.9, \"last\": 0.4}, \"summary.json holds steps 3, best 0.9, last 0.4.\")",
         "expected": "summary.json holds steps 3, best 0.9, last 0.4.",
-        "reassurance": "The artifact keeps the best score even though the latest metric is lower."
+        "reassurance": "The artifact keeps the best score even though the latest metric is lower.",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Assemble one trial",
-        "instruction": "Rewrite `record_trial` so it keeps the run handle from the `with` statement in `run` and, after the run has closed, returns its run ID.",
+        "instruction": "Update `record_trial` so it keeps the run handle from the `with` statement in `run` and, after the run has closed, returns its run ID.",
         "code": "def record_trial(name, params, scores):\n    require_scores(scores)\n    mlflow.set_experiment(\"trial-history\")\n    with mlflow.start_run(run_name=name) as run:\n        mlflow.log_params(params)\n        log_scores(scores)\n        mlflow.log_dict(trial_summary(scores), \"summary.json\")\n    return run.info.run_id",
         "check": "test(\"Assemble one trial\", lambda: mlflow.get_run(record_trial(\"practice\", {}, [0.2, 0.9, 0.4])).metrics[\"quality\"] == [(0, 0.2), (1, 0.9), (2, 0.4)], \"The returned ID finds a run with history [(0, 0.2), (1, 0.9), (2, 0.4)].\")",
         "expected": "The returned ID finds a run with history [(0, 0.2), (1, 0.9), (2, 0.4)].",
-        "reassurance": "Callers can now find the run they just recorded."
+        "reassurance": "Callers can now find the run they just recorded.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Fetch the sample run",
@@ -370,11 +385,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Measure accuracy safely",
-        "instruction": "Rewrite `eval_accuracy` so empty rows raise `ValueError` before any division.",
+        "instruction": "Update `eval_accuracy` so empty rows raise `ValueError` before any division.",
         "code": "def eval_accuracy(predict, rows):\n    if not rows:\n        raise ValueError(\"cannot evaluate on an empty dataset\")\n    return sum(predict(row[\"input\"]) == row[\"label\"] for row in rows) / len(rows)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Measure accuracy safely\", lambda: eval_accuracy(lambda q: q.upper(), [{\"input\": \"a\", \"label\": \"A\"}]) == 1.0 and _rejects(lambda: eval_accuracy(lambda q: q, [])), \"One correct answer out of one gives 1.0; empty rows raise ValueError.\")",
         "expected": "One correct answer out of one gives 1.0; empty rows raise ValueError.",
-        "reassurance": "Scoring works independently of tracking. Next attach that score to a run."
+        "reassurance": "Scoring works independently of tracking. Next attach that score to a run.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Record the score in a run",
@@ -386,19 +404,25 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Measure before the run",
-        "instruction": "Rewrite `log_eval` so it measures accuracy into `accuracy` before anything else, then chooses experiment `eval`, and only then opens the run and logs that score.",
+        "instruction": "Update `log_eval` so it measures accuracy into `accuracy` before anything else, then chooses experiment `eval`, and only then opens the run and logs that score.",
         "code": "def log_eval(run_name, predict, rows):\n    accuracy = eval_accuracy(predict, rows)\n    mlflow.set_experiment(\"eval\")\n    with mlflow.start_run(run_name=run_name) as run:\n        mlflow.log_metric(\"accuracy\", accuracy)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\nlog_eval(\"practice\", lambda q: \"x\", [{\"input\": \"a\", \"label\": \"x\"}])\ntest(\"Measure before the run\", lambda: len(mlflow.search_runs(experiment_names=[\"eval\"])) == 1 and _rejects(lambda: log_eval(\"empty\", lambda q: q, [])) and len(mlflow.search_runs(search_all_experiments=True)) == 1 and mlflow.active_run() is None, \"One eval run; an empty dataset raises ValueError and adds no run.\")",
         "expected": "One eval run; an empty dataset raises ValueError and adds no run.",
-        "reassurance": "Measuring first means a failure leaves no half-finished run behind."
+        "reassurance": "Measuring first means a failure leaves no half-finished run behind.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Log one evaluation",
-        "instruction": "Rewrite `log_eval` so the run also stores the dataset fingerprint as tag `dataset_digest` and the row count as parameter `n_examples`. After the run closes, return its run ID. Preserve the dataset.",
+        "instruction": "Update `log_eval` so the run also stores the dataset fingerprint as tag `dataset_digest` and the row count as parameter `n_examples`. After the run closes, return its run ID. Preserve the dataset.",
         "code": "def log_eval(run_name, predict, rows):\n    accuracy = eval_accuracy(predict, rows)\n    mlflow.set_experiment(\"eval\")\n    with mlflow.start_run(run_name=run_name) as run:\n        mlflow.set_tag(\"dataset_digest\", dataset_digest(rows))\n        mlflow.log_param(\"n_examples\", len(rows))\n        mlflow.log_metric(\"accuracy\", accuracy)\n    return run.info.run_id",
         "check": "test(\"Log one evaluation\", lambda: mlflow.get_run(log_eval(\"practice\", lambda q: \"x\", [{\"input\": \"a\", \"label\": \"x\"}])).data.metrics[\"accuracy\"] == 1.0, \"A finished evaluation run with accuracy 1.0.\")",
         "expected": "A finished evaluation run with accuracy 1.0.",
-        "reassurance": "The score is recorded. The next function filters comparisons to one exact dataset."
+        "reassurance": "The score is recorded. The next function filters comparisons to one exact dataset.",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Find runs on the same data",
@@ -410,11 +434,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Build the matching leaderboard",
-        "instruction": "Rewrite `leaderboard` so it keeps the pairs in `board` and returns them sorted by decreasing accuracy, then alphabetically by run name for ties. No matches still give an empty list.",
+        "instruction": "Update `leaderboard` so it keeps the pairs in `board` and returns them sorted by decreasing accuracy, then alphabetically by run name for ties. No matches still give an empty list.",
         "code": "def leaderboard(digest):\n    runs = mlflow.search_runs(experiment_names=[\"eval\"], filter_string=f\"tags.dataset_digest = '{digest}' and attributes.status = 'FINISHED'\")\n    board = [(row[\"tags.mlflow.runName\"], row[\"metrics.accuracy\"]) for _, row in runs.iterrows()]\n    return sorted(board, key=lambda item: (-item[1], item[0]))",
         "check": "",
         "expected": "Only finished evaluations on the same digest appear; unknown digests give [].",
-        "reassurance": "The full chapter checks dataset stability, matching leaderboards and rejection before logging."
+        "reassurance": "The full chapter checks dataset stability, matching leaderboards and rejection before logging.",
+        "startFrom": [
+          8
+        ]
       }
     ]
   },
@@ -455,11 +482,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Apply a strict promotion rule",
-        "instruction": "Rewrite `promote_if_better` so it returns `True` after moving the alias and `False` when the candidate does not win. Let invalid model or version errors propagate.",
+        "instruction": "Update `promote_if_better` so it returns `True` after moving the alias and `False` when the candidate does not win. Let invalid model or version errors propagate.",
         "code": "def promote_if_better(name, candidate_version):\n    if is_better(name, candidate_version):\n        mlflow.MlflowClient().set_registered_model_alias(name, \"champion\", candidate_version)\n        return True\n    return False",
         "check": "test(\"Apply a strict promotion rule\", lambda: promote_if_better(\"demo-model\", champion.version) is False, \"Comparing the champion with itself returns False.\")",
         "expected": "Comparing the champion with itself returns False.",
-        "reassurance": "Ties correctly keep the alias. The complete check also tests wins, losses and invalid versions."
+        "reassurance": "Ties correctly keep the alias. The complete check also tests wins, losses and invalid versions.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Try a stronger candidate",
@@ -500,11 +530,14 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Record one prompt version",
-        "instruction": "Rewrite `record_prompt` so it measures the candidate with `prompt_accuracy` into `accuracy` before opening the run, logs it as metric `accuracy` inside the run, and returns it after the run closes.",
+        "instruction": "Update `record_prompt` so it measures the candidate with `prompt_accuracy` into `accuracy` before opening the run, logs it as metric `accuracy` inside the run, and returns it after the run closes.",
         "code": "def record_prompt(name, fn, dataset):\n    accuracy = prompt_accuracy(fn, dataset)\n    with mlflow.start_run(run_name=name):\n        mlflow.log_param(\"prompt_version\", name)\n        mlflow.log_metric(\"accuracy\", accuracy)\n    return accuracy",
         "check": "test(\"Record one prompt version\", lambda: record_prompt(\"practice\", v1, DATASET) == 0.5 and mlflow.active_run() is None, \"v1 scores 0.5 and its run is closed.\")",
         "expected": "v1 scores 0.5 and its run is closed.",
-        "reassurance": "One candidate records correctly. Next compare all candidates while keeping the first winner when scores tie."
+        "reassurance": "One candidate records correctly. Next compare all candidates while keeping the first winner when scores tie.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Pick the best candidate",
@@ -516,12 +549,15 @@ export const MLFLOW_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Choose the measured winner",
-        "instruction": "Rewrite `evaluate_prompts` so it validates the dataset with `require_dataset` first and then selects experiment `prompt-eval` before recording. Empty datasets must create no runs.",
+        "instruction": "Update `evaluate_prompts` so it validates the dataset with `require_dataset` first and then selects experiment `prompt-eval` before recording. Empty datasets must create no runs.",
         "code": "def evaluate_prompts(candidates, dataset):\n    require_dataset(dataset)\n    mlflow.set_experiment(\"prompt-eval\")\n    return max(candidates, key=lambda name: record_prompt(name, candidates[name], dataset), default=None)",
         "check": "",
         "expected": "v2 wins the sample; no candidates returns None.",
-        "reassurance": "The full check changes names and data, checks first-wins ties, and counts the recorded metrics."
+        "reassurance": "The full check changes names and data, checks first-wins ties, and counts the recorded metrics.",
+        "startFrom": [
+          4
+        ]
       }
     ]
   }
-};
+}

@@ -95,7 +95,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def holdout_scores(X, y, seed):\n    X_train, X_test, y_train, y_test = split(X, y, seed)\n    model = LinearRegression().fit(X_train, y_train)\n    return model.score(X_train, y_train), model.score(X_test, y_test)",
         "check": "_tr, _te = holdout_scores(X, y, 4)\n_Xtr, _Xte, _ytr, _yte = train_test_split(X, y, test_size=0.25, random_state=4)\n_m = LinearRegression().fit(_Xtr, _ytr)\ntest('Wrap it in a function', lambda: np.isclose(_tr, _m.score(_Xtr, _ytr)) and np.isclose(_te, _m.score(_Xte, _yte)) and _tr > 0.9 and _te > 0.9, 'Both scores match a model fitted on the seed-4 training rows only, and both are above 0.9.')",
         "expected": "Both scores match a model fitted on the seed-4 training rows only, and both are above 0.9.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Compare three seeds",
@@ -140,7 +143,11 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def confusion(y_true, y_pred):\n    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)\n    tp = int(((y_true == 1) & (y_pred == 1)).sum())\n    fp = int(((y_true == 0) & (y_pred == 1)).sum())\n    fn = int(((y_true == 1) & (y_pred == 0)).sum())\n    tn = int(((y_true == 0) & (y_pred == 0)).sum())\n    return tp, fp, fn, tn",
         "check": "test('Wrap the counts in a function', lambda: confusion([1, 1, 0, 0, 1, 0], [1, 0, 1, 0, 1, 0]) == (2, 1, 1, 2) and all(type(v) is int for v in confusion([1], [1])), 'Two hits, one false alarm, one miss, two correct rejections, all plain ints.')",
         "expected": "Two hits, one false alarm, one miss, two correct rejections, all plain ints.",
-        "reassurance": "Every metric is a ratio of these four counts."
+        "reassurance": "Every metric is a ratio of these four counts.",
+        "startFrom": [
+          1,
+          2
+        ]
       },
       {
         "title": "Divide without crashing",
@@ -172,7 +179,11 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def evaluate(y_true, y_pred):\n    tp, fp, fn, tn = confusion(y_true, y_pred)\n    accuracy = ratio(tp + tn, tp + fp + fn + tn)\n    precision = ratio(tp, tp + fp)\n    recall = ratio(tp, tp + fn)\n    f1 = ratio(2 * precision * recall, precision + recall)\n    return {\"accuracy\": accuracy, \"precision\": precision, \"recall\": recall, \"f1\": f1}",
         "check": "from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score\n_yt = np.array([1, 1, 0, 0, 1, 0, 1, 0, 0, 1])\n_yp = np.array([1, 0, 1, 0, 1, 0, 1, 1, 0, 0])\n_out = evaluate(_yt, _yp)\ntest('Wrap the metrics in a function', lambda: all(np.isclose(_out[k], f(_yt, _yp)) for k, f in [('accuracy', accuracy_score), ('precision', precision_score), ('recall', recall_score), ('f1', f1_score)]) and evaluate([0] * 9 + [1], [0] * 10) == {'accuracy': 0.9, 'precision': 0.0, 'recall': 0.0, 'f1': 0.0}, 'All four metrics match scikit-learn, and the always-negative model scores 0.9 accuracy with zero recall.')",
         "expected": "All four metrics match scikit-learn, and the always-negative model scores 0.9 accuracy with zero recall.",
-        "reassurance": "That last case is the whole lesson: 90% accurate and useless."
+        "reassurance": "That last case is the whole lesson: 90% accurate and useless.",
+        "startFrom": [
+          5,
+          6
+        ]
       },
       {
         "title": "Evaluate the demo classifier",
@@ -286,7 +297,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "best_name, best_mean = None, -1.0\nfor name, model in models.items():\n    mean, _ = cv_report(model, X, y)\n    if mean > best_mean:\n        best_name, best_mean = name, mean",
         "check": "test(\"Keep the best mean\", lambda: best_name == 'logistic' and np.isclose(best_mean, cv_report(models['logistic'], X, y)[0]), \"best_name is logistic, with its mean accuracy in best_mean.\")",
         "expected": "best_name is logistic, with its mean accuracy in best_mean.",
-        "reassurance": "A strictly-higher test keeps the first model on a tie."
+        "reassurance": "A strictly-higher test keeps the first model on a tie.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Wrap the comparison",
@@ -294,7 +308,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def compare(models, X, y):\n    best_name, best_mean = None, -1.0\n    for name, model in models.items():\n        mean, _ = cv_report(model, X, y)\n        if mean > best_mean:\n            best_name, best_mean = name, mean\n    return best_name",
         "check": "from sklearn.dummy import DummyClassifier\n_r = np.random.default_rng(0)\n_Xs = _r.normal(size=(200, 2))\n_ys = (_Xs[:, 0] + _Xs[:, 1] > 0).astype(int)\ntest('Wrap the comparison', lambda: compare({'dummy': DummyClassifier(), 'logistic': LogisticRegression()}, _Xs, _ys) == 'logistic' and compare({'a': DummyClassifier(), 'b': DummyClassifier()}, _Xs, _ys) == 'a' and compare({}, _Xs, _ys) is None, 'Logistic beats the dummy, a tie keeps a, and no models gives None.')",
         "expected": "Logistic beats the dummy, a tie keeps a, and no models gives None.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Print the comparison",
@@ -376,7 +393,11 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def pr_at(probs, y, t):\n    probs, y = np.asarray(probs), np.asarray(y)\n    pred = probs >= t\n    tp, fp = int((pred & (y == 1)).sum()), int((pred & (y == 0)).sum())\n    fn = int((~pred & (y == 1)).sum())\n    precision = tp / (tp + fp) if tp + fp else 0.0\n    recall = tp / (tp + fn) if tp + fn else 0.0\n    return precision, recall",
         "check": "from sklearn.metrics import precision_score, recall_score\n_P = np.array([0.9, 0.8, 0.7, 0.6, 0.4, 0.3, 0.2, 0.1])\n_Y = np.array([1, 1, 0, 1, 1, 0, 0, 0])\ntest('Wrap it in a function', lambda: all(np.allclose(pr_at(_P, _Y, t), (precision_score(_Y, _P >= t), recall_score(_Y, _P >= t))) for t in (0.9, 0.6, 0.4, 0.1)) and pr_at(_P, _Y, 0.95) == (0.0, 0.0), 'Precision and recall match scikit-learn at four cutoffs, and a cutoff above every probability gives (0.0, 0.0).')",
         "expected": "Precision and recall match scikit-learn at four cutoffs, and a cutoff above every probability gives (0.0, 0.0).",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2
+        ]
       },
       {
         "title": "Walk the candidate cutoffs",
@@ -392,7 +413,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "best = None\nfor t in sorted(np.unique(probs), reverse=True):\n    precision, recall = pr_at(probs, y, t)\n    if recall >= min_recall and (best is None or precision > best[1]):\n        best = (float(t), precision, recall)",
         "check": "test(\"Keep the best qualifying cutoff\", lambda: type(best[0]) is float and best[2] >= 0.8 and best[0] < 0.5 and np.isclose(best[1], max(pr_at(probs, y, u)[0] for u in np.unique(probs) if pr_at(probs, y, u)[1] >= 0.8)), \"best has the highest precision of all cutoffs with recall at least 0.8, and its cutoff is below 0.5.\")",
         "expected": "best has the highest precision of all cutoffs with recall at least 0.8, and its cutoff is below 0.5.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Wrap the scan",
@@ -400,7 +424,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def pick_threshold(probs, y, min_recall=0.8):\n    best = None\n    for t in sorted(np.unique(probs), reverse=True):\n        precision, recall = pr_at(probs, y, t)\n        if recall >= min_recall and (best is None or precision > best[1]):\n            best = (float(t), precision, recall)\n    return best",
         "check": "_P = np.array([0.9, 0.8, 0.7, 0.6, 0.4, 0.3, 0.2, 0.1])\n_Y = np.array([1, 1, 0, 1, 1, 0, 0, 0])\ntest('Wrap the scan', lambda: pick_threshold(_P, _Y, 0.8) == (0.4, 0.8, 1.0) and pick_threshold(_P, _Y, 0.5) == (0.8, 1.0, 0.5) and type(pick_threshold(_P, _Y, 0.8)[0]) is float, 'Recall 0.8 needs the cutoff 0.4 (precision 0.8); recall 0.5 allows 0.8 (precision 1.0); the threshold is a float.')",
         "expected": "Recall 0.8 needs the cutoff 0.4 (precision 0.8); recall 0.5 allows 0.8 (precision 1.0); the threshold is a float.",
-        "reassurance": "The business constraint picks the cutoff, not the 0.5 default."
+        "reassurance": "The business constraint picks the cutoff, not the 0.5 default.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Refuse a bad min_recall",
@@ -412,11 +439,14 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Refuse data without positives",
-        "instruction": "Update `validate` to also raise `ValueError` when `y` contains no positive label. Write the whole updated definition.",
+        "instruction": "Update `validate` to also raise `ValueError` when `y` contains no positive label.",
         "code": "def validate(y, min_recall):\n    if not 0 < min_recall <= 1:\n        raise ValueError(\"min_recall must be in (0, 1]\")\n    if np.asarray(y).sum() == 0:\n        raise ValueError(\"no positive labels to recall\")",
         "check": "def _rejects(y, m):\n    try:\n        validate(y, m)\n    except ValueError:\n        return True\n    return False\ntest('Refuse data without positives', lambda: _rejects([1], 0) and _rejects([1], 1.5) and _rejects([0, 0], 0.8) and validate([0, 1], 0.8) is None, 'min_recall of 0 or 1.5 and label-free data raise ValueError; a valid request passes silently.')",
         "expected": "min_recall of 0 or 1.5 and label-free data raise ValueError; a valid request passes silently.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7
+        ]
       },
       {
         "title": "Guard the picker",
@@ -424,7 +454,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def pick_threshold(probs, y, min_recall=0.8):\n    validate(y, min_recall)\n    best = None\n    for t in sorted(np.unique(probs), reverse=True):\n        precision, recall = pr_at(probs, y, t)\n        if recall >= min_recall and (best is None or precision > best[1]):\n            best = (float(t), precision, recall)\n    return best",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest('Guard the picker', lambda: _rejects(lambda: pick_threshold([0.5], [1], min_recall=0)) and _rejects(lambda: pick_threshold([0.5, 0.2], [0, 0])) and pick_threshold(probs, y_test, 0.8)[2] >= 0.8 and pick_threshold(probs, y_test, 0.8)[0] < 0.5, 'Bad requests raise ValueError; on the demo data the chosen cutoff is below 0.5 and reaches recall 0.8.')",
         "expected": "Bad requests raise ValueError; on the demo data the chosen cutoff is below 0.5 and reaches recall 0.8.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Compare with the default cutoff",
@@ -461,7 +494,10 @@ export const ML_GUIDES: Record<string, CodingGuide> = {
         "code": "def make_preprocessor():\n    encoder = OneHotEncoder(handle_unknown=\"ignore\")\n    return ColumnTransformer([(\"num\", StandardScaler(), NUMERIC), (\"cat\", encoder, [\"plan\"])])",
         "check": "_p = make_preprocessor()\n_names = {name: (est, cols) for name, est, cols in _p.transformers}\ntest('Build it on demand', lambda: isinstance(_p, ColumnTransformer) and set(_names) == {'num', 'cat'} and isinstance(_names['num'][0], StandardScaler) and list(_names['num'][1]) == NUMERIC and isinstance(_names['cat'][0], OneHotEncoder) and list(_names['cat'][1]) == ['plan'] and _names['cat'][0].handle_unknown == 'ignore', 'A ColumnTransformer with a num route (scaler on the numeric columns) and a cat route (one-hot on plan, unknowns ignored).')",
         "expected": "A ColumnTransformer with a num route (scaler on the numeric columns) and a cat route (one-hot on plan, unknowns ignored).",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Train the pipeline",

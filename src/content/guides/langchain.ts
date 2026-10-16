@@ -129,7 +129,10 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "prompt = ChatPromptTemplate.from_messages([\n    (\"system\", \"You are a support assistant for {product}.\"),\n    MessagesPlaceholder(\"history\"),\n    (\"human\", \"{question}\"),\n])",
         "check": "test(\"Place history in the prompt\", lambda: [m.type for m in prompt.invoke({\"product\":\"Orbit\", \"history\":[HumanMessage(\"earlier\")], \"question\":\"now\"}).to_messages()] == [\"system\", \"human\", \"human\"], \"The prompt contains system, earlier human, then newest human.\")",
         "expected": "The prompt contains system, earlier human, then newest human.",
-        "reassurance": "The placeholder expands into however many messages you pass; trimming is the next job."
+        "reassurance": "The placeholder expands into however many messages you pass; trimming is the next job.",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Find where turns start",
@@ -149,11 +152,14 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Keep complete recent turns",
-        "instruction": "Rewrite `trim_history` so a window of zero or less returns `[]` straight away, and a history with no human message also gives `[]` instead of failing. Leave the original list unchanged.",
+        "instruction": "Update `trim_history` so a window of zero or less returns `[]` straight away, and a history with no human message also gives `[]` instead of failing. Leave the original list unchanged.",
         "code": "def trim_history(messages, max_turns):\n    if max_turns <= 0:\n        return []\n    starts = [i for i, m in enumerate(messages) if m.type == \"human\"][-max_turns:]\n    return list(messages[starts[0]:]) if starts else []",
         "check": "test(\"Keep complete recent turns\", lambda: [m.content for m in trim_history(history, 1)] == [\"Also my login fails\", \"Try the reset link.\"] and trim_history(history, 0) == [] and trim_history([AIMessage(\"hi\")], 2) == [] and trim_history([], 2) == [], \"One turn keeps the newest question and reply. A zero window or no human messages gives [].\")",
         "expected": "One turn keeps the newest question and reply. A zero window or no human messages gives [].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Connect trimming to the chain",
@@ -198,7 +204,10 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "@tool\ndef word_count(text: str) -> int:\n    \"\"\"Count the words in a piece of text.\"\"\"\n    return len(text.split())",
         "check": "test(\"Turn a counter into a tool\", lambda: word_count.invoke({\"text\":\"  one\\ttwo\\nthree  \"}) == 3 and word_count.name == \"word_count\" and \"Count the words\" in word_count.description, \"word_count is now a tool named word_count that still counts 3 words.\")",
         "expected": "word_count is now a tool named word_count that still counts 3 words.",
-        "reassurance": "The function name becomes the tool name and the docstring becomes its description."
+        "reassurance": "The function name becomes the tool name and the docstring becomes its description.",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Look up tools by name",
@@ -255,11 +264,14 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Validate source citations",
-        "instruction": "Rewrite `validate_sources` so it also rejects a list containing anything other than strings, and returns the accepted list unchanged. An empty list is valid.",
+        "instruction": "Update `validate_sources` so it also rejects a list containing anything other than strings, and returns the accepted list unchanged. An empty list is valid.",
         "code": "def validate_sources(sources):\n    if not isinstance(sources, list) or any(not isinstance(source, str) for source in sources):\n        raise ValueError(\"sources must be a list of strings\")\n    return sources",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate source citations\", lambda: validate_sources([\"guide\"]) == [\"guide\"] and validate_sources([]) == [] and _rejects(lambda: validate_sources([\"guide\", 3])), \"A list of strings and an empty list are valid; a list containing 3 is rejected.\")",
         "expected": "A list of strings and an empty list are valid; a list containing 3 is rejected.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Parse the reply",
@@ -271,27 +283,36 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Trim the answer and check citations",
-        "instruction": "Rewrite `parse_answer` to read both fields with the dictionary `get` method, trim surrounding whitespace from the answer, and pass the sources through `validate_sources`.",
+        "instruction": "Update `parse_answer` to read both fields with the dictionary `get` method, trim surrounding whitespace from the answer, and pass the sources through `validate_sources`.",
         "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    answer = data.get(\"answer\")\n    return {\"answer\": answer.strip(), \"sources\": validate_sources(data.get(\"sources\"))}",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Trim the answer and check citations\", lambda: parse_answer(message) == {\"answer\":\"Delta remembers versions.\", \"sources\":[\"guide\"]} and _rejects(lambda: parse_answer(AIMessage('{\"answer\":\"ok\"}'))), \"The answer is trimmed, and missing sources raise ValueError.\")",
         "expected": "The answer is trimmed, and missing sources raise ValueError.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Require a JSON object",
-        "instruction": "Rewrite `parse_answer` so parsed data that is not a dictionary raises `ValueError` with the text “answer must be a JSON object”, before any field is read.",
+        "instruction": "Update `parse_answer` so parsed data that is not a dictionary raises `ValueError` with the text “answer must be a JSON object”, before any field is read.",
         "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    if not isinstance(data, dict):\n        raise ValueError(\"answer must be a JSON object\")\n    answer = data.get(\"answer\")\n    return {\"answer\": answer.strip(), \"sources\": validate_sources(data.get(\"sources\"))}",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Require a JSON object\", lambda: parse_answer(message)[\"answer\"] == \"Delta remembers versions.\" and _rejects(lambda: parse_answer(AIMessage(\"[1, 2]\"))), \"A JSON list is rejected with ValueError; the example still parses.\")",
         "expected": "A JSON list is rejected with ValueError; the example still parses.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Validate the answer shape",
-        "instruction": "Rewrite `parse_answer` so an answer that is missing, not a string, or blank raises `ValueError` with the text “answer must be non-empty text”. Extra fields are still ignored.",
+        "instruction": "Update `parse_answer` so an answer that is missing, not a string, or blank raises `ValueError` with the text “answer must be non-empty text”. Extra fields are still ignored.",
         "code": "def parse_answer(message):\n    data = parser.invoke(message)\n    if not isinstance(data, dict):\n        raise ValueError(\"answer must be a JSON object\")\n    answer = data.get(\"answer\")\n    if not isinstance(answer, str) or not answer.strip():\n        raise ValueError(\"answer must be non-empty text\")\n    return {\"answer\": answer.strip(), \"sources\": validate_sources(data.get(\"sources\"))}",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate the answer shape\", lambda: parse_answer(message) == {\"answer\":\"Delta remembers versions.\", \"sources\":[\"guide\"]} and _rejects(lambda: parse_answer(AIMessage('{\"answer\":\" \",\"sources\":[]}'))) and _rejects(lambda: parse_answer(AIMessage('{\"answer\":12,\"sources\":[]}'))), \"The fenced reply becomes a trimmed answer; blank or numeric answers are rejected.\")",
         "expected": "The fenced reply becomes a trimmed answer; blank or numeric answers are rejected.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Show the structured result",
@@ -352,7 +373,10 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "chunks = []\nfor number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n    if number and start + overlap >= len(words):\n        break\n    chunks.append(\" \".join(words[start:start + chunk_size]))",
         "check": "test(\"Stop at the end\", lambda: len(chunks) == 3 and chunks[-1] == \"the last good version before rerunning the pipeline.\", \"Three windows; the last one ends on “pipeline.”.\")",
         "expected": "Three windows; the last one ends on “pipeline.”.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Wrap windows in a function",
@@ -360,7 +384,10 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "def chunk_document(doc, chunk_size, overlap):\n    words = doc.page_content.split()\n    chunks = []\n    for number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n        if number and start + overlap >= len(words):\n            break\n        chunks.append(\" \".join(words[start:start + chunk_size]))\n    return chunks",
         "check": "test(\"Wrap windows in a function\", lambda: chunk_document(Document(\"a b c d e f g\"), 4, 1) == [\"a b c d\", \"d e f g\"] and chunk_document(Document(\"  \"), 4, 1) == [], \"Seven words give two four-word windows; a blank document gives [].\")",
         "expected": "Seven words give two four-word windows; a blank document gives [].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Build windows for one document",
@@ -368,7 +395,10 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "def chunk_document(doc, chunk_size, overlap):\n    words = doc.page_content.split()\n    chunks = []\n    for number, start in enumerate(range(0, len(words), chunk_size - overlap)):\n        if number and start + overlap >= len(words):\n            break\n        chunks.append(Document(\" \".join(words[start:start + chunk_size]), metadata={**doc.metadata, \"chunk\": number, \"start_word\": start}))\n    return chunks",
         "check": "test(\"Build windows for one document\", lambda: [(c.page_content, c.metadata) for c in chunk_document(Document(\"a b c d e f g\", metadata={\"source\":\"a\"}), 4, 1)] == [(\"a b c d\", {\"source\":\"a\", \"chunk\":0, \"start_word\":0}), (\"d e f g\", {\"source\":\"a\", \"chunk\":1, \"start_word\":3})], \"Two Documents keep source a and record chunk 0 at word 0, chunk 1 at word 3.\")",
         "expected": "Two Documents keep source a and record chunk 0 at word 0, chunk 1 at word 3.",
-        "reassurance": "{**doc.metadata, ...} builds a fresh dictionary, so the source metadata is never shared or changed."
+        "reassurance": "{**doc.metadata, ...} builds a fresh dictionary, so the source metadata is never shared or changed.",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Combine documents",
@@ -380,11 +410,14 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Validate sizes and combine documents",
-        "instruction": "Rewrite `split_documents` to first require a size of at least 1 and an overlap that is non-negative and smaller than the size; otherwise raise `ValueError` with the text “need chunk_size >= 1 and 0 <= overlap < chunk_size”.",
+        "instruction": "Update `split_documents` to first require a size of at least 1 and an overlap that is non-negative and smaller than the size; otherwise raise `ValueError` with the text “need chunk_size >= 1 and 0 <= overlap < chunk_size”.",
         "code": "def split_documents(docs, chunk_size, overlap):\n    if chunk_size < 1 or not 0 <= overlap < chunk_size:\n        raise ValueError(\"need chunk_size >= 1 and 0 <= overlap < chunk_size\")\n    return [chunk for doc in docs for chunk in chunk_document(doc, chunk_size, overlap)]",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate sizes and combine documents\", lambda: _rejects(lambda: split_documents([], 0, 0)) and _rejects(lambda: split_documents([], 4, 4)) and _rejects(lambda: split_documents([], 4, -1)) and len(split_documents([Document(\"a b c d e f g\", metadata={})], 4, 1)) == 2, \"Size 0, overlap 4 of 4 and overlap -1 raise ValueError; the seven-word example still gives two chunks.\")",
         "expected": "Size 0, overlap 4 of 4 and overlap -1 raise ValueError; the seven-word example still gives two chunks.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Inspect every chunk",
@@ -409,19 +442,25 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Separate only when needed",
-        "instruction": "Rewrite `add_passage` to compute `size`, the passage length plus 2 only when `context` is non-empty, and to add the two-newline separator only in that case too.",
+        "instruction": "Update `add_passage` to compute `size`, the passage length plus 2 only when `context` is non-empty, and to add the two-newline separator only in that case too.",
         "code": "def add_passage(context, used, document, max_chars):\n    passage = document.strip()\n    size = len(passage) + (2 if context else 0)\n    return context + (\"\\n\\n\" if context else \"\") + passage, used + size",
         "check": "test(\"Separate only when needed\", lambda: add_passage(\"\", 0, \" go \", 9) == (\"go\", 2) and add_passage(\"ok\", 2, \"go\", 6) == (\"ok\\n\\ngo\", 6), \"The first passage has no separator and counts 2; the second counts its separator.\")",
         "expected": "The first passage has no separator and counts 2; the second counts its separator.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Try one whole passage",
-        "instruction": "Rewrite `add_passage` so the passage is added only when it is not blank and `used + size` stays within `max_chars`. Otherwise return `context` and `used` unchanged.",
+        "instruction": "Update `add_passage` so the passage is added only when it is not blank and `used + size` stays within `max_chars`. Otherwise return `context` and `used` unchanged.",
         "code": "def add_passage(context, used, document, max_chars):\n    passage = document.strip()\n    size = len(passage) + (2 if context else 0)\n    if passage and used + size <= max_chars:\n        return context + (\"\\n\\n\" if context else \"\") + passage, used + size\n    return context, used",
         "check": "test(\"Try one whole passage\", lambda: add_passage(\"ok\", 2, \"go\", 6) == (\"ok\\n\\ngo\", 6) and add_passage(\"ok\", 2, \"go\", 5) == (\"ok\", 2) and add_passage(\"ok\", 2, \"  \", 9) == (\"ok\", 2), \"Budget 6 includes go and its separator; budget 5 or a blank passage leaves only ok.\")",
         "expected": "Budget 6 includes go and its separator; budget 5 or a blank passage leaves only ok.",
-        "reassurance": "The helper keeps a whole passage or skips it, never partial text."
+        "reassurance": "The helper keeps a whole passage or skips it, never partial text.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Start an empty context",
@@ -445,15 +484,21 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "def pack_context(documents, max_chars):\n    context, used = \"\", 0\n    for document in documents:\n        context, used = add_passage(context, used, document, max_chars)\n    return context",
         "check": "test(\"Wrap the scan in a function\", lambda: pack_context([\"too long to fit\", \"ok\", \"go\"], 6) == \"ok\\n\\ngo\" and pack_context([\"ok\", \"go\"], 5) == \"ok\" and pack_context([], 5) == \"\", \"Budget 6 packs ok and go; budget 5 packs only ok; no documents gives \\\"\\\".\")",
         "expected": "Budget 6 packs ok and go; budget 5 packs only ok; no documents gives \"\".",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Scan every passage within the budget",
-        "instruction": "Rewrite `pack_context` so a budget of zero or less returns an empty string straight away.",
+        "instruction": "Update `pack_context` so a budget of zero or less returns an empty string straight away.",
         "code": "def pack_context(documents, max_chars):\n    if max_chars <= 0:\n        return \"\"\n    context, used = \"\", 0\n    for document in documents:\n        context, used = add_passage(context, used, document, max_chars)\n    return context",
         "check": "test(\"Scan every passage within the budget\", lambda: pack_context([\"text\"], 0) == \"\" and pack_context([\"text\"], -2) == \"\" and pack_context([\"too long to fit\", \"ok\", \"go\"], 6) == \"ok\\n\\ngo\", \"Budgets of 0 and -2 give \\\"\\\"; the six-character example still packs ok and go.\")",
         "expected": "Budgets of 0 and -2 give \"\"; the six-character example still packs ok and go.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Create the context prompt",
@@ -530,15 +575,22 @@ export const LANGCHAIN_GUIDES: Record<string, CodingGuide> = {
         "code": "def retrieve(question, k=1):\n    q = embed(question)\n    norms = np.linalg.norm(DOC_VECS, axis=1) * np.linalg.norm(q)\n    sims = np.divide(DOC_VECS @ q, norms, out=np.zeros(len(DOCS)), where=norms != 0)\n    return [DOCS[i] for i in np.argsort(-sims, kind=\"stable\")[:k]]",
         "check": "test(\"Wrap retrieval in a function\", lambda: retrieve(\"How does MLflow track experiments and metrics?\") == [DOCS[0]] and len(retrieve(\"MLflow\", 2)) == 2, \"The MLflow question retrieves its document; k=2 returns two documents.\")",
         "expected": "The MLflow question retrieves its document; k=2 returns two documents.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2
+        ]
       },
       {
         "title": "Package the reusable retriever",
-        "instruction": "Rewrite `retrieve` so a blank question, an empty `DOCS`, or a non-positive `k` returns `[]` before any work is done.",
+        "instruction": "Update `retrieve` so a blank question, an empty `DOCS`, or a non-positive `k` returns `[]` before any work is done.",
         "code": "def retrieve(question, k=1):\n    if not question.strip() or not DOCS or k <= 0:\n        return []\n    q = embed(question)\n    norms = np.linalg.norm(DOC_VECS, axis=1) * np.linalg.norm(q)\n    sims = np.divide(DOC_VECS @ q, norms, out=np.zeros(len(DOCS)), where=norms != 0)\n    return [DOCS[i] for i in np.argsort(-sims, kind=\"stable\")[:k]]",
         "check": "test(\"Package the reusable retriever\", lambda: retrieve(\"How does MLflow track experiments and metrics?\")[0] == DOCS[0] and retrieve(\"  \") == [] and retrieve(\"MLflow\", 0) == [], \"The MLflow question retrieves its document; blank queries and zero k return [].\")",
         "expected": "The MLflow question retrieves its document; blank queries and zero k return [].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Create the RAG prompt",
