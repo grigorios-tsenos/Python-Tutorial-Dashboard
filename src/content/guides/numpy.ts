@@ -185,7 +185,14 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def column_means(values, missing):\n    observed = (~missing).sum(axis=0)\n    observed_only = np.where(missing, 0.0, values)\n    totals = observed_only.sum(axis=0)\n    fallback = np.zeros(values.shape[1])\n    means = np.divide(totals, observed, out=fallback, where=observed > 0)\n    return means",
         "check": "test(\"Wrap the column means\", lambda: np.allclose(column_means(values, missing), means) and np.isnan(values).sum() == 3, \"column_means(values, missing) returns [34, 55000, 7]; values keeps its gaps.\")",
         "expected": "column_means(values, missing) returns [34, 55000, 7]; values keeps its gaps.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
       },
       {
         "title": "Wrap the steps in a function",
@@ -193,15 +200,21 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def impute_columns(values):\n    missing = np.isnan(values)\n    means = column_means(values, missing)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "test(\"Wrap the steps in a function\", lambda: np.allclose(impute_columns(values)[0], filled) and impute_columns(values)[1].tolist() == [1, 1, 1] and np.isnan(values).sum() == 3, \"impute_columns(values) returns your filled matrix and the counts [1, 1, 1]; values keeps its gaps.\")",
         "expected": "impute_columns(values) returns your filled matrix and the counts [1, 1, 1]; values keeps its gaps.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Accept any numeric matrix",
-        "instruction": "Update `impute_columns` so it first converts whatever it receives into a floating-point NumPy array. Lists of lists and integer matrices should then work as well. Write the whole updated definition.",
+        "instruction": "Update `impute_columns` so it first converts whatever it receives into a floating-point NumPy array. Lists of lists and integer matrices should then work as well.",
         "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    missing = np.isnan(values)\n    means = column_means(values, missing)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "test(\"Accept any numeric matrix\", lambda: np.issubdtype(impute_columns([[1, 2], [3, 4]])[0].dtype, np.floating) and impute_columns([[1, 2], [3, 4]])[0].tolist() == [[1, 2], [3, 4]], \"A list of integer lists comes back as the same numbers in a float array.\")",
         "expected": "A list of integer lists comes back as the same numbers in a float array.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Reject the wrong shape",
@@ -209,7 +222,10 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def impute_columns(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    missing = np.isnan(values)\n    means = column_means(values, missing)\n    return np.where(missing, means, values), missing.sum(axis=0)",
         "check": "",
         "expected": "The full check covers integer input, an all-missing column, an empty matrix and one-dimensional input.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          9
+        ]
       }
     ]
   },
@@ -246,15 +262,22 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def standardize(values):\n    centered = values - values.mean(axis=0)\n    scales = values.std(axis=0)\n    return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "test(\"Wrap it in a function\", lambda: np.allclose(standardize(values), scaled) and values[0].tolist() == [10, 100, 7], \"standardize(values) matches scaled, and values is unchanged.\")",
         "expected": "standardize(values) matches scaled, and values is unchanged.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0,
+          1
+        ]
       },
       {
         "title": "Convert and check the input",
-        "instruction": "Update `standardize` so it converts its input to a floating-point array first, and raises a `ValueError` when that array is not two-dimensional. Write the whole updated definition.",
+        "instruction": "Update `standardize` so it converts its input to a floating-point array first, and raises a `ValueError` when that array is not two-dimensional.",
         "code": "def standardize(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    centered = values - values.mean(axis=0)\n    scales = values.std(axis=0)\n    return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Convert and check the input\", lambda: np.allclose(standardize([[1, 3], [3, 3]]), [[-1, 0], [1, 0]]) and _rejects(lambda: standardize([1.0, 2.0])), \"A list of integer lists is standardized, and a one-dimensional input raises ValueError.\")",
         "expected": "A list of integer lists is standardized, and a one-dimensional input raises ValueError.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Handle an empty matrix",
@@ -262,7 +285,10 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def standardize(values):\n    values = np.asarray(values, dtype=float)\n    if values.ndim != 2: raise ValueError(\"expected a two-dimensional matrix\")\n    if len(values) == 0: return values.copy()\n    centered = values - values.mean(axis=0)\n    scales = values.std(axis=0)\n    return np.divide(centered, scales, out=np.zeros_like(centered), where=scales != 0)",
         "check": "",
         "expected": "The complete check covers constant features, a single row, empty matrices, new shapes and unchanged inputs.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       }
     ]
   },
@@ -315,15 +341,21 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def predict_proba(X, W, b):\n    logits = X @ W + b\n    exp = np.exp(logits - logits.max(axis=1, keepdims=True))\n    return exp / exp.sum(axis=1, keepdims=True)",
         "check": "test(\"Turn the steps into predict_proba\", lambda: np.allclose(predict_proba(X, W, b), probs) and np.isfinite(predict_proba(np.array([[1.0]]), np.array([[1000.0, 999.0]]), np.zeros(2))).all(), \"The function matches the example probabilities and stays finite for logits near 1000.\")",
         "expected": "The function matches the example probabilities and stays finite for logits near 1000.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Validate the shapes",
-        "instruction": "Update `predict_proba` so it first converts `X`, `W` and `b` to floating-point arrays, then raises a `ValueError` unless `X` has shape (n, d), `W` has shape (d, k) and `b` has shape (k,). Keep the stable softmax. Write the whole updated definition.",
+        "instruction": "Update `predict_proba` so it first converts `X`, `W` and `b` to floating-point arrays, then raises a `ValueError` unless `X` has shape (n, d), `W` has shape (d, k) and `b` has shape (k,). Keep the stable softmax.",
         "code": "def predict_proba(X, W, b):\n    X, W, b = (np.asarray(a, dtype=float) for a in (X, W, b))\n    if X.ndim != 2 or W.ndim != 2 or X.shape[1] != W.shape[0] or b.shape != (W.shape[1],):\n        raise ValueError(\"expected X (n, d), W (d, k) and b (k,)\")\n    logits = X @ W + b\n    exp = np.exp(logits - logits.max(axis=1, keepdims=True))\n    return exp / exp.sum(axis=1, keepdims=True)",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Validate the shapes\", lambda: np.allclose(predict_proba([[1]], [[1000, 999]], [0, 0]).sum(), 1) and _rejects(lambda: predict_proba(np.ones((2, 2)), W, b)) and _rejects(lambda: predict_proba(X, W, [0.0])), \"Plain lists work, and mismatched shapes raise ValueError.\")",
         "expected": "Plain lists work, and mismatched shapes raise ValueError.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Count the classes",
@@ -343,11 +375,15 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Require one label per class",
-        "instruction": "Update `predict_labels` so that, before predicting anything, it raises a `ValueError` unless there is exactly one label per class of `W`. Keep inputs unchanged. Write the whole updated definition, then run Check.",
+        "instruction": "Update `predict_labels` so that, before predicting anything, it raises a `ValueError` unless there is exactly one label per class of `W`. Keep inputs unchanged. Then run Check.",
         "code": "def predict_labels(X, W, b, labels):\n    n_classes = np.shape(W)[1]\n    if len(labels) != n_classes:\n        raise ValueError(\"need exactly one label per class\")\n    winners = [labels[i] for i in predict_proba(X, W, b).argmax(axis=1)]\n    return winners",
         "check": "",
         "expected": "The full check includes huge logits, empty batches, tied classes, malformed shapes and unchanged inputs.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7,
+          8
+        ]
       }
     ]
   },
@@ -384,7 +420,11 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def pairwise_squared(left, right):\n    left_float = np.asarray(left, dtype=float)\n    right_float = np.asarray(right, dtype=float)\n    differences = left_float[:, None, :] - right_float[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
         "check": "test(\"Wrap it in a function\", lambda: np.allclose(pairwise_squared(left, right), distances) and np.allclose(pairwise_squared([[50000]], [[-50000]]), [[1e10]]), \"The function matches distances and handles large integers without overflow.\")",
         "expected": "The function matches distances and handles large integers without overflow.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0,
+          1
+        ]
       },
       {
         "title": "Reject mismatched shapes",
@@ -392,7 +432,10 @@ export const NUMPY_GUIDES: Record<string, CodingGuide> = {
         "code": "def pairwise_squared(left, right):\n    left_float = np.asarray(left, dtype=float)\n    right_float = np.asarray(right, dtype=float)\n    if left_float.ndim != 2 or right_float.ndim != 2 or left_float.shape[1] != right_float.shape[1]:\n        raise ValueError(\"expected matrices with matching feature counts\")\n    # ponytail: n*m*d temporary values; chunk rows when vector collections outgrow memory.\n    differences = left_float[:, None, :] - right_float[None, :, :]\n    return np.sum(differences ** 2, axis=-1)",
         "check": "",
         "expected": "The full check includes swapped inputs, empty collections, large integers, invalid shapes and unchanged inputs.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       }
     ]
   },

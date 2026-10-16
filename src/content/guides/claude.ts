@@ -42,7 +42,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def describe(event):\n    tool = event.get(\"tool_name\", \"?\")\n    details = event.get(\"tool_input\", {})\n    if tool == \"Bash\":\n        return f\"Bash: {details.get('command', '?')}\"\n    return tool",
         "check": "test(\"Describe Bash events\", lambda: describe(LOG[0]) == \"Bash: npm test\" and describe({\"tool_name\": \"Bash\"}) == \"Bash: ?\" and describe(LOG[2]) == \"WebSearch\", \"Bash: npm test, Bash: ? without details, and WebSearch unchanged.\")",
         "expected": "Bash: npm test, Bash: ? without details, and WebSearch unchanged.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Describe file edits",
@@ -50,7 +53,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def describe(event):\n    tool = event.get(\"tool_name\", \"?\")\n    details = event.get(\"tool_input\", {})\n    if tool == \"Bash\":\n        return f\"Bash: {details.get('command', '?')}\"\n    if tool in (\"Edit\", \"Write\"):\n        return f\"{tool}: {details.get('file_path', '?')}\"\n    return tool",
         "check": "test(\"Describe file edits\", lambda: describe({\"tool_name\": \"Write\", \"tool_input\": {\"file_path\": \"a.py\"}}) == \"Write: a.py\" and describe({\"tool_name\": \"Edit\"}) == \"Edit: ?\" and describe({\"tool_name\": \"Bash\"}) == \"Bash: ?\", \"Write: a.py, Edit: ? without details, Bash: ? still works.\")",
         "expected": "Write: a.py, Edit: ? without details, Bash: ? still works.",
-        "reassurance": "All three cases are covered. The final loop prints the actual audit trail."
+        "reassurance": "All three cases are covered. The final loop prints the actual audit trail.",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Print the audit trail",
@@ -87,7 +93,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def matches(rule, tool, arg):\n    name, _, rest = rule.partition(\"(\")\n    pattern = rest[:-1]\n    return name == tool and arg == pattern",
         "check": "test(\"Match exact rules\", lambda: matches(\"Read(./.env)\", \"Read\", \"./.env\") and not matches(\"Read(./.env)\", \"Edit\", \"./.env\") and not matches(\"Read(./.env)\", \"Read\", \"./.env.local\"), \"Read(./.env) matches only Read with ./.env exactly.\")",
         "expected": "Read(./.env) matches only Read with ./.env exactly.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Match a tool and argument",
@@ -95,7 +104,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def matches(rule, tool, arg):\n    name, _, rest = rule.partition(\"(\")\n    pattern = rest[:-1]\n    if pattern.endswith(\":*\"):\n        return name == tool and arg.startswith(pattern[:-2])\n    return name == tool and arg == pattern",
         "check": "test(\"Match a tool and argument\", lambda: matches(\"Bash(git:*)\", \"Bash\", \"git status\") and not matches(\"Bash(git:*)\", \"Edit\", \"git status\") and matches(\"Read(./.env)\", \"Read\", \"./.env\"), \"Prefix and exact rules match only the named tool.\")",
         "expected": "Prefix and exact rules match only the named tool.",
-        "reassurance": "Rule matching works. Deny must be checked before allow."
+        "reassurance": "Rule matching works. Deny must be checked before allow.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Ask by default",
@@ -111,7 +123,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def decide(settings, tool, arg):\n    perms = settings.get(\"permissions\", {})\n    if any(matches(rule, tool, arg) for rule in perms.get(\"deny\", [])):\n        return \"deny\"\n    return \"ask\"",
         "check": "test(\"Check the deny rules\", lambda: decide(build_settings([], [\"Read(./.env)\"]), \"Read\", \"./.env\") == \"deny\" and decide({\"permissions\": {}}, \"Read\", \"./.env\") == \"ask\", \"Reading ./.env is denied; settings without lists still ask.\")",
         "expected": "Reading ./.env is denied; settings without lists still ask.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Apply deny before allow",
@@ -119,7 +134,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def decide(settings, tool, arg):\n    perms = settings.get(\"permissions\", {})\n    if any(matches(rule, tool, arg) for rule in perms.get(\"deny\", [])):\n        return \"deny\"\n    if any(matches(rule, tool, arg) for rule in perms.get(\"allow\", [])):\n        return \"allow\"\n    return \"ask\"",
         "check": "test(\"Apply deny before allow\", lambda: decide(build_settings([\"Bash(git:*)\"], [\"Bash(git push:*)\"]), \"Bash\", \"git push origin main\") == \"deny\" and decide(build_settings([\"Bash(git:*)\"], []), \"Bash\", \"git status\") == \"allow\", \"git push is denied even though git commands are allowed; git status is allowed.\")",
         "expected": "git push is denied even though git commands are allowed; git status is allowed.",
-        "reassurance": "The order of the checks is the precedence rule."
+        "reassurance": "The order of the checks is the precedence rule.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Inspect a settings example",
@@ -148,7 +166,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def command_block_reason(command):\n    if \"rm -rf\" in command: return \"Blocked: rm -rf is not allowed. Delete specific files instead.\"\n    if re.search(r\"git push\\b.*(--force|\\s-f\\b)\", command):\n        return \"Blocked: force pushes are not allowed. Use a normal push.\"\n    return \"\"",
         "check": "test(\"Block destructive shell commands\", lambda: \"rm -rf\" in command_block_reason(\"rm -rf /tmp/x\") and \"force\" in command_block_reason(\"git push -f origin main\") and command_block_reason(\"git push origin main\") == \"\", \"rm -rf and force pushes have reasons; a normal push has none.\")",
         "expected": "rm -rf and force pushes have reasons; a normal push has none.",
-        "reassurance": "The command policy is checked. The next rule covers file edits."
+        "reassurance": "The command policy is checked. The next rule covers file edits.",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Identify protected environment paths",
@@ -172,7 +193,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def pre_tool_use(event):\n    tool, args = event.get(\"tool_name\"), event.get(\"tool_input\", {})\n    if tool == \"Bash\":\n        reason = command_block_reason(args.get(\"command\", \"\"))\n        return (2, reason) if reason else (0, \"\")\n    return 0, \"\"",
         "check": "test(\"Route Bash commands\", lambda: pre_tool_use({\"tool_name\": \"Bash\", \"tool_input\": {\"command\": \"ls -la\"}}) == (0, \"\") and pre_tool_use({\"tool_name\": \"Bash\", \"tool_input\": {\"command\": \"rm -rf /\"}})[0] == 2 and pre_tool_use({\"tool_name\": \"Bash\"}) == (0, \"\"), \"ls -la is allowed, rm -rf returns exit code 2, a Bash event without input is allowed.\")",
         "expected": "ls -la is allowed, rm -rf returns exit code 2, a Bash event without input is allowed.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Return the hook decision",
@@ -180,7 +204,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def pre_tool_use(event):\n    tool, args = event.get(\"tool_name\"), event.get(\"tool_input\", {})\n    if tool == \"Bash\":\n        reason = command_block_reason(args.get(\"command\", \"\"))\n        return (2, reason) if reason else (0, \"\")\n    if tool in (\"Write\", \"Edit\", \"MultiEdit\") and protected_env_path(args.get(\"file_path\", \"\")):\n        return 2, \"Blocked: .env files hold secrets. Edit .env.example instead.\"\n    return 0, \"\"",
         "check": "test(\"Return the hook decision\", lambda: pre_tool_use({\"tool_name\": \"Edit\", \"tool_input\": {\"file_path\": \"/repo/.env\"}})[0] == 2 and \".env\" in pre_tool_use({\"tool_name\": \"Edit\", \"tool_input\": {\"file_path\": \"/repo/.env\"}})[1] and pre_tool_use({\"tool_name\": \"Edit\", \"tool_input\": {\"file_path\": \"/repo/app.py\"}}) == (0, \"\"), \"Editing .env returns exit code 2 with a reason naming .env; app.py is allowed.\")",
         "expected": "Editing .env returns exit code 2 with a reason naming .env; app.py is allowed.",
-        "reassurance": "Both routing branches are checked. The final checks exercise the other prohibited commands."
+        "reassurance": "Both routing branches are checked. The final checks exercise the other prohibited commands.",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Inspect a blocked result",
@@ -225,7 +252,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "meta = {}\nfor line in head.splitlines():\n    key, _, value = line.partition(\":\")\n    meta[key.strip()] = value.strip()",
         "check": "test(\"Build the metadata mapping\", lambda: meta == {\"name\": \"code-reviewer\", \"description\": \"Use when: reviewing diffs\", \"tools\": \"Read, Grep\"}, \"Exactly three metadata fields with their original values.\")",
         "expected": "Exactly three metadata fields with their original values.",
-        "reassurance": "The metadata is correct. Package the verified operations as the requested parser."
+        "reassurance": "The metadata is correct. Package the verified operations as the requested parser.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Return metadata and body",
@@ -233,7 +263,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def parse_frontmatter(text):\n    head, _, body = text.removeprefix(\"---\\n\").partition(\"\\n---\\n\")\n    meta = {}\n    for line in head.splitlines():\n        key, _, value = line.partition(\":\")\n        meta[key.strip()] = value.strip()\n    return meta, body.strip()",
         "check": "",
         "expected": "parse_frontmatter returns the three metadata fields and the body text.",
-        "reassurance": "The complete check verifies key count, internal colons and removal of the header."
+        "reassurance": "The complete check verifies key count, internal colons and removal of the header.",
+        "startFrom": [
+          3
+        ]
       }
     ]
   },
@@ -286,7 +319,11 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def validate_skill(meta, body):\n    if not isinstance(meta, dict): return [\"metadata\"]\n    errors = []\n    if not valid_skill_name(meta.get(\"name\")): errors.append(\"name\")\n    if not valid_skill_description(meta.get(\"description\")): errors.append(\"description\")\n    if \"allowed-tools\" in meta and not valid_skill_tools(meta[\"allowed-tools\"]): errors.append(\"allowed-tools\")\n    if not isinstance(body, str) or not body.strip(): errors.append(\"body\")\n    return errors",
         "check": "",
         "expected": "Invalid fields are reported as name, description, allowed-tools, body, in that order.",
-        "reassurance": "The full checks cover missing fields, limits, tool names, body types and unchanged metadata."
+        "reassurance": "The full checks cover missing fields, limits, tool names, body types and unchanged metadata.",
+        "startFrom": [
+          3,
+          4
+        ]
       }
     ]
   },
@@ -299,7 +336,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def is_memory_import(token, in_code):\n    return not in_code and token.startswith(\"@\") and len(token) > 1 and len(token.split()) == 1",
         "check": "test(\"Recognize whole-line imports\", lambda: is_memory_import(\"@docs/testing.md\", False) and not is_memory_import(\"@dataclass\", True) and not is_memory_import(\"@notes.md extra\", False), \"@docs/testing.md is an import; a code decorator and a token with extra text are not.\")",
         "expected": "@docs/testing.md is an import; a code decorator and a token with extra text are not.",
-        "reassurance": "The import boundary is checked. Relative paths need the importing file\u2019s directory."
+        "reassurance": "The import boundary is checked. Relative paths need the importing file’s directory."
       },
       {
         "title": "Join an import path",
@@ -315,7 +352,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def memory_target(path, token):\n    return posixpath.normpath(posixpath.join(posixpath.dirname(path), token[1:]))",
         "check": "test(\"Resolve an import path\", lambda: memory_target(\"docs/testing.md\", \"@fixtures.md\") == \"docs/fixtures.md\" and memory_target(\"docs/fixtures.md\", \"@../CLAUDE.md\") == \"CLAUDE.md\", \"Sibling fixtures resolve under docs; ../CLAUDE.md resolves to the root file.\")",
         "expected": "Sibling fixtures resolve under docs; ../CLAUDE.md resolves to the root file.",
-        "reassurance": "Path resolution matches the sample. Missing, cyclic or too-deep imports must remain visible."
+        "reassurance": "Path resolution matches the sample. Missing, cyclic or too-deep imports must remain visible.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Keep ordinary lines",
@@ -331,7 +371,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def expand_memory_line(files, path, line, depth, chain, max_depth, loaded, in_code):\n    if not is_memory_import(line.strip(), in_code):\n        return [line]\n    target = memory_target(path, line.strip())\n    if target not in files or target in chain or depth + 1 > max_depth:\n        return [line]\n    return expand_memory_lines(files, target, depth + 1, chain | {target}, max_depth, loaded)",
         "check": "test(\"Expand one safe import\", lambda: expand_memory_line(PROJECT, \"CLAUDE.md\", \"@docs/missing.md\", 0, {\"CLAUDE.md\"}, 5, [], False) == [\"@docs/missing.md\"] and expand_memory_line(PROJECT, \"docs/fixtures.md\", \"@../CLAUDE.md\", 2, {\"CLAUDE.md\"}, 5, [], False) == [\"@../CLAUDE.md\"], \"Missing and cyclic imports stay as their original lines.\")",
         "expected": "Missing and cyclic imports stay as their original lines.",
-        "reassurance": "The stopping cases are verified without recursing. Next walk a file\u2019s lines and track code fences."
+        "reassurance": "The stopping cases are verified without recursing. Next walk a file’s lines and track code fences.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Record the loaded file",
@@ -347,15 +390,21 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def expand_memory_lines(files, path, depth, chain, max_depth, loaded):\n    if path not in loaded: loaded.append(path)\n    lines, in_code = [], False\n    for line in files[path].splitlines():\n        lines.extend(expand_memory_line(files, path, line, depth, chain, max_depth, loaded, in_code))\n    return lines",
         "check": "test(\"Expand every line\", lambda: expand_memory_lines({\"CLAUDE.md\": \"root\\n@a.md\", \"a.md\": \"A\"}, \"CLAUDE.md\", 0, {\"CLAUDE.md\"}, 5, []) == [\"root\", \"A\"], \"A simple import expands to root, then A.\")",
         "expected": "A simple import expands to root, then A.",
-        "reassurance": "Code fences are not tracked yet, so an @ line inside one would still import."
+        "reassurance": "Code fences are not tracked yet, so an @ line inside one would still import.",
+        "startFrom": [
+          5
+        ]
       },
       {
-        "title": "Walk one file\u2019s lines",
+        "title": "Walk one file’s lines",
         "instruction": "Inside the loop, before expanding, flip `in_code` whenever a line's trimmed text starts with three backticks.",
         "code": "def expand_memory_lines(files, path, depth, chain, max_depth, loaded):\n    if path not in loaded: loaded.append(path)\n    lines, in_code = [], False\n    for line in files[path].splitlines():\n        if line.strip().startswith(\"```\"):\n            in_code = not in_code\n        lines.extend(expand_memory_line(files, path, line, depth, chain, max_depth, loaded, in_code))\n    return lines",
-        "check": "test(\"Walk one file\u2019s lines\", lambda: expand_memory_lines({\"CLAUDE.md\": \"```\\n@a.md\\n```\\n@a.md\", \"a.md\": \"A\"}, \"CLAUDE.md\", 0, {\"CLAUDE.md\"}, 5, []) == [\"```\", \"@a.md\", \"```\", \"A\"], \"The fenced @a.md stays as text; the one after the fence expands to A.\")",
+        "check": "test(\"Walk one file’s lines\", lambda: expand_memory_lines({\"CLAUDE.md\": \"```\\n@a.md\\n```\\n@a.md\", \"a.md\": \"A\"}, \"CLAUDE.md\", 0, {\"CLAUDE.md\"}, 5, []) == [\"```\", \"@a.md\", \"```\", \"A\"], \"The fenced @a.md stays as text; the one after the fence expands to A.\")",
         "expected": "The fenced @a.md stays as text; the one after the fence expands to A.",
-        "reassurance": "The wrapper will validate the entry and return loaded order."
+        "reassurance": "The wrapper will validate the entry and return loaded order.",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Assemble from the entry file",
@@ -371,7 +420,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def expand_memory(files, entry=\"CLAUDE.md\", max_depth=5):\n    loaded = []\n    text = \"\\n\".join(expand_memory_lines(files, entry, 0, {entry}, max_depth, loaded))\n    return text, loaded",
         "check": "test(\"Wrap the assembler\", lambda: expand_memory(PROJECT)[1] == [\"CLAUDE.md\", \"docs/testing.md\", \"docs/fixtures.md\"] and expand_memory(PROJECT) == expand_memory(PROJECT), \"Loaded order is CLAUDE.md, docs/testing.md, docs/fixtures.md, on every call.\")",
         "expected": "Loaded order is CLAUDE.md, docs/testing.md, docs/fixtures.md, on every call.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Expose the memory assembler",
@@ -379,7 +431,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def expand_memory(files, entry=\"CLAUDE.md\", max_depth=5):\n    if entry not in files:\n        raise FileNotFoundError(entry)\n    loaded = []\n    text = \"\\n\".join(expand_memory_lines(files, entry, 0, {entry}, max_depth, loaded))\n    return text, loaded",
         "check": "def _rejects(fn, error):\n    try:\n        fn()\n    except error:\n        return True\n    return False\ntest(\"Expose the memory assembler\", lambda: expand_memory(PROJECT)[1] == [\"CLAUDE.md\", \"docs/testing.md\", \"docs/fixtures.md\"] and _rejects(lambda: expand_memory({}), FileNotFoundError), \"Loaded order is unchanged, and a missing entry raises FileNotFoundError.\")",
         "expected": "Loaded order is unchanged, and a missing entry raises FileNotFoundError.",
-        "reassurance": "The last check also tests depth, sharing and fenced code."
+        "reassurance": "The last check also tests depth, sharing and fenced code.",
+        "startFrom": [
+          9
+        ]
       },
       {
         "title": "Inspect assembled memory",
@@ -448,7 +503,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def classify_hook_parts(parts):\n    if protected_hook_parts(parts): return hook_reply(\"deny\", \"protected project path\")\n    if parts[-1] in {\"package.json\", \"pyproject.toml\", \"requirements.txt\"}:\n        return hook_reply(\"ask\", \"review dependencies before writing\")\n    return {}",
         "check": "test(\"Choose the project-path policy\", lambda: classify_hook_parts([\".git\", \"package.json\"])[\"hookSpecificOutput\"][\"permissionDecision\"] == \"deny\" and classify_hook_parts([\"package.json\"])[\"hookSpecificOutput\"][\"permissionDecision\"] == \"ask\" and classify_hook_parts([\"src\", \"app.py\"]) == {}, \"Protected files deny, dependency files ask, and ordinary files return {}.\")",
         "expected": "Protected files deny, dependency files ask, and ordinary files return {}.",
-        "reassurance": "The path policy is checked independently. First the next helper will make sure a normalized path stays inside the project."
+        "reassurance": "The path policy is checked independently. First the next helper will make sure a normalized path stays inside the project.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Normalize a sample path",
@@ -464,15 +522,30 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def classify_hook_path(path, project_dir):\n    root = posixpath.normpath(project_dir)\n    path = posixpath.normpath(posixpath.join(root, path))\n    return classify_hook_parts(posixpath.relpath(path, root).split(\"/\"))",
         "check": "test(\"Classify relative components\", lambda: classify_hook_path(\"config/../package.json\", \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"ask\" and classify_hook_path(\"src/app.py\", \"/workspace/repo\") == {}, \"config/../package.json asks; src/app.py returns {}.\")",
         "expected": "config/../package.json asks; src/app.py returns {}.",
-        "reassurance": "A path like ../package.json still slips through as a dependency file. Scope comes next."
+        "reassurance": "A path like ../package.json still slips through as a dependency file. Scope comes next.",
+        "startFrom": [
+          7
+        ]
+      },
+      {
+        "title": "Find the common path",
+        "instruction": "Using `root` and `path` from your sample, store their shared leading directory in `shared` with `posixpath.commonpath`, which takes a list of paths and compares whole components.",
+        "code": "shared = posixpath.commonpath([root, path])",
+        "check": "test(\"Find the common path\", lambda: shared == \"/workspace/repo\", \"shared is /workspace/repo.\")",
+        "expected": "shared is /workspace/repo.",
+        "reassurance": ""
       },
       {
         "title": "Normalize and check project scope",
-        "instruction": "Before classifying, deny with reason `write is outside the project` when the common path of `root` and `path` is not `root`. Use `posixpath.commonpath`, which compares whole components, so a sibling root does not count as inside.",
-        "code": "def classify_hook_path(path, project_dir):\n    root = posixpath.normpath(project_dir)\n    # ponytail: lexical paths only; resolve symlinks before filesystem enforcement.\n    path = posixpath.normpath(posixpath.join(root, path))\n    if posixpath.commonpath([root, path]) != root:\n        return hook_reply(\"deny\", \"write is outside the project\")\n    return classify_hook_parts(posixpath.relpath(path, root).split(\"/\"))",
+        "instruction": "Before classifying, compute `shared` the same way and deny with reason `write is outside the project` when it is not `root`. Because `posixpath.commonpath` compares whole components, a sibling root does not count as inside.",
+        "code": "def classify_hook_path(path, project_dir):\n    root = posixpath.normpath(project_dir)\n    # ponytail: lexical paths only; resolve symlinks before filesystem enforcement.\n    path = posixpath.normpath(posixpath.join(root, path))\n    shared = posixpath.commonpath([root, path])\n    if shared != root:\n        return hook_reply(\"deny\", \"write is outside the project\")\n    return classify_hook_parts(posixpath.relpath(path, root).split(\"/\"))",
         "check": "test(\"Normalize and check project scope\", lambda: classify_hook_path(\"../package.json\", \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"deny\" and classify_hook_path(\"config/../package.json\", \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"ask\", \"Outside writes deny; normalized project dependency files ask.\")",
         "expected": "Outside writes deny; normalized project dependency files ask.",
-        "reassurance": "Scope takes precedence over dependency review. Next route validated write tools into this classifier."
+        "reassurance": "Scope takes precedence over dependency review. Next route validated write tools into this classifier.",
+        "startFrom": [
+          8,
+          9
+        ]
       },
       {
         "title": "Route a write event",
@@ -488,7 +561,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def route_hook(event, project_dir):\n    if event[\"tool_name\"] not in {\"Write\", \"Edit\", \"MultiEdit\"}: return {}\n    path = event_path(event)\n    if not valid_hook_path(path):\n        return hook_reply(\"deny\", \"malformed file path\")\n    return classify_hook_path(path, project_dir)",
         "check": "test(\"Check the tool and path\", lambda: route_hook({\"tool_name\": \"Read\"}, \"/workspace/repo\") == {} and route_hook({\"tool_name\": \"Write\", \"tool_input\": None}, \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"deny\", \"Read returns {}; a Write without a usable path is denied.\")",
         "expected": "Read returns {}; a Write without a usable path is denied.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          11
+        ]
       },
       {
         "title": "Route the complete event",
@@ -496,7 +572,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def route_hook(event, project_dir):\n    if not valid_tool_event(event):\n        return hook_reply(\"deny\", \"malformed tool event\")\n    if event[\"tool_name\"] not in {\"Write\", \"Edit\", \"MultiEdit\"}: return {}\n    path = event_path(event)\n    if not valid_hook_path(path):\n        return hook_reply(\"deny\", \"malformed file path\")\n    return classify_hook_path(path, project_dir)",
         "check": "test(\"Route the complete event\", lambda: route_hook(event, \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"ask\" and route_hook({\"tool_name\": \"Read\"}, \"/workspace/repo\") == {} and route_hook({\"tool_name\": \"Write\", \"tool_input\": {\"file_path\": \"src/app.py\"}}, \"/workspace/repo\") == {} and route_hook(None, \"/workspace/repo\")[\"hookSpecificOutput\"][\"permissionDecision\"] == \"deny\", \"Dependencies ask, normal writes and unmanaged tools return {}, and malformed events deny.\")",
         "expected": "Dependencies ask, normal writes and unmanaged tools return {}, and malformed events deny.",
-        "reassurance": "The router correctly handles the sample dependency, an ordinary write, an unmanaged tool and malformed input. The final check adds the remaining path cases."
+        "reassurance": "The router correctly handles the sample dependency, an ordinary write, an unmanaged tool and malformed input. The final check adds the remaining path cases.",
+        "startFrom": [
+          12
+        ]
       },
       {
         "title": "Inspect the dependency decision",
@@ -517,7 +596,7 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "PLACEHOLDER = re.compile(r\"\\$\\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\\}\")",
         "check": "test(\"Recognize supported placeholders\", lambda: PLACEHOLDER.fullmatch(\"${PORT:-443}\").groups() == (\"PORT\", \"443\") and PLACEHOLDER.fullmatch(\"${1X}\") is None, \"${PORT:-443} captures PORT and 443; ${1X} stays literal.\")",
         "expected": "${PORT:-443} captures PORT and 443; ${1X} stays literal.",
-        "reassurance": "The parser recognizes only the promised syntax. Next decide one placeholder\u2019s value."
+        "reassurance": "The parser recognizes only the promised syntax. Next decide one placeholder’s value."
       },
       {
         "title": "Read a match's groups",
@@ -541,7 +620,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def placeholder_value(match, env, missing):\n    name, default = match.group(1), match.group(2)\n    current = env.get(name)\n    if default is not None and not current: return default\n    return current",
         "check": "test(\"Fall back to the default\", lambda: placeholder_value(PLACEHOLDER.fullmatch(\"${PORT:-443}\"), {\"PORT\": \"\"}, set()) == \"443\" and placeholder_value(PLACEHOLDER.fullmatch(\"${X}\"), {\"X\": \"\"}, set()) == \"\", \"An empty PORT uses 443; an empty X without a default stays empty.\")",
         "expected": "An empty PORT uses 443; an empty X without a default stays empty.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Resolve one placeholder",
@@ -549,7 +631,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def placeholder_value(match, env, missing):\n    name, default = match.group(1), match.group(2)\n    current = env.get(name)\n    if default is not None and not current: return default\n    if current is None:\n        missing.add(name)\n        return match.group(0)\n    return current",
         "check": "test(\"Resolve one placeholder\", lambda: placeholder_value(PLACEHOLDER.fullmatch(\"${X}\"), {}, seen := set()) == \"${X}\" and seen == {\"X\"}, \"An unset X stays ${X} and is recorded in missing.\")",
         "expected": "An unset X stays ${X} and is recorded in missing.",
-        "reassurance": "Default and empty-value behavior match the contract. Expand each string only once."
+        "reassurance": "Default and empty-value behavior match the contract. Expand each string only once.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Expand every placeholder",
@@ -565,7 +650,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def expand_mcp_text(value, env, missing):\n    if not isinstance(value, str):\n        return value\n    return PLACEHOLDER.sub(lambda match: placeholder_value(match, env, missing), value)",
         "check": "test(\"Expand one string once\", lambda: expand_mcp_text(7, {}, set()) == 7 and expand_mcp_text([\"${X}\"], {\"X\": \"y\"}, set()) == [\"${X}\"] and expand_mcp_text(\"${X}\", {\"X\": \"y\"}, set()) == \"y\", \"7 and a list come back unchanged; ${X} still expands.\")",
         "expected": "7 and a list come back unchanged; ${X} still expands.",
-        "reassurance": "Expansion happens once, which prevents accidental secret chaining. Next apply it only to allowed server fields."
+        "reassurance": "Expansion happens once, which prevents accidental secret chaining. Next apply it only to allowed server fields.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Expand command and url",
@@ -581,15 +669,29 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def resolve_mcp_server(server, env, missing):\n    for field in (\"command\", \"url\"):\n        if field in server: server[field] = expand_mcp_text(server[field], env, missing)\n    if isinstance(server.get(\"args\"), list):\n        server[\"args\"] = [expand_mcp_text(arg, env, missing) for arg in server[\"args\"]]",
         "check": "test(\"Expand the args list\", lambda: resolve_mcp_server(server := {\"args\": [\"--root\", \"${R:-./docs}\"]}, {}, set()) is None and server[\"args\"] == [\"--root\", \"./docs\"], \"args becomes [\\\"--root\\\", \\\"./docs\\\"].\")",
         "expected": "args becomes [\"--root\", \"./docs\"].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7
+        ]
       },
       {
-        "title": "Expand a server\u2019s allowed fields",
+        "title": "Expand a server’s allowed fields",
         "instruction": "Finally loop over `env` and `headers`, and when the field holds a dictionary, rebuild it with every value expanded and the keys kept.",
         "code": "def resolve_mcp_server(server, env, missing):\n    for field in (\"command\", \"url\"):\n        if field in server: server[field] = expand_mcp_text(server[field], env, missing)\n    if isinstance(server.get(\"args\"), list):\n        server[\"args\"] = [expand_mcp_text(arg, env, missing) for arg in server[\"args\"]]\n    for field in (\"env\", \"headers\"):\n        if isinstance(server.get(field), dict):\n            server[field] = {key: expand_mcp_text(value, env, missing) for key, value in server[field].items()}",
-        "check": "test(\"Expand a server\u2019s allowed fields\", lambda: resolve_mcp_server(server := {\"headers\": {\"A\": \"Bearer ${T}\"}, \"env\": \"${T}\"}, {\"T\": \"x\"}, set()) is None and server == {\"headers\": {\"A\": \"Bearer x\"}, \"env\": \"${T}\"}, \"Header values expand; an env that is not a dictionary stays as written.\")",
+        "check": "test(\"Expand a server’s allowed fields\", lambda: resolve_mcp_server(server := {\"headers\": {\"A\": \"Bearer ${T}\"}, \"env\": \"${T}\"}, {\"T\": \"x\"}, set()) is None and server == {\"headers\": {\"A\": \"Bearer x\"}, \"env\": \"${T}\"}, \"Header values expand; an env that is not a dictionary stays as written.\")",
         "expected": "Header values expand; an env that is not a dictionary stays as written.",
-        "reassurance": "The field boundary is verified. The public function must copy before calling this mutating helper."
+        "reassurance": "The field boundary is verified. The public function must copy before calling this mutating helper.",
+        "startFrom": [
+          8
+        ]
+      },
+      {
+        "title": "Deep copy the sample",
+        "instruction": "Store an independent deep copy of `CONFIG` in `resolved` with `copy.deepcopy`, so nested dictionaries are copied too.",
+        "code": "resolved = copy.deepcopy(CONFIG)",
+        "check": "test(\"Deep copy the sample\", lambda: resolved == CONFIG and resolved[\"mcpServers\"][\"tracker\"][\"headers\"] is not CONFIG[\"mcpServers\"][\"tracker\"][\"headers\"], \"resolved equals CONFIG but shares no nested dictionaries.\")",
+        "expected": "resolved equals CONFIG but shares no nested dictionaries.",
+        "reassurance": ""
       },
       {
         "title": "Copy the configuration",
@@ -605,7 +707,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def resolve_mcp_config(config, env):\n    resolved, missing = copy.deepcopy(config), set()\n    for server in resolved.get(\"mcpServers\", {}).values():\n        resolve_mcp_server(server, env, missing)\n    return resolved",
         "check": "test(\"Resolve every server\", lambda: resolve_mcp_config(CONFIG, {\"TRACKER_TOKEN\": \"tok-123\"})[\"mcpServers\"][\"tracker\"][\"headers\"][\"Authorization\"] == \"Bearer tok-123\" and CONFIG[\"mcpServers\"][\"tracker\"][\"headers\"][\"Authorization\"] == \"Bearer ${TRACKER_TOKEN}\" and resolve_mcp_config({}, {}) == {}, \"The result uses Bearer tok-123; CONFIG still holds its placeholder; {} copies to {}.\")",
         "expected": "The result uses Bearer tok-123; CONFIG still holds its placeholder; {} copies to {}.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          11
+        ]
       },
       {
         "title": "Report missing variables",
@@ -613,7 +718,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def resolve_mcp_config(config, env):\n    resolved, missing = copy.deepcopy(config), set()\n    for server in resolved.get(\"mcpServers\", {}).values():\n        resolve_mcp_server(server, env, missing)\n    if missing:\n        raise ValueError(\"missing environment variables: \" + \", \".join(sorted(missing)))\n    return resolved",
         "check": "def _rejects(fn, error):\n    try:\n        fn()\n    except error:\n        return True\n    return False\ntest(\"Report missing variables\", lambda: _rejects(lambda: resolve_mcp_config(CONFIG, {}), ValueError) and resolve_mcp_config(CONFIG, {\"TRACKER_TOKEN\": \"t\"})[\"mcpServers\"][\"docs\"][\"args\"][-1] == \"./docs\", \"A complete environment still resolves; an incomplete one now raises ValueError.\")",
         "expected": "A complete environment still resolves; an incomplete one now raises ValueError.",
-        "reassurance": "Copying preserves the input. The last check adds missing variables, defaults and multiple placeholders."
+        "reassurance": "Copying preserves the input. The last check adds missing variables, defaults and multiple placeholders.",
+        "startFrom": [
+          12
+        ]
       },
       {
         "title": "Inspect the resolved configuration",
@@ -637,6 +745,14 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "The report starts clean. Next parse lines without allowing malformed JSON to stop later events."
       },
       {
+        "title": "Decode one line",
+        "instruction": "Store the text `{\"type\": \"tool_use\", \"tool\": \"Bash\"}` in `line`, then turn it into a Python value with `json.loads` and store the result in `event`.",
+        "code": "line = '{\"type\": \"tool_use\", \"tool\": \"Bash\"}'\nevent = json.loads(line)",
+        "check": "test(\"Decode one line\", lambda: event == {\"type\": \"tool_use\", \"tool\": \"Bash\"}, \"event is a dictionary with type tool_use and tool Bash.\")",
+        "expected": "event is a dictionary with type tool_use and tool Bash.",
+        "reassurance": ""
+      },
+      {
         "title": "Parse a JSON line",
         "instruction": "Define `parse_log_event(line)` that turns the line into a Python value with `json.loads`, stores it in `event`, and returns it only when it is a dictionary, otherwise `None`.",
         "code": "def parse_log_event(line):\n    event = json.loads(line)\n    return event if isinstance(event, dict) else None",
@@ -650,7 +766,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def parse_log_event(line):\n    try:\n        event = json.loads(line)\n    except json.JSONDecodeError:\n        return None\n    return event if isinstance(event, dict) else None",
         "check": "test(\"Parse one JSON object\", lambda: parse_log_event(\"not json\") is None and parse_log_event(\"[1, 2]\") is None and parse_log_event('{\"type\":\"tool_use\"}') == {\"type\": \"tool_use\"}, \"Junk and arrays are rejected; a JSON object is retained.\")",
         "expected": "Junk and arrays are rejected; a JSON object is retained.",
-        "reassurance": "Bad lines cannot crash the parser. Known event fields still need validation."
+        "reassurance": "Bad lines cannot crash the parser. Known event fields still need validation.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Validate the tool name",
@@ -682,7 +801,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def count_named_event(report, event):\n    if not valid_report_tool(event):\n        report[\"skipped\"] += 1\n    else:\n        name = event[\"tool\"]\n        report[\"tools\"][name] = report[\"tools\"].get(name, 0) + 1",
         "check": "test(\"Skip invalid tool names\", lambda: count_named_event(report := empty_report(), {\"type\": \"tool_use\", \"tool\": \" \"}) is None and report[\"skipped\"] == 1 and report[\"tools\"] == {} and count_named_event(report, {\"type\": \"tool_use\", \"tool\": \"Read\"}) is None and report[\"tools\"] == {\"Read\": 1}, \"A blank tool name is skipped and counts no tool; a named one still counts.\")",
         "expected": "A blank tool name is skipped and counts no tool; a named one still counts.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Count named actions",
@@ -690,7 +812,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def count_named_event(report, event):\n    if not valid_report_tool(event):\n        report[\"skipped\"] += 1\n    elif event[\"type\"] == \"hook_block\":\n        report[\"blocked\"] += 1\n    else:\n        name = event[\"tool\"]\n        report[\"tools\"][name] = report[\"tools\"].get(name, 0) + 1",
         "check": "test(\"Count named actions\", lambda: count_named_event(report := empty_report(), {\"type\": \"hook_block\", \"tool\": \"Bash\"}) is None and report[\"blocked\"] == 1 and report[\"tools\"] == {}, \"A hook_block increases blocked and adds no tool count.\")",
         "expected": "A hook_block increases blocked and adds no tool count.",
-        "reassurance": "Named actions count correctly. Error flags and usage events have different validation."
+        "reassurance": "Named actions count correctly. Error flags and usage events have different validation.",
+        "startFrom": [
+          7
+        ]
       },
       {
         "title": "Count true error flags",
@@ -706,7 +831,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def count_result_event(report, event):\n    is_error = event.get(\"is_error\", False)\n    if not isinstance(is_error, bool):\n        report[\"skipped\"] += 1\n    else:\n        report[\"errors\"] += int(is_error)",
         "check": "test(\"Count error flags\", lambda: count_result_event(report := empty_report(), {\"is_error\": \"true\"}) is None and report[\"skipped\"] == 1 and report[\"errors\"] == 0, \"The string \\\"true\\\" is skipped rather than counted as an error.\")",
         "expected": "The string \"true\" is skipped rather than counted as an error.",
-        "reassurance": "Malformed error flags are contained. Next total valid usage records."
+        "reassurance": "Malformed error flags are contained. Next total valid usage records.",
+        "startFrom": [
+          9
+        ]
       },
       {
         "title": "Add usage tokens",
@@ -722,7 +850,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def count_usage_event(report, event):\n    count = report_token_count(event)\n    if count is None:\n        report[\"skipped\"] += 1\n    else:\n        report[\"tokens\"] += count",
         "check": "test(\"Count usage records\", lambda: count_usage_event(report := empty_report(), {\"input_tokens\": -1}) is None and report[\"skipped\"] == 1 and report[\"tokens\"] == 0, \"A negative count is skipped and adds no tokens.\")",
         "expected": "A negative count is skipped and adds no tokens.",
-        "reassurance": "Usage totals are verified. Now route the event types to their checked handlers."
+        "reassurance": "Usage totals are verified. Now route the event types to their checked handlers.",
+        "startFrom": [
+          11
+        ]
       },
       {
         "title": "Route named actions",
@@ -738,7 +869,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def count_log_event(report, event):\n    kind = event.get(\"type\")\n    if kind in (\"tool_use\", \"hook_block\"): count_named_event(report, event)\n    elif kind == \"tool_result\": count_result_event(report, event)\n    elif kind == \"usage\": count_usage_event(report, event)",
         "check": "test(\"Route known event types\", lambda: count_log_event(report := empty_report(), {\"type\": \"future_event\"}) is None and report == empty_report() and count_log_event(report, {\"type\": \"usage\", \"output_tokens\": 5}) is None and report[\"tokens\"] == 5, \"An unknown future event leaves the report unchanged; a usage event adds its tokens.\")",
         "expected": "An unknown future event leaves the report unchanged; a usage event adds its tokens.",
-        "reassurance": "Routing preserves forward compatibility. The line loop will now combine parsing and counting."
+        "reassurance": "Routing preserves forward compatibility. The line loop will now combine parsing and counting.",
+        "startFrom": [
+          13
+        ]
       },
       {
         "title": "Start the summary",
@@ -754,7 +888,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def summarize(log_text):\n    report = empty_report()\n    for line in log_text.splitlines():\n        event = parse_log_event(line)\n        if event is None: report[\"skipped\"] += 1\n    return report",
         "check": "test(\"Count malformed lines\", lambda: summarize(\"not json\\n[1, 2]\\n{}\")[\"skipped\"] == 2, \"Junk and an array count as 2 skipped; the object is not skipped.\")",
         "expected": "Junk and an array count as 2 skipped; the object is not skipped.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          15
+        ]
       },
       {
         "title": "Summarize the log",
@@ -762,7 +899,10 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
         "code": "def summarize(log_text):\n    report = empty_report()\n    for line in log_text.splitlines():\n        if not line.strip(): continue\n        event = parse_log_event(line)\n        if event is None: report[\"skipped\"] += 1\n        else: count_log_event(report, event)\n    return report",
         "check": "test(\"Summarize the log\", lambda: summarize(LOG) == {\"tools\": {\"Bash\": 1, \"Edit\": 1}, \"errors\": 1, \"blocked\": 1, \"tokens\": 2450, \"skipped\": 1}, \"Sample: Bash 1, Edit 1, errors 1, blocked 1, tokens 2450, skipped 1.\")",
         "expected": "Sample: Bash 1, Edit 1, errors 1, blocked 1, tokens 2450, skipped 1.",
-        "reassurance": "The sample report is correct. The final check adds malformed fields, arrays and independent repeated calls."
+        "reassurance": "The sample report is correct. The final check adds malformed fields, arrays and independent repeated calls.",
+        "startFrom": [
+          16
+        ]
       },
       {
         "title": "Print the run report",
@@ -774,4 +914,4 @@ export const CLAUDE_GUIDES: Record<string, CodingGuide> = {
       }
     ]
   }
-};
+}

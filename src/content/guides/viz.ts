@@ -55,7 +55,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def plot_curves(ax, epochs, train, val):\n    ax.plot(epochs, train, label=\"train\")\n    ax.plot(epochs, val, label=\"val\")\n    ax.set(xlabel=\"epoch\", ylabel=\"loss\")\n    ax.legend()",
         "check": "_f, _a = plt.subplots()\nplot_curves(_a, [1, 2, 3, 4], [1.0, 0.5, 0.3, 0.2], [1.1, 0.7, 0.6, 0.8])\ntest(\"Label the axes and add a legend\", lambda: _a.get_legend() is not None and _a.get_xlabel() == 'epoch' and _a.get_ylabel() == 'loss' and len(_a.get_lines()) == 2, \"Both curves, a legend, and axis labels epoch and loss.\")",
         "expected": "Both curves, a legend, and axis labels epoch and loss.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Find the best validation epoch",
@@ -66,12 +69,23 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "Epoch 5 is where validation loss stops falling: the model starts to overfit after it."
       },
       {
+        "title": "Try a vertical line",
+        "instruction": "Create a figure and axes as `fig` and `ax`, then draw a dashed grey vertical line on `ax` at the best epoch of the demo `epochs` and `val`, found with `best_epoch`.",
+        "code": "fig, ax = plt.subplots()\nax.axvline(best_epoch(epochs, val), linestyle=\"--\", color=\"gray\")",
+        "check": "test(\"Try a vertical line\", lambda: any(list(l.get_xdata()) == [5, 5] and l.get_linestyle() == '--' for l in ax.get_lines()), \"ax holds one dashed vertical line at epoch 5.\")",
+        "expected": "ax holds one dashed vertical line at epoch 5.",
+        "reassurance": ""
+      },
+      {
         "title": "Mark it and return it",
         "instruction": "Update `plot_curves` so that after drawing it finds the best epoch, draws a dashed grey vertical line there, and returns that epoch.",
         "code": "def plot_curves(ax, epochs, train, val):\n    ax.plot(epochs, train, label=\"train\")\n    ax.plot(epochs, val, label=\"val\")\n    ax.set(xlabel=\"epoch\", ylabel=\"loss\")\n    ax.legend()\n    best = best_epoch(epochs, val)\n    ax.axvline(best, linestyle=\"--\", color=\"gray\")\n    return best",
         "check": "_f, _a = plt.subplots()\n_best = plot_curves(_a, [1, 2, 3, 4], [1.0, 0.5, 0.3, 0.2], [1.1, 0.7, 0.6, 0.8])\ntest('Mark it and return it', lambda: _best == 3 and any(len(set(l.get_xdata())) == 1 and list(l.get_xdata())[0] == 3 and l.get_linestyle() == '--' for l in _a.get_lines()), 'plot_curves returns 3 and a dashed vertical line stands at x = 3.')",
         "expected": "plot_curves returns 3 and a dashed vertical line stands at x = 3.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Draw the demo history",
@@ -87,6 +101,14 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
     "setup": "import numpy as np\nimport matplotlib.pyplot as plt\n\nrng = np.random.default_rng(0)\nX = np.vstack([rng.normal([0, 0], 0.6, (80, 2)), rng.normal([3, 1], 0.6, (80, 2)), rng.normal([1.5, 3], 0.6, (80, 2))])\ny = np.repeat([0, 1, 2], 80)",
     "steps": [
       {
+        "title": "Try a scatter plot",
+        "instruction": "Create a figure and axes as `fig` and `ax`. Then create `sc`: a scatter of column 0 of `X` against column 1, coloured by `y`, with alpha 0.6 and point size 25.",
+        "code": "fig, ax = plt.subplots()\nsc = ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.6, s=25)",
+        "check": "test(\"Try a scatter plot\", lambda: len(sc.get_offsets()) == 240 and np.allclose(np.asarray(sc.get_offsets()), X) and sc.get_alpha() == 0.6 and list(sc.get_sizes()) == [25], \"sc holds 240 points, alpha 0.6 and size 25.\")",
+        "expected": "sc holds 240 points, alpha 0.6 and size 25.",
+        "reassurance": ""
+      },
+      {
         "title": "Scatter the points, coloured by label",
         "instruction": "Define `plot_embedding(ax, X, y)`: scatter column 0 of `X` on x against column 1 on y, colour each point by its label in `y`, make the points semi-transparent with alpha 0.6 and small with size 25, and return the scatter collection.",
         "code": "def plot_embedding(ax, X, y):\n    sc = ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.6, s=25)\n    return sc",
@@ -100,7 +122,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def plot_embedding(ax, X, y):\n    sc = ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.6, s=25)\n    ax.set(xlabel=\"dim 1\", ylabel=\"dim 2\")\n    ax.set_aspect(\"equal\")\n    return sc",
         "check": "_f, _a = plt.subplots()\nplot_embedding(_a, np.array([[0.0, 0.0], [1.0, 1.0]]), np.array([0, 1]))\ntest('Label the axes and equalise the aspect', lambda: _a.get_xlabel() == 'dim 1' and _a.get_ylabel() == 'dim 2' and _a.get_aspect() == 1.0, 'The axes read dim 1 and dim 2 and the aspect ratio is 1.0.')",
         "expected": "The axes read dim 1 and dim 2 and the aspect ratio is 1.0.",
-        "reassurance": "With an equal aspect, clusters look as round as they really are."
+        "reassurance": "With an equal aspect, clusters look as round as they really are.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Draw the three clusters",
@@ -124,6 +149,14 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Try a bar chart",
+        "instruction": "Create a figure and axes as `fig` and `ax`, then draw one bar per demo model on `ax`: `names` along x, `means` as heights, `stds` as error bars with caps of size 4.",
+        "code": "fig, ax = plt.subplots()\nax.bar(names, means, yerr=stds, capsize=4)",
+        "check": "test(\"Try a bar chart\", lambda: [p.get_height() for p in ax.patches] == means and any(type(c).__name__ == 'ErrorbarContainer' for c in ax.containers), \"ax holds four bars in demo order, with error bars.\")",
+        "expected": "ax holds four bars in demo order, with error bars.",
+        "reassurance": ""
+      },
+      {
         "title": "Draw the ranked bars",
         "instruction": "Define `plot_benchmark(ax, names, means, stds)`: rank the inputs with `rank`, then draw one bar per model with the spreads as error bars and small caps. It returns nothing yet.",
         "code": "def plot_benchmark(ax, names, means, stds):\n    names, means, stds = rank(names, means, stds)\n    ax.bar(names, means, yerr=stds, capsize=4)",
@@ -132,12 +165,24 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Fix the y range",
+        "instruction": "On the demo `ax`, make the y axis run from 0 to 1.",
+        "code": "ax.set_ylim(0, 1)",
+        "check": "test(\"Fix the y range\", lambda: ax.get_ylim() == (0.0, 1.0), \"The demo y axis spans 0 to 1.\")",
+        "expected": "The demo y axis spans 0 to 1.",
+        "reassurance": ""
+      },
+      {
         "title": "Start the axis at zero and return the order",
         "instruction": "Update `plot_benchmark` so the y axis runs from 0 to 1 and is labelled `accuracy`, and return the names in plotted order.",
         "code": "def plot_benchmark(ax, names, means, stds):\n    names, means, stds = rank(names, means, stds)\n    ax.bar(names, means, yerr=stds, capsize=4)\n    ax.set_ylim(0, 1)\n    ax.set_ylabel(\"accuracy\")\n    return names",
         "check": "_f, _a = plt.subplots()\n_out = plot_benchmark(_a, ['b', 'a', 'c'], [0.7, 0.9, 0.8], [0.02, 0.01, 0.03])\ntest(\"Start the axis at zero and return the order\", lambda: _out == ['a', 'c', 'b'] and _a.get_ylim() == (0.0, 1.0) and _a.get_ylabel() == 'accuracy', \"The y axis spans 0 to 1 and reads accuracy, and the names come back best first.\")",
         "expected": "The y axis spans 0 to 1 and reads accuracy, and the names come back best first.",
-        "reassurance": "Readers compare bar heights; an axis that starts above zero exaggerates small differences."
+        "reassurance": "Readers compare bar heights; an axis that starts above zero exaggerates small differences.",
+        "startFrom": [
+          2,
+          3
+        ]
       },
       {
         "title": "Draw the demo benchmark",
@@ -177,6 +222,14 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Collect the panels",
+        "instruction": "Create `panels`: the list of axes that `fig` holds, read from the figure itself.",
+        "code": "panels = fig.axes",
+        "check": "test(\"Collect the panels\", lambda: len(panels) == 2 and panels[0] is axes[0] and panels[1] is axes[1], \"panels holds the two axes of fig, left then right.\")",
+        "expected": "panels holds the two axes of fig, left then right.",
+        "reassurance": ""
+      },
+      {
         "title": "Label and legend each panel",
         "instruction": "For every axes in `fig`, label the x axis `epoch` and show a legend.",
         "code": "for ax in fig.axes:\n    ax.set(xlabel=\"epoch\")\n    ax.legend()",
@@ -185,12 +238,23 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Try a log scale",
+        "instruction": "Put the left axes of `fig` on a logarithmic y scale.",
+        "code": "fig.axes[0].set_yscale(\"log\")",
+        "check": "test(\"Try a log scale\", lambda: fig.axes[0].get_yscale() == 'log' and fig.axes[1].get_yscale() == 'linear', \"The left panel is logarithmic; the right is still linear.\")",
+        "expected": "The left panel is logarithmic; the right is still linear.",
+        "reassurance": ""
+      },
+      {
         "title": "Log scale and panel titles",
         "instruction": "Put the left axes of `fig` on a logarithmic y scale and title it `loss`; title the right axes `accuracy`.",
         "code": "fig.axes[0].set_yscale(\"log\")\nfig.axes[0].set_title(\"loss\")\nfig.axes[1].set_title(\"accuracy\")",
         "check": "test(\"Log scale and panel titles\", lambda: fig.axes[0].get_yscale() == 'log' and fig.axes[1].get_yscale() == 'linear' and fig.axes[0].get_title() == 'loss' and fig.axes[1].get_title() == 'accuracy', \"The left panel is logarithmic and titled loss; the right is linear and titled accuracy.\")",
         "expected": "The left panel is logarithmic and titled loss; the right is linear and titled accuracy.",
-        "reassurance": "The loss falls from 2 to 0.03; a log axis shows that relative change evenly instead of flattening the tail."
+        "reassurance": "The loss falls from 2 to 0.03; a log axis shows that relative change evenly instead of flattening the tail.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Collect the decoration in decorate",
@@ -198,7 +262,11 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def decorate(fig):\n    for ax in fig.axes:\n        ax.set(xlabel=\"epoch\")\n        ax.legend()\n    fig.axes[0].set_yscale(\"log\")\n    fig.axes[0].set_title(\"loss\")\n    fig.axes[1].set_title(\"accuracy\")\n    fig.suptitle(\"Training history\")",
         "check": "_f, _axes = plt.subplots(1, 2)\ndraw_pair(_axes[0], [1, 2], [1.0, 0.5], [1.1, 0.6])\ndraw_pair(_axes[1], [1, 2], [0.5, 0.8], [0.5, 0.7])\ndecorate(_f)\ntest('Collect the decoration in decorate', lambda: all(ax.get_legend() is not None and ax.get_xlabel() == 'epoch' and ax.get_title().strip() for ax in _f.axes) and _f.axes[0].get_yscale() == 'log' and _f.axes[1].get_yscale() == 'linear' and _f._suptitle is not None and _f._suptitle.get_text().strip() != '', 'Both panels have a legend, an epoch label and a title; only the left is logarithmic; the figure has a suptitle.')",
         "expected": "Both panels have a legend, an epoch label and a title; only the left is logarithmic; the figure has a suptitle.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4,
+          6
+        ]
       },
       {
         "title": "Assemble the figure",
@@ -206,7 +274,11 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def plot_training(history):\n    fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))\n    epochs = range(1, len(history[\"train_loss\"]) + 1)\n    draw_pair(axes[0], epochs, history[\"train_loss\"], history[\"val_loss\"])\n    draw_pair(axes[1], epochs, history[\"train_acc\"], history[\"val_acc\"])\n    decorate(fig)\n    return fig",
         "check": "import matplotlib.figure\n_h = {'train_loss': [1.0, 0.5, 0.2], 'val_loss': [1.1, 0.6, 0.4], 'train_acc': [0.5, 0.8, 0.9], 'val_acc': [0.5, 0.75, 0.8]}\n_fig = plot_training(_h)\ntest('Assemble the figure', lambda: isinstance(_fig, matplotlib.figure.Figure) and len(_fig.axes) == 2 and list(_fig.axes[0].get_lines()[0].get_ydata()) == [1.0, 0.5, 0.2] and list(_fig.axes[1].get_lines()[1].get_ydata()) == [0.5, 0.75, 0.8] and _fig.axes[0].get_yscale() == 'log', 'A figure with two axes: losses on a log scale on the left, accuracies on the right.')",
         "expected": "A figure with two axes: losses on a log scale on the left, accuracies on the right.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2
+        ]
       },
       {
         "title": "Draw the demo run",
@@ -272,6 +344,17 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def annotate_best(ax, epochs, val_loss):\n    ax.plot(epochs, val_loss, marker=\"o\")\n    i = int(np.argmin(val_loss))\n    return epochs[i]",
         "check": "_f, _a = plt.subplots()\n_best = annotate_best(_a, [1, 2, 3, 4], [0.9, 0.5, 0.6, 0.8])\ntest(\"Find the minimum\", lambda: _best == 2 and annotate_best(plt.subplots()[1], [10, 20, 30], [0.5, 0.9, 0.1]) == 30, \"The best epoch is 2 for the first curve and 30 for the second.\")",
         "expected": "The best epoch is 2 for the first curve and 30 for the second.",
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
+      },
+      {
+        "title": "Try an annotation",
+        "instruction": "Create a figure and axes as `fig` and `ax`, then add an annotation reading `lowest` with its arrow tip at epoch 7, loss 0.3 (the minimum of `val_loss`) and its text at epoch 8, loss 0.5.",
+        "code": "fig, ax = plt.subplots()\nax.annotate(\"lowest\", xy=(7, 0.3), xytext=(8, 0.5), arrowprops=dict(arrowstyle=\"->\"))",
+        "check": "test(\"Try an annotation\", lambda: len(ax.texts) == 1 and ax.texts[0].get_text() == 'lowest' and tuple(ax.texts[0].xy) == (7, 0.3) and ax.texts[0].arrow_patch is not None, \"ax holds one annotation, lowest, with its arrow on (7, 0.3).\")",
+        "expected": "ax holds one annotation, lowest, with its arrow on (7, 0.3).",
         "reassurance": ""
       },
       {
@@ -280,7 +363,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def annotate_best(ax, epochs, val_loss):\n    ax.plot(epochs, val_loss, marker=\"o\")\n    i = int(np.argmin(val_loss))\n    best = epochs[i]\n    ax.annotate(f\"best: epoch {best}\", xy=(best, val_loss[i]), xytext=(best + 1, val_loss[i] + 0.2), arrowprops=dict(arrowstyle=\"->\"))\n    return best",
         "check": "_f, _a = plt.subplots()\nannotate_best(_a, [1, 2, 3, 4], [0.9, 0.5, 0.6, 0.8])\ntest('Point at it with an arrow', lambda: len(_a.texts) == 1 and tuple(_a.texts[0].xy) == (2, 0.5) and _a.texts[0].get_text() == 'best: epoch 2' and _a.texts[0].arrow_patch is not None and tuple(_a.texts[0].get_position()) != (2, 0.5), 'One annotation named best: epoch 2 with its arrow on (2, 0.5) and its text offset from the point.')",
         "expected": "One annotation named best: epoch 2 with its arrow on (2, 0.5) and its text offset from the point.",
-        "reassurance": "xy is the point the arrow touches; xytext is where the label sits."
+        "reassurance": "xy is the point the arrow touches; xytext is where the label sits.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Add the reference line",
@@ -288,7 +374,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def annotate_best(ax, epochs, val_loss):\n    ax.plot(epochs, val_loss, marker=\"o\")\n    i = int(np.argmin(val_loss))\n    best = epochs[i]\n    ax.annotate(f\"best: epoch {best}\", xy=(best, val_loss[i]), xytext=(best + 1, val_loss[i] + 0.2), arrowprops=dict(arrowstyle=\"->\"))\n    ax.axvline(best, linestyle=\"--\", color=\"gray\")\n    return best",
         "check": "_f, _a = plt.subplots()\nannotate_best(_a, [1, 2, 3, 4], [0.9, 0.5, 0.6, 0.8])\ntest('Add the reference line', lambda: any(len(set(l.get_xdata())) == 1 and list(l.get_xdata())[0] == 2 and l.get_linestyle() == '--' for l in _a.get_lines()) and annotate_best(plt.subplots()[1], [10, 20, 30], [0.5, 0.9, 0.1]) == 30, 'A dashed vertical line stands at epoch 2, and another curve gives epoch 30.')",
         "expected": "A dashed vertical line stands at epoch 2, and another curve gives epoch 30.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Run it on the demo curve",
@@ -325,7 +414,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def panel_curves(ax, train, val, title, log=False):\n    epochs = range(1, len(train) + 1)\n    ax.plot(epochs, train, label=\"train\")\n    ax.plot(epochs, val, label=\"val\")\n    ax.set_title(title)\n    ax.legend()",
         "check": "_f, _a = plt.subplots()\npanel_curves(_a, [1.0, 0.5, 0.2], [1.1, 0.6, 0.4], 'loss')\ntest(\"Add validation, title and legend\", lambda: len(_a.get_lines()) == 2 and list(_a.get_lines()[1].get_ydata()) == [1.1, 0.6, 0.4] and _a.get_title() == 'loss' and _a.get_legend() is not None, \"Two lines, the panel titled loss, and a legend.\")",
         "expected": "Two lines, the panel titled loss, and a legend.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Choose the y scale",
@@ -333,7 +425,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def panel_curves(ax, train, val, title, log=False):\n    epochs = range(1, len(train) + 1)\n    ax.plot(epochs, train, label=\"train\")\n    ax.plot(epochs, val, label=\"val\")\n    ax.set_yscale(\"log\") if log else ax.set_ylim(0, 1)\n    ax.set_title(title)\n    ax.legend()",
         "check": "_f, (_l, _r) = plt.subplots(1, 2)\npanel_curves(_l, [1.0, 0.5, 0.2], [1.1, 0.6, 0.4], 'loss', log=True)\npanel_curves(_r, [0.5, 0.8, 0.9], [0.5, 0.75, 0.8], 'accuracy')\ntest('Choose the y scale', lambda: _l.get_yscale() == 'log' and _r.get_yscale() == 'linear' and _r.get_ylim() == (0.0, 1.0) and all(len(a.get_lines()) == 2 and a.get_legend() is not None and a.get_title().strip() for a in (_l, _r)) and list(_l.get_lines()[0].get_ydata()) == [1.0, 0.5, 0.2] and list(_r.get_lines()[1].get_ydata()) == [0.5, 0.75, 0.8], 'The loss panel is logarithmic, the accuracy panel spans 0 to 1, both have two labelled lines, a legend and a title.')",
         "expected": "The loss panel is logarithmic, the accuracy panel spans 0 to 1, both have two labelled lines, a legend and a title.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Rank the benchmark",
@@ -349,7 +444,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def panel_benchmark(ax, benchmark):\n    ranked = sorted(benchmark.items(), key=lambda item: item[1][0], reverse=True)\n    names = [name for name, _ in ranked]\n    ax.bar(names, [m for _, (m, _) in ranked], yerr=[s for _, (_, s) in ranked], capsize=4)",
         "check": "_f, _a = plt.subplots()\npanel_benchmark(_a, {'b': (0.8, 0.02), 'a': (0.9, 0.01), 'c': (0.85, 0.03)})\n_f.canvas.draw()\ntest(\"Draw the ranked bars\", lambda: [p.get_height() for p in _a.patches] == [0.9, 0.85, 0.8] and [t.get_text() for t in _a.get_xticklabels()] == ['a', 'c', 'b'] and any(type(c).__name__ == 'ErrorbarContainer' for c in _a.containers), \"Bars 0.9, 0.85, 0.8 labelled a, c, b, with error bars.\")",
         "expected": "Bars 0.9, 0.85, 0.8 labelled a, c, b, with error bars.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Fix the range and title",
@@ -357,7 +455,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def panel_benchmark(ax, benchmark):\n    ranked = sorted(benchmark.items(), key=lambda item: item[1][0], reverse=True)\n    names = [name for name, _ in ranked]\n    ax.bar(names, [m for _, (m, _) in ranked], yerr=[s for _, (_, s) in ranked], capsize=4)\n    ax.set_ylim(0, 1)\n    ax.set_title(\"benchmark\")",
         "check": "_f, _a = plt.subplots()\npanel_benchmark(_a, {'b': (0.8, 0.02), 'a': (0.9, 0.01), 'c': (0.85, 0.03)})\n_f.canvas.draw()\ntest('Fix the range and title', lambda: [p.get_height() for p in _a.patches] == [0.9, 0.85, 0.8] and [t.get_text() for t in _a.get_xticklabels()] == ['a', 'c', 'b'] and any(type(c).__name__ == 'ErrorbarContainer' for c in _a.containers) and _a.get_ylim() == (0.0, 1.0) and _a.get_title() == 'benchmark', 'Bars 0.9, 0.85, 0.8 labelled a, c, b with error bars, from 0 to 1, titled benchmark.')",
         "expected": "Bars 0.9, 0.85, 0.8 labelled a, c, b with error bars, from 0 to 1, titled benchmark.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Draw the matrix as an image",
@@ -368,12 +469,23 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Try writing text",
+        "instruction": "Create a figure and axes as `fig` and `ax`, then write the top-left count of `confusion` on `ax` at x 0, y 0, centred both ways, in white.",
+        "code": "fig, ax = plt.subplots()\nax.text(0, 0, str(confusion[0, 0]), ha=\"center\", va=\"center\", color=\"white\")",
+        "check": "test(\"Try writing text\", lambda: len(ax.texts) == 1 and ax.texts[0].get_text() == '412' and ax.texts[0].get_position() == (0, 0), \"ax shows 412 at (0, 0).\")",
+        "expected": "ax shows 412 at (0, 0).",
+        "reassurance": ""
+      },
+      {
         "title": "Write the counts in",
         "instruction": "Update `panel_confusion` to write each count in the centre of its cell in white text, using the column index as x and the row index as y.",
         "code": "def panel_confusion(ax, confusion):\n    ax.imshow(confusion)\n    for i in range(confusion.shape[0]):\n        for j in range(confusion.shape[1]):\n            ax.text(j, i, str(confusion[i, j]), ha=\"center\", va=\"center\", color=\"white\")",
         "check": "_f, _a = plt.subplots()\n_cm = np.array([[5, 1], [2, 7]])\npanel_confusion(_a, _cm)\ntest(\"Write the counts in\", lambda: sorted(t.get_text() for t in _a.texts) == ['1', '2', '5', '7'] and any(t.get_position() == (1, 0) and t.get_text() == '1' for t in _a.texts), \"Four counts written in, with 1 at column 1, row 0.\")",
         "expected": "Four counts written in, with 1 at column 1, row 0.",
-        "reassurance": "An image puts row 0 at the top and column j at x = j, so cell (i, j) sits at x = j, y = i."
+        "reassurance": "An image puts row 0 at the top and column j at x = j, so cell (i, j) sits at x = j, y = i.",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Title and label the panel",
@@ -381,7 +493,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def panel_confusion(ax, confusion):\n    ax.imshow(confusion)\n    for i in range(confusion.shape[0]):\n        for j in range(confusion.shape[1]):\n            ax.text(j, i, str(confusion[i, j]), ha=\"center\", va=\"center\", color=\"white\")\n    ax.set_title(\"confusion matrix\")\n    ax.set(xlabel=\"predicted\", ylabel=\"true\")",
         "check": "_f, _a = plt.subplots()\n_cm = np.array([[5, 1], [2, 7]])\npanel_confusion(_a, _cm)\ntest('Title and label the panel', lambda: len(_a.images) == 1 and np.array_equal(_a.images[0].get_array(), _cm) and sorted(t.get_text() for t in _a.texts) == ['1', '2', '5', '7'] and _a.get_title() == 'confusion matrix' and _a.get_xlabel() == 'predicted', 'One heatmap of the 2 by 2 matrix with all four counts written in, titled and labelled.')",
         "expected": "One heatmap of the 2 by 2 matrix with all four counts written in, titled and labelled.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Lay out a 2 by 2 grid",
@@ -397,7 +512,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def report_figure(history, benchmark, confusion):\n    fig, ((top_left, top_right), (bottom_left, bottom_right)) = plt.subplots(2, 2, figsize=(10, 7), layout=\"constrained\")\n    panel_curves(top_left, history[\"train_loss\"], history[\"val_loss\"], \"loss\", log=True)\n    panel_curves(top_right, history[\"train_acc\"], history[\"val_acc\"], \"accuracy\")\n    return fig",
         "check": "import matplotlib.figure\n_h = {'train_loss': [1.0, 0.5, 0.2], 'val_loss': [1.1, 0.6, 0.4], 'train_acc': [0.5, 0.8, 0.9], 'val_acc': [0.5, 0.75, 0.8]}\n_fig = report_figure(_h, {'b': (0.8, 0.02), 'a': (0.9, 0.01)}, np.array([[5, 1], [2, 7]]))\ntest(\"Draw the two curve panels\", lambda: _fig.axes[0].get_yscale() == 'log' and len(_fig.axes[0].get_lines()) == 2 and _fig.axes[1].get_ylim() == (0.0, 1.0) and list(_fig.axes[1].get_lines()[1].get_ydata()) == [0.5, 0.75, 0.8], \"Top left holds the log losses, top right the accuracies from 0 to 1.\")",
         "expected": "Top left holds the log losses, top right the accuracies from 0 to 1.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          10
+        ]
       },
       {
         "title": "Add the last panels and the suptitle",
@@ -405,7 +523,10 @@ export const VIZ_GUIDES: Record<string, CodingGuide> = {
         "code": "def report_figure(history, benchmark, confusion):\n    fig, ((top_left, top_right), (bottom_left, bottom_right)) = plt.subplots(2, 2, figsize=(10, 7), layout=\"constrained\")\n    panel_curves(top_left, history[\"train_loss\"], history[\"val_loss\"], \"loss\", log=True)\n    panel_curves(top_right, history[\"train_acc\"], history[\"val_acc\"], \"accuracy\")\n    panel_benchmark(bottom_left, benchmark)\n    panel_confusion(bottom_right, confusion)\n    fig.suptitle(\"Experiment report\")\n    return fig",
         "check": "import matplotlib.figure\n_h = {'train_loss': [1.0, 0.5, 0.2], 'val_loss': [1.1, 0.6, 0.4], 'train_acc': [0.5, 0.8, 0.9], 'val_acc': [0.5, 0.75, 0.8]}\n_fig = report_figure(_h, {'b': (0.8, 0.02), 'a': (0.9, 0.01)}, np.array([[5, 1], [2, 7]]))\ntest('Add the last panels and the suptitle', lambda: isinstance(_fig, matplotlib.figure.Figure) and len(_fig.axes) == 4 and _fig.axes[0].get_yscale() == 'log' and _fig.axes[1].get_ylim() == (0.0, 1.0) and len(_fig.axes[2].patches) == 2 and len(_fig.axes[3].images) == 1 and _fig._suptitle is not None and all(ax.get_title().strip() for ax in _fig.axes), 'Four titled panels in order: log losses, accuracies from 0 to 1, two bars, one heatmap; plus a suptitle.')",
         "expected": "Four titled panels in order: log losses, accuracies from 0 to 1, two bars, one heatmap; plus a suptitle.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          11
+        ]
       },
       {
         "title": "Build the demo report",

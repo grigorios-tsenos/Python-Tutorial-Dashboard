@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { commandsFor } from '../content/commands'
-import { guidedCheck, guidedSource, type CodingGuide } from '../content/guided'
+import { guidedCheck, guidedSource, seedDraft, type CodingGuide } from '../content/guided'
 import type { Lesson } from '../content/types'
 import { allPassed } from '../engine/outputText'
 import { runner } from '../engine/runner'
@@ -18,15 +18,25 @@ interface Props {
   onComplete: (tries: number) => void
 }
 
+/** "step 3", "steps 2 and 4", "steps 2 to 6", "steps 1, 3 and 5" */
+const from = (steps: number[]) => {
+  const n = steps.map(i => i + 1)
+  if (n.length === 1) return `step ${n[0]}`
+  if (n.length > 2 && n[n.length - 1] - n[0] === n.length - 1) return `steps ${n[0]} to ${n[n.length - 1]}`
+  return `steps ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`
+}
+
 export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
   const saved = useStore(s => s.guided[lesson.id])
   const vim = useStore(s => s.settings.vim)
   const index = Math.min(saved?.step ?? 0, guide.steps.length - 1)
   const drafts = saved?.drafts ?? []
-  const draft = drafts[index] ?? ''
   const step = guide.steps[index]
+  const seed = seedDraft(guide, drafts, index)
+  const draft = drafts[index] ?? seed
   const last = index === guide.steps.length - 1
-  const source = guidedSource(guide, drafts, index)
+  const withDraft = drafts[index] === undefined ? Object.assign([...drafts], { [index]: draft }) : drafts
+  const source = guidedSource(guide, withDraft, index)
   const identity = JSON.stringify([index, source])
   const [checked, setChecked] = useState<{ identity: string; result: RunResult } | null>(null)
   const result = checked?.identity === identity ? checked.result : null
@@ -50,6 +60,7 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
 
   const run = async () => {
     if (busy.current || !draft.trim()) return
+    if (drafts[index] === undefined) save(index, withDraft)   // keep the starting code, later steps build on it
     busy.current = true
     setRunning(true)
     setChecked(null)
@@ -62,7 +73,9 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
     if (mine !== token.current) return
     const latest = useStore.getState().guided[lesson.id]
     const latestIndex = Math.min(latest?.step ?? 0, guide.steps.length - 1)
-    if (latestIndex !== index || guidedSource(guide, latest?.drafts ?? [], latestIndex) !== source) return
+    const latestDrafts = latest?.drafts ?? []
+    const latestWith = latestDrafts[latestIndex] === undefined ? Object.assign([...latestDrafts], { [latestIndex]: seedDraft(guide, latestDrafts, latestIndex) }) : latestDrafts
+    if (latestIndex !== index || guidedSource(guide, latestWith, latestIndex) !== source) return
     setChecked({ identity, result: res })
     if (last && !res.infra && allPassed(res)) onComplete(useStore.getState().tries[lesson.id] ?? 1)
   }
@@ -79,7 +92,9 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
         <h2 ref={heading} tabIndex={-1}>Step {index + 1}: {step.title}</h2>
         <Markdown src={step.instruction} />
         <CommandCards commands={commandsFor(lesson.id, index)} unit="step" />
-        <p className="small dim">Write your own approach below. It runs after your earlier steps; to change a function, write its whole new definition.</p>
+        <p className="small dim">{seed
+          ? <>The editor starts with your code from {from(step.startFrom ?? [])}. Edit it in place: wrap it, or add only what this step asks. <button className="link-btn" disabled={running || draft === seed} onClick={() => { const next = [...drafts]; next[index] = seed; save(index, next) }}>Start over from it</button></>
+          : 'Write your own approach below. It runs after your earlier steps.'}</p>
         <div className="guided-expected"><strong>What to verify</strong><Markdown src={step.expected} /></div>
       </div>
       <div className="guided-editor" aria-label="Write the current step">
@@ -99,7 +114,7 @@ export function GuidedPractice({ lesson, guide, runRef, onComplete }: Props) {
       </div>
       <OutputPanel result={result} running={running} graded completed={false} visualFirst={lesson.kind === 'lab' || lesson.track === 'viz'} showTestMessages={false} emptyMessage="Use the check button above. The verification result and any printed output will appear here." />
       {result?.error && <p className="guided-code small dim">Error line numbers refer to the combined program in “Provided setup and your code so far”.</p>}
-      <details className="guided-code"><summary>Provided setup and your code so far</summary><pre><code>{guidedSource(guide, drafts, index) || 'Your code will appear here as you write.'}</code></pre></details>
+      <details className="guided-code"><summary>Provided setup and your code so far</summary><pre><code>{source || 'Your code will appear here as you write.'}</code></pre></details>
     </div>
   )
 }

@@ -135,11 +135,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Stop after approval",
-        "instruction": "Rewrite `route` so it also selects `END` once `attempts` has reached 5, even without approval, so the loop can never run forever. The setup writer increments `attempts`; the reviewer approves the third attempt and later.",
+        "instruction": "Update `route` so it also selects `END` once `attempts` has reached 5, even without approval, so the loop can never run forever. The setup writer increments `attempts`; the reviewer approves the third attempt and later.",
         "code": "def route(state):\n    if state[\"approved\"] or state[\"attempts\"] >= 5:\n        return END\n    return \"write\"",
         "check": "test(\"Stop after approval\", lambda: route({\"approved\": True, \"attempts\": 1}) == END and route({\"approved\": False, \"attempts\": 2}) == \"write\" and route({\"approved\": False, \"attempts\": 5}) == END, \"Approved routes to END; unapproved routes back to write until the fifth attempt, which also ends.\")",
         "expected": "Approved routes to END; unapproved routes back to write until the fifth attempt, which also ends.",
-        "reassurance": "The stop condition is verified before running any loop."
+        "reassurance": "The stop condition is verified before running any loop.",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Create the graph",
@@ -381,7 +384,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "code": "def ticket_graph():\n    graph = StateGraph(Ticket)\n    graph.add_node(\"urgent\", urgent)\n    graph.add_node(\"standard\", standard)\n    graph.add_edge(\"urgent\", END)\n    graph.add_edge(\"standard\", END)\n    return graph",
         "check": "test(\"Keep the shared branch wiring reusable\", lambda: set(ticket_graph().nodes) == {\"urgent\",\"standard\"} and (\"urgent\",END) in ticket_graph().edges, \"The helper returns both branches with their exit edges.\")",
         "expected": "The helper returns both branches with their exit edges.",
-        "reassurance": "The already verified branch wiring can be reused for different thresholds."
+        "reassurance": "The already verified branch wiring can be reused for different thresholds.",
+        "startFrom": [
+          1,
+          2,
+          3,
+          5,
+          6
+        ]
       },
       {
         "title": "Make the threshold reusable",
@@ -389,7 +399,10 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "code": "def build_router(threshold):\n    graph = ticket_graph()\n    graph.add_conditional_edges(START, lambda state: \"urgent\" if state[\"priority\"] >= threshold else \"standard\", {\"urgent\": \"urgent\", \"standard\": \"standard\"})\n    return graph.compile()",
         "check": "test(\"Make the threshold reusable\", lambda: build_router(5).invoke({\"question\":\"Help\", \"priority\":4})[\"reply\"] == \"QUEUED: Help\", \"With threshold 5, priority 4 takes the standard branch.\")",
         "expected": "With threshold 5, priority 4 takes the standard branch.",
-        "reassurance": "Each graph uses the threshold supplied to its own builder."
+        "reassurance": "Each graph uses the threshold supplied to its own builder.",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Build the demonstration router",
@@ -680,11 +693,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Turn validation into state updates",
-        "instruction": "Rewrite `validate` so a `ValueError` from parsing is caught and becomes an update with only `error` set to the exception text. The graph can then retry without losing the reason for failure.",
+        "instruction": "Update `validate` so a `ValueError` from parsing is caught and becomes an update with only `error` set to the exception text. The graph can then retry without losing the reason for failure.",
         "code": "def validate(state):\n    try:\n        return {\"order\": parse_order(state[\"raw\"]), \"status\": \"ok\", \"error\": None}\n    except ValueError as error:\n        return {\"error\": str(error)}",
         "check": "test(\"Turn validation into state updates\", lambda: validate({\"raw\":\"not json\"}) == {\"error\":\"reply must be valid JSON\"} and validate({\"raw\":'{\"sku\":\"A\",\"quantity\":1}'})[\"status\"] == \"ok\", \"Invalid JSON becomes an error update; a valid order sets status to ok.\")",
         "expected": "Invalid JSON becomes an error update; a valid order sets status to ok.",
-        "reassurance": "The loop can now distinguish a correct answer from a fixable failure."
+        "reassurance": "The loop can now distinguish a correct answer from a fixable failure.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Define the safe fallback",
@@ -704,11 +720,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Route with an explicit budget",
-        "instruction": "Rewrite `route` so a `status` of “ok” selects `END` first, regardless of the attempt count. Read the status safely: it is missing until validation succeeds.",
+        "instruction": "Update `route` so a `status` of “ok” selects `END` first, regardless of the attempt count. Read the status safely: it is missing until validation succeeds.",
         "code": "def route(state, max_attempts):\n    if state.get(\"status\") == \"ok\":\n        return END\n    return \"generate\" if state[\"attempts\"] < max_attempts else \"fallback\"",
         "check": "test(\"Route with an explicit budget\", lambda: route({\"status\":\"ok\", \"attempts\":1}, 3) == END and route({\"attempts\":1}, 3) == \"generate\" and route({\"attempts\":3}, 3) == \"fallback\", \"Success ends; attempt 1 of 3 retries; attempt 3 of 3 falls back.\")",
         "expected": "Success ends; attempt 1 of 3 retries; attempt 3 of 3 falls back.",
-        "reassurance": "All three routing outcomes are checked before the graph loops."
+        "reassurance": "All three routing outcomes are checked before the graph loops.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Create a practice graph",
@@ -780,7 +799,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "code": "def extraction_graph(model):\n    graph = StateGraph(Extraction)\n    graph.add_node(\"generate\", lambda state: generate(state, model))\n    graph.add_node(\"validate\", validate)\n    graph.add_node(\"fallback\", fallback)\n    graph.add_edge(START, \"generate\")\n    graph.add_edge(\"generate\", \"validate\")\n    return graph",
         "check": "test(\"Reuse the generation and validation path\", lambda: set(extraction_graph(lambda message, feedback: \"ok\").nodes) == {\"generate\",\"validate\",\"fallback\"}, \"The helper returns all three nodes and the generation-to-validation path.\")",
         "expected": "The helper returns all three nodes and the generation-to-validation path.",
-        "reassurance": "The reusable wiring keeps the chosen model inside the generation node."
+        "reassurance": "The reusable wiring keeps the chosen model inside the generation node.",
+        "startFrom": [
+          7,
+          9,
+          10,
+          11,
+          12
+        ]
       },
       {
         "title": "Build a fixed-budget extractor",
@@ -788,23 +814,33 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "code": "def build_extractor(model):\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, 3), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
         "check": "test(\"Build a fixed-budget extractor\", lambda: build_extractor(scripted('{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"one item\"})[\"attempts\"] == 1, \"A valid first reply finishes after exactly one attempt.\")",
         "expected": "A valid first reply finishes after exactly one attempt.",
-        "reassurance": "The wiring works. Next let the caller choose the budget."
+        "reassurance": "The wiring works. Next let the caller choose the budget.",
+        "startFrom": [
+          13,
+          14
+        ]
       },
       {
         "title": "Let the caller set the budget",
-        "instruction": "Rewrite `build_extractor` with a second parameter, `max_attempts`, defaulting to 3, and use it in the route instead of the fixed 3.",
+        "instruction": "Update `build_extractor` with a second parameter, `max_attempts`, defaulting to 3, and use it in the route instead of the fixed 3.",
         "code": "def build_extractor(model, max_attempts=3):\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, max_attempts), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
         "check": "test(\"Let the caller set the budget\", lambda: build_extractor(scripted(\"not json\"), 1).invoke({\"message\":\"x\"})[\"status\"] == \"needs_human\" and build_extractor(scripted(\"bad\", '{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"x\"})[\"attempts\"] == 2, \"A budget of 1 falls back after one bad reply; the default budget retries.\")",
         "expected": "A budget of 1 falls back after one bad reply; the default budget retries.",
-        "reassurance": "A budget of 0 would still make no sense. Reject it next."
+        "reassurance": "A budget of 0 would still make no sense. Reject it next.",
+        "startFrom": [
+          16
+        ]
       },
       {
         "title": "Build with a validated attempt budget",
-        "instruction": "Rewrite `build_extractor` so it rejects budgets below 1 with `ValueError` before building anything; error text: “max_attempts must be at least 1”.",
+        "instruction": "Update `build_extractor` so it rejects budgets below 1 with `ValueError` before building anything; error text: “max_attempts must be at least 1”.",
         "code": "def build_extractor(model, max_attempts=3):\n    if max_attempts < 1:\n        raise ValueError(\"max_attempts must be at least 1\")\n    graph = extraction_graph(model)\n    graph.add_conditional_edges(\"validate\", lambda state: route(state, max_attempts), {\"generate\": \"generate\", \"fallback\": \"fallback\", END: END})\n    graph.add_edge(\"fallback\", END)\n    return graph.compile()",
         "check": "def _rejects(fn):\n    try:\n        fn()\n    except ValueError:\n        return True\n    return False\ntest(\"Build with a validated attempt budget\", lambda: _rejects(lambda: build_extractor(scripted(), 0)) and build_extractor(scripted('{\"sku\":\"A\",\"quantity\":1}')).invoke({\"message\":\"one item\"})[\"attempts\"] == 1, \"A budget of 0 raises ValueError; a valid first reply still finishes after one attempt.\")",
         "expected": "A budget of 0 raises ValueError; a valid first reply still finishes after one attempt.",
-        "reassurance": "The builder now combines the verified nodes, routing budget, and fallback exit."
+        "reassurance": "The builder now combines the verified nodes, routing budget, and fallback exit.",
+        "startFrom": [
+          17
+        ]
       },
       {
         "title": "Script a reply that needs correction",
@@ -842,6 +878,14 @@ export const LANGGRAPH_GUIDES: Record<string, CodingGuide> = {
         "check": "from langchain_core.messages import HumanMessage\ndef verify_agent_node():\n    global model\n    original = model\n    history = [HumanMessage(\"probe question\")]\n    before = list(history)\n    reply = AIMessage(\"probe answer\")\n    model = GenericFakeChatModel(messages=iter([reply]))\n    try:\n        update = agent({\"messages\": history})\n        return update == {\"messages\": [reply]} and model.calls == [before] and history == before\n    finally:\n        model = original\ntest(\"agent forwards history and returns only the new message\", verify_agent_node, \"Return {messages: [model.invoke(state[messages])]} without changing the input history.\")\ntest(\"the demonstration replies remain unused\", lambda: model.calls == [], \"The probe must use an independent model.\")",
         "expected": "A fresh probe receives the unchanged conversation, and agent returns only its new AI message. The demonstration replies remain unused.",
         "reassurance": "Your agent forwards the conversation and returns the expected message update. The graph demonstration still has both scripted replies available."
+      },
+      {
+        "title": "Build a tool message",
+        "instruction": "Create `reply`, a `ToolMessage` whose `content` is the text `\"6\"` and whose `tool_call_id` is `\"probe\"`.",
+        "code": "reply = ToolMessage(content=\"6\", tool_call_id=\"probe\")",
+        "check": "test(\"Build a tool message\", lambda: isinstance(reply, ToolMessage) and reply.content == \"6\" and reply.tool_call_id == \"probe\", \"reply is a tool message with content 6 for call probe.\")",
+        "expected": "reply is a tool message with content 6 for call probe.",
+        "reassurance": ""
       },
       {
         "title": "Run one tool call",

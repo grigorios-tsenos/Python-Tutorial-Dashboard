@@ -198,7 +198,10 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def attach_plans(events, users):\n    \"\"\"Attach exactly one plan to every event, preserving event rows.\"\"\"\n    joined = events.merge(users, on=\"user_id\", how=\"left\", sort=False, validate=\"many_to_one\")\n    return joined.assign(plan=joined[\"plan\"].fillna(\"unknown\"))",
         "check": "",
         "expected": "The full check covers new users, repeated events, duplicate lookup rejection, empty tables and unchanged inputs.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       }
     ]
   },
@@ -283,7 +286,13 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def error_window(logs, days):\n    parsed = pd.to_datetime(logs[\"at\"], utc=True)\n    day = parsed.dt.floor(\"D\")\n    flagged = logs.assign(day=day, errors=logs[\"status\"] >= 500)\n    window = flagged[day.between(days[0], days[-1])]\n    return window",
         "check": "test(\"Wrap the per-request steps\", lambda: error_window(logs, days).equals(window) and \"day\" not in logs.columns, \"error_window(logs, days) returns the same five rows as window, and logs is unchanged.\")",
         "expected": "error_window(logs, days) returns the same five rows as window, and logs is unchanged.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2,
+          3,
+          4,
+          5
+        ]
       },
       {
         "title": "Wrap the pipeline in a function",
@@ -291,7 +300,13 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    window = error_window(logs, days)\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    aligned = table.reindex(days, fill_value=0)\n    daily = aligned.astype(int)\n    return daily",
         "check": "test(\"Wrap the pipeline in a function\", lambda: daily_errors(logs, start, end).equals(daily) and \"day\" not in logs.columns, \"daily_errors(logs, start, end) returns the same table as daily, and logs is unchanged.\")",
         "expected": "daily_errors(logs, start, end) returns the same table as daily, and logs is unchanged.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          6,
+          7,
+          8
+        ]
       },
       {
         "title": "Reject reversed dates",
@@ -299,7 +314,10 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def daily_errors(logs, start, end):\n    days = pd.date_range(start, end, freq=\"D\", tz=\"UTC\", name=\"day\")\n    if days.empty: raise ValueError(\"end must not be before start\")\n    window = error_window(logs, days)\n    table = window.pivot_table(index=\"day\", columns=\"endpoint\", values=\"errors\", aggfunc=\"sum\", fill_value=0)\n    aligned = table.reindex(days, fill_value=0)\n    daily = aligned.astype(int)\n    return daily",
         "check": "",
         "expected": "The complete check covers UTC offsets, healthy endpoints, outside-window traffic, empty windows and reversed dates.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          10
+        ]
       }
     ]
   },
@@ -368,7 +386,11 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def clean_events(events):\n    clean = events.assign(at=pd.to_datetime(events[\"at\"], errors=\"coerce\", utc=True, format=\"mixed\"))\n    clean = clean.assign(amount=pd.to_numeric(clean[\"amount\"], errors=\"coerce\").fillna(0))\n    return clean",
         "check": "test(\"Wrap the cleaning\", lambda: clean_events(events).equals(clean) and events[\"amount\"].tolist() == [\"5\", \"12\", \"100\"], \"clean_events(events) matches clean, and events still holds the original strings.\")",
         "expected": "clean_events(events) matches clean, and events still holds the original strings.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2
+        ]
       },
       {
         "title": "Wrap the pipeline in a function",
@@ -376,7 +398,13 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def recent_features(events, as_of, days=7):\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = clean_events(events)\n    window_start = cutoff - pd.Timedelta(days=days)\n    window = clean[(clean[\"at\"] > window_start) & (clean[\"at\"] <= cutoff)]\n    per_user = window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\"))\n    return per_user.reset_index()",
         "check": "test(\"Wrap the pipeline in a function\", lambda: recent_features(events, as_of).equals(features) and recent_features(events, as_of, days=1)[\"n_events\"].tolist() == [1], \"recent_features(events, as_of) matches features, and a one-day window keeps one event.\")",
         "expected": "recent_features(events, as_of) matches features, and a one-day window keeps one event.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0,
+          3,
+          4,
+          5
+        ]
       },
       {
         "title": "Reject empty windows",
@@ -384,7 +412,10 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def recent_features(events, as_of, days=7):\n    if days < 1: raise ValueError(\"days must be positive\")\n    cutoff = pd.to_datetime(as_of, utc=True)\n    clean = clean_events(events)\n    window_start = cutoff - pd.Timedelta(days=days)\n    window = clean[(clean[\"at\"] > window_start) & (clean[\"at\"] <= cutoff)]\n    per_user = window.groupby(\"user\", sort=True).agg(n_events=(\"at\", \"size\"), revenue=(\"amount\", \"sum\"))\n    return per_user.reset_index()",
         "check": "",
         "expected": "The full check covers exact boundaries, invalid values, UTC offsets, empty data, shorter windows and input preservation.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       }
     ]
   },
@@ -432,12 +463,25 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "reassurance": "A frozen, ordered list keeps the columns the same for batches that contain fewer categories."
       },
       {
+        "title": "Wrap a list as a Series",
+        "instruction": "Create `values`: the plain list `vocabulary` turned into a pandas Series, so Series methods such as `dropna` work on it.",
+        "code": "values = pd.Series(vocabulary)",
+        "check": "test(\"Wrap a list as a Series\", lambda: isinstance(values, pd.Series) and values.tolist() == [\"free\", \"pro\", \"team\"], \"values is a Series holding free, pro and team.\")",
+        "expected": "values is a Series holding free, pro and team.",
+        "reassurance": ""
+      },
+      {
         "title": "Make vocabulary fitting reusable",
-        "instruction": "Implement `fit_vocabulary(values, min_count=1)`, with parameters in that order and a default threshold of one. Turn `values` into a Series first, so a plain list works too, then repeat steps 1 to 5 and return the sorted list of categories seen at least `min_count` times. Missing values are ignored; empty input returns an empty list.",
+        "instruction": "Implement `fit_vocabulary(values, min_count=1)`, with parameters in that order and a default threshold of one. Turn `values` into a Series first as you just did, so a plain list works too, then repeat steps 1 to 5 and return the sorted list of categories seen at least `min_count` times. Missing values are ignored; empty input returns an empty list.",
         "code": "def fit_vocabulary(values, min_count=1):\n    observed = pd.Series(values).dropna()\n    counts = observed.value_counts()\n    frequent = counts[counts >= min_count]\n    labels = frequent.index.tolist()\n    return sorted(labels)",
         "check": "test('Make vocabulary fitting reusable', lambda: fit_vocabulary([\"b\", \"a\", \"b\", None], 2) == [\"b\"] and fit_vocabulary([]) == [], 'A threshold of 2 keeps only b in [b, a, b, missing]; empty input returns [].')",
         "expected": "A threshold of 2 keeps only b in [b, a, b, missing]; empty input returns [].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2,
+          3
+        ]
       },
       {
         "title": "Declare every output column",
@@ -485,7 +529,12 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def indicators_for(values, column, vocabulary):\n    names = [f\"{column}={value}\" for value in vocabulary] + [f\"{column}=other\"]\n    known = values.where(values.isin(vocabulary), \"other\")\n    dummies = pd.get_dummies(known, prefix=column, prefix_sep=\"=\", dtype=int)\n    indicators = dummies.reindex(columns=names, fill_value=0)\n    return indicators",
         "check": "test(\"Encode one column\", lambda: indicators_for(train[column], column, vocabulary).equals(indicators) and indicators_for(pd.Series([\"enterprise\"]), \"plan\", vocabulary)[\"plan=other\"].tolist() == [1], \"It matches indicators for train, and an unseen plan lands in plan=other.\")",
         "expected": "It matches indicators for train, and an unseen plan lands in plan=other.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7,
+          9,
+          10
+        ]
       },
       {
         "title": "Build the reusable encoder",
@@ -522,7 +571,10 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "per_user = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n    n_views=(\"is_view\", \"sum\"),\n    n_purchases=(\"is_purchase\", \"sum\"),\n)",
         "check": "test(\"Count the flags\", lambda: per_user[\"n_views\"].tolist() == [2, 1, 0] and per_user[\"n_purchases\"].tolist() == [1, 0, 0], \"Views are [2, 1, 0] and purchases [1, 0, 0].\")",
         "expected": "Views are [2, 1, 0] and purchases [1, 0, 0].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Add the revenue",
@@ -530,7 +582,10 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "per_user = df.groupby(\"user\").agg(\n    n_events=(\"action\", \"size\"),\n    n_views=(\"is_view\", \"sum\"),\n    n_purchases=(\"is_purchase\", \"sum\"),\n    revenue=(\"value\", \"sum\"),\n)",
         "check": "test(\"Add the revenue\", lambda: per_user.index.tolist() == [\"a\", \"b\", \"c\"] and per_user[\"n_events\"].tolist() == [3, 2, 1] and per_user[\"revenue\"].tolist() == [30.0, 0.0, 0.0], \"Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].\")",
         "expected": "Users a, b, c have event counts [3, 2, 1] and revenue [30, 0, 0].",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Make user a column",
@@ -562,7 +617,11 @@ export const PANDAS_GUIDES: Record<string, CodingGuide> = {
         "code": "def build_user_features(events):\n    df = events.assign(is_view=events[\"action\"].eq(\"view\"), is_purchase=events[\"action\"].eq(\"purchase\"))\n    out = df.groupby(\"user\").agg(n_events=(\"action\", \"size\"), n_views=(\"is_view\", \"sum\"), n_purchases=(\"is_purchase\", \"sum\"), revenue=(\"value\", \"sum\")).reset_index()\n    out[\"conversion\"] = (out[\"n_purchases\"] / out[\"n_views\"]).where(out[\"n_views\"] > 0, 0.0)\n    return out.drop(columns=\"n_views\")",
         "check": "",
         "expected": "The complete check includes new users, shuffled events, purchases without views, empty input and unchanged data.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0,
+          5
+        ]
       }
     ]
   }

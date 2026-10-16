@@ -34,7 +34,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "end, words = start, 0\nwhile end < len(sentences):\n    n = len(sentences[end].split())\n    if end > start and words + n > max_words:\n        break\n    words, end = words + n, end + 1",
         "check": "test(\"Stop at the budget\", lambda: end == 4 and words == 20, \"The walk stops at end = 4: sentences 1 to 3 fill exactly 20 words.\")",
         "expected": "The walk stops at end = 4: sentences 1 to 3 fill exactly 20 words.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Wrap it as pack",
@@ -42,7 +45,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def pack(sentences, start, max_words):\n    end, words = start, 0\n    while end < len(sentences):\n        n = len(sentences[end].split())\n        if end > start and words + n > max_words:\n            break\n        words, end = words + n, end + 1\n    return end",
         "check": "_S = split_sentences(HANDBOOK)\ntest(\"Fill one chunk\", lambda: pack(_S, 0, 20) == 1 and pack(_S, 1, 20) == 4 and pack(_S, 3, 20) == 6 and pack(_S, 0, 3) == 1, \"From sentence 0 only one fits in 20 words; from 1, three fit exactly; an over-long sentence is still taken alone.\")",
         "expected": "From sentence 0 only one fits in 20 words; from 1, three fit exactly; an over-long sentence is still taken alone.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Pack the first chunk",
@@ -66,7 +72,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def chunk_sentences(sentences, max_words, overlap=1):\n    chunks, start, end = [], 0, 0\n    while end < len(sentences):\n        end = pack(sentences, start, max_words)\n        chunks.append(\" \".join(sentences[start:end]))\n        start = max(end - overlap, start + 1)\n    return chunks",
         "check": "_S = split_sentences(HANDBOOK)\ntest(\"Slide with overlap\", lambda: chunk_sentences(_S, 20) == [_S[0], \" \".join(_S[1:4]), \" \".join(_S[3:6])] and chunk_sentences(_S, 20, overlap=0) == [_S[0], \" \".join(_S[1:4]), \" \".join(_S[4:6])] and chunk_sentences([], 20) == [], \"Three chunks sharing one boundary sentence; overlap=0 shares none; no sentences give no chunks.\")",
         "expected": "Three chunks sharing one boundary sentence; overlap=0 shares none; no sentences give no chunks.",
-        "reassurance": "The overlap is the safety margin for facts that straddle a boundary."
+        "reassurance": "The overlap is the safety margin for facts that straddle a boundary.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Keep the source",
@@ -119,7 +128,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def count_vector(text):\n    v = np.zeros(DIM)\n    for t in tokens(text):\n        if t in CONCEPTS:\n            v[CONCEPTS[t]] += 1\n    return v",
         "check": "test(\"Count concepts\", lambda: count_vector(\"Refund refunded to my card\")[0] == 2 and count_vector(\"Refund refunded to my card\")[1] == 1 and count_vector(\"Refund refunded to my card\").sum() == 3 and count_vector(\"hello\").sum() == 0, \"Two refund words land on dimension 0, card on dimension 1, and the rest is ignored.\")",
         "expected": "Two refund words land on dimension 0, card on dimension 1, and the rest is ignored.",
-        "reassurance": "Synonyms already share a dimension; next, remove the effect of length."
+        "reassurance": "Synonyms already share a dimension; next, remove the effect of length.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Measure the length",
@@ -135,7 +147,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def embed(text):\n    v = count_vector(text)\n    norm = np.linalg.norm(v)\n    return v / norm if norm > 0 else v",
         "check": "test(\"Unit length\", lambda: np.isclose(np.linalg.norm(embed(\"refund to my card\")), 1.0) and np.array_equal(embed(\"hello\"), np.zeros(DIM)) and np.allclose(embed(\"refund\"), embed(\"refund refund\")), \"Known text has length 1, unknown text stays all zeros, and repeating a word changes nothing.\")",
         "expected": "Known text has length 1, unknown text stays all zeros, and repeating a word changes nothing.",
-        "reassurance": "Unit vectors make a dot product a cosine similarity."
+        "reassurance": "Unit vectors make a dot product a cosine similarity.",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Embed the collection",
@@ -241,7 +256,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def rrf(rankings, k=60):\n    fused = {}\n    for ranked in rankings:\n        for rank, i in enumerate(ranked, start=1):\n            fused[i] = fused.get(i, 0.0) + 1 / (k + rank)\n    return sorted(fused, key=lambda i: (-fused[i], i))",
         "check": "test(\"Fuse the rankings\", lambda: rrf([[2, 0], [0, 1]]) == [0, 2, 1] and rrf([[5]], k=0) == [5] and rrf([]) == [] and rrf([[3], [1]]) == [1, 3], \"A chunk in both lists beats one that tops a single list; ties go to the lower index; no rankings give no results.\")",
         "expected": "A chunk in both lists beats one that tops a single list; ties go to the lower index; no rankings give no results.",
-        "reassurance": "RRF never looks at a raw score, only at positions."
+        "reassurance": "RRF never looks at a raw score, only at positions.",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Search both ways",
@@ -286,15 +304,21 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def pair_score(query, text):\n    wanted = concepts(query)\n    score = len(wanted & concepts(text)) / len(wanted)\n    return score",
         "check": "test(\"Wrap it as pair_score\", lambda: pair_score(query, CHUNKS[4][\"text\"]) == 1.0 and abs(pair_score(query, CHUNKS[2][\"text\"]) - 2 / 3) < 1e-9, \"The lost-package chunk covers all three concepts; the shipping chunk only two.\")",
         "expected": "The lost-package chunk covers all three concepts; the shipping chunk only two.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Guard empty queries",
-        "instruction": "Update `pair_score` so it returns 0.0 right away when the query has no concepts, instead of dividing by zero. Write the whole updated definition.",
+        "instruction": "Update `pair_score` so it returns 0.0 right away when the query has no concepts, instead of dividing by zero.",
         "code": "def pair_score(query, text):\n    wanted = concepts(query)\n    if not wanted:\n        return 0.0\n    score = len(wanted & concepts(text)) / len(wanted)\n    return score",
         "check": "_q = \"My delivery is lost, how many days do I have?\"\ntest(\"Score a pair\", lambda: pair_score(_q, CHUNKS[4][\"text\"]) == 1.0 and abs(pair_score(_q, CHUNKS[2][\"text\"]) - 2 / 3) < 1e-9 and pair_score(\"hello\", CHUNKS[0][\"text\"]) == 0.0, \"The lost-package chunk covers all three concepts of the question; the shipping chunk only two.\")",
         "expected": "The lost-package chunk covers all three concepts of the question; the shipping chunk only two.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Reorder the shortlist",
@@ -355,7 +379,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "kept, used = [], 0\nfor i in ids:\n    n = len(CHUNKS[i][\"text\"].split())\n    if used + n > max_words:\n        break\n    kept, used = kept + [i], used + n",
         "check": "test(\"Stop at the budget\", lambda: kept == [0, 3] and used == 25, \"kept is [0, 3]: 14 + 11 words fit in 30, the next 10 do not.\")",
         "expected": "kept is [0, 3]: 14 + 11 words fit in 30, the next 10 do not.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Respect the budget",
@@ -363,7 +390,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def fit_budget(ids, max_words):\n    kept, used = [], 0\n    for i in ids:\n        n = len(CHUNKS[i][\"text\"].split())\n        if used + n > max_words:\n            break\n        kept, used = kept + [i], used + n\n    return kept",
         "check": "test(\"Respect the budget\", lambda: fit_budget([0, 3, 1], 30) == [0, 3] and fit_budget([0, 3, 1], 40) == [0, 3, 1] and fit_budget([0, 2], 5) == [] and fit_budget([0, 6, 1], 25) == [0], \"14 + 11 words fit in 30, the next 10 do not; a short later chunk never jumps ahead.\")",
         "expected": "14 + 11 words fit in 30, the next 10 do not; a short later chunk never jumps ahead.",
-        "reassurance": "Rank order is a promise: the best evidence goes in first."
+        "reassurance": "Rank order is a promise: the best evidence goes in first.",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Assemble the prompt",
@@ -395,15 +425,21 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def grounded(answer, n_blocks):\n    cited = citations(answer)\n    ok = len(cited) > 0 and all(1 <= n <= n_blocks for n in cited)\n    return ok",
         "check": "test(\"Wrap it as grounded\", lambda: grounded(\"Yes [1].\", 2) and not grounded(\"Yes [3].\", 2) and not grounded(\"Yes.\", 2) and not grounded(\"Yes [0].\", 2), \"A valid citation passes; a missing, invented or zero citation fails.\")",
         "expected": "A valid citation passes; a missing, invented or zero citation fails.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7
+        ]
       },
       {
         "title": "Accept an honest refusal",
-        "instruction": "Update `grounded` so an answer containing `I don't know` returns True right away: an honest refusal is grounded. Write the whole updated definition.",
+        "instruction": "Update `grounded` so an answer containing `I don't know` returns True right away: an honest refusal is grounded.",
         "code": "def grounded(answer, n_blocks):\n    if \"I don't know\" in answer:\n        return True\n    cited = citations(answer)\n    ok = len(cited) > 0 and all(1 <= n <= n_blocks for n in cited)\n    return ok",
         "check": "test(\"Accept an honest refusal\", lambda: grounded(\"Yes [1].\", 2) and not grounded(\"Yes [3].\", 2) and not grounded(\"Yes.\", 2) and not grounded(\"Yes [0].\", 2) and grounded(\"I don't know.\", 0), \"A valid citation passes; a missing, invented or zero citation fails; an honest refusal passes.\")",
         "expected": "A valid citation passes; a missing, invented or zero citation fails; an honest refusal passes.",
-        "reassurance": "A refusal beats a confident answer with no evidence."
+        "reassurance": "A refusal beats a confident answer with no evidence.",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Generate an answer",
@@ -477,7 +513,18 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def hyde_vector(question, n=2):\n    vecs = [embed(d) for d in drafts(question, n)] + [embed(question)]\n    v = np.mean(vecs, axis=0)\n    norm = np.linalg.norm(v)\n    return v / norm if norm > 0 else v",
         "check": "_q = EVAL[0][0]\n_m = np.mean([embed(draft_answer(_q, 0)), embed(draft_answer(_q, 1)), embed(_q)], axis=0)\ntest(\"One HyDE vector\", lambda: np.allclose(hyde_vector(_q), _m / np.linalg.norm(_m)) and all(np.isclose(np.linalg.norm(hyde_vector(question)), 1.0) for question, _ in EVAL) and np.array_equal(hyde_vector(\"Zxq?\"), np.zeros(DIM)), \"The mean of two drafts and the question, at unit length; an unknown question stays the zero vector.\")",
         "expected": "The mean of two drafts and the question, at unit length; an unknown question stays the zero vector.",
-        "reassurance": "The question keeps a vote, so a draft that wanders off topic cannot take over."
+        "reassurance": "The question keeps a vote, so a draft that wanders off topic cannot take over.",
+        "startFrom": [
+          1
+        ]
+      },
+      {
+        "title": "Find the strongest concept",
+        "instruction": "Create `top_dim`, the index of the largest entry in `v` (the averaged vector), as an int.",
+        "code": "top_dim = int(np.argmax(v))",
+        "check": "test(\"Find the strongest concept\", lambda: top_dim == int(np.argmax(v)) and type(top_dim) is int and v[top_dim] == v.max(), \"top_dim is the concept dimension where v is largest.\")",
+        "expected": "top_dim is the concept dimension where v is largest.",
+        "reassurance": ""
       },
       {
         "title": "Find the best chunk",
@@ -493,7 +540,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def top1(vector):\n    scores = CHUNK_VECS @ vector\n    best = int(np.argmax(scores))\n    return best if scores[best] > 0 else None",
         "check": "test(\"Search with any vector\", lambda: top1(embed(\"reset password\")) == 6 and top1(np.zeros(DIM)) is None, \"The password chunk for a password vector; None when nothing matches.\")",
         "expected": "The password chunk for a password vector; None when nothing matches.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Score one question",
@@ -517,7 +567,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "hits = 0\nfor question, source in EVAL:\n    best = top1(to_vector(question))\n    hits += best is not None and CHUNKS[best][\"source\"] == source",
         "check": "test(\"Loop over every question\", lambda: hits == sum(top1(embed(q)) is not None and CHUNKS[top1(embed(q))][\"source\"] == s for q, s in EVAL), \"hits counts how many of the four questions plain embed answers from the right file.\")",
         "expected": "hits counts how many of the four questions plain embed answers from the right file.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7
+        ]
       },
       {
         "title": "Measure the hit rate",
@@ -525,7 +578,10 @@ export const RAG_GUIDES: Record<string, CodingGuide> = {
         "code": "def hit_rate(to_vector):\n    hits = 0\n    for question, source in EVAL:\n        best = top1(to_vector(question))\n        hits += best is not None and CHUNKS[best][\"source\"] == source\n    return hits / len(EVAL)",
         "check": "test(\"Measure the hit rate\", lambda: hit_rate(lambda question: embed(\"refund\")) == 0.25 and hit_rate(lambda question: np.zeros(DIM)) == 0.0, \"A function that always searches for refunds hits only the first question; one that finds nothing scores 0.\")",
         "expected": "A function that always searches for refunds hits only the first question; one that finds nothing scores 0.",
-        "reassurance": "Any retrieval idea can now be compared with one number."
+        "reassurance": "Any retrieval idea can now be compared with one number.",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Compare plain and HyDE",

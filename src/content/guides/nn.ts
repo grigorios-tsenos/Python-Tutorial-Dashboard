@@ -132,7 +132,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def softmax(logits):\n    shifted = logits - logits.max(axis=1, keepdims=True)\n    exp = np.exp(shifted)\n    return exp / exp.sum(axis=1, keepdims=True)",
         "check": "_L = np.array([[1.0, 2.0, 3.0], [1000.0, 0.0, -1000.0]])\ntest('A stable softmax', lambda: np.allclose(softmax(_L).sum(axis=1), 1) and bool(np.isfinite(softmax(_L)).all()) and np.allclose(softmax(_L)[0], np.exp([1, 2, 3]) / np.exp([1, 2, 3]).sum()) and np.isclose(softmax(_L)[1, 0], 1.0), 'Rows sum to 1, a row with 1000 stays finite, and the first row matches the textbook softmax.')",
         "expected": "Rows sum to 1, a row with 1000 stays finite, and the first row matches the textbook softmax.",
-        "reassurance": "The max subtraction cancels in the ratio and saves you from overflow."
+        "reassurance": "The max subtraction cancels in the ratio and saves you from overflow.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "The forward pass",
@@ -140,7 +143,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def forward(X, params):\n    h = hidden(X, params)\n    logits = h @ params[\"W2\"] + params[\"b2\"]\n    probs = softmax(logits)\n    return probs, {\"X\": X, \"h\": h, \"probs\": probs}",
         "check": "_P = init_params(2, 3, 2, seed=1)\n_Xs = np.array([[1.0, -1.0], [0.5, 2.0], [100.0, 100.0]])\n_h_ref = np.maximum(0, _Xs @ _P['W1'] + _P['b1'])\n_logits = _h_ref @ _P['W2'] + _P['b2']\n_e = np.exp(_logits - _logits.max(axis=1, keepdims=True))\n_probs, _cache = forward(_Xs, _P)\ntest('The forward pass', lambda: _probs.shape == (3, 2) and np.allclose(_probs, _e / _e.sum(axis=1, keepdims=True)) and set(_cache) == {'X', 'h', 'probs'} and _cache['X'] is _Xs and np.allclose(_cache['h'], _h_ref) and forward(np.ones((6, 5)), init_params(5, 7, 4, seed=3))[0].shape == (6, 4), 'probs matches the reference, the cache holds X, h and probs, and other sizes work.')",
         "expected": "probs matches the reference, the cache holds X, h and probs, and other sizes work.",
-        "reassurance": "Two matrix products and a softmax: that is the whole network."
+        "reassurance": "Two matrix products and a softmax: that is the whole network.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Run the demo batch",
@@ -169,7 +175,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "w = float(w0)\nhistory = [w]\nfor _ in range(steps):\n    w = w - lr * grad(w)\n    history.append(w)",
         "check": "test(\"Record the walk\", lambda: len(history) == 11 and history[0] == 0.0 and np.isclose(history[1], 0.6) and np.isclose(history[-1], 3 - 3 * 0.8 ** 10), \"history holds 11 positions, from 0 through 0.6 to about 2.68, closing in on 3.\")",
         "expected": "history holds 11 positions, from 0 through 0.6 to about 2.68, closing in on 3.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Walk downhill",
@@ -177,7 +186,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def descend(grad, w0, lr, steps):\n    w = float(w0)\n    history = [w]\n    for _ in range(steps):\n        w = w - lr * grad(w)\n        history.append(w)\n    return np.array(history)",
         "check": "_h = descend(grad, 0.0, 0.1, 50)\ntest('Walk downhill', lambda: _h.shape == (51,) and _h[0] == 0.0 and np.isclose(_h[1], 0.6) and abs(_h[-1] - 3) < 1e-3 and np.isclose(descend(grad, 10.0, 0.5, 1)[-1], 3.0) and descend(grad, 7.0, 0.1, 0).tolist() == [7.0], 'Fifty steps at lr 0.1 converge on 3; lr 0.5 lands on it in one step; zero steps returns just the start.')",
         "expected": "Fifty steps at lr 0.1 converge on 3; lr 0.5 lands on it in one step; zero steps returns just the start.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Score one walk",
@@ -188,11 +200,30 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "reassurance": ""
       },
       {
+        "title": "Start the best at infinity",
+        "instruction": "Create `best_lr` as None and `best_score` as positive infinity, using NumPy's constant for it, so that any real score will beat it.",
+        "code": "best_lr, best_score = None, np.inf",
+        "check": "test(\"Start the best at infinity\", lambda: best_lr is None and best_score == float('inf') and best_score > 1e308, \"best_lr is None and best_score is inf, larger than any real number.\")",
+        "expected": "best_lr is None and best_score is inf, larger than any real number.",
+        "reassurance": ""
+      },
+      {
         "title": "Remember the best so far",
         "instruction": "Create `best_lr` as None and `best_score` as infinity (NumPy has a constant for it). Then, if `score` is smaller than `best_score`, set `best_lr` to `lr` and `best_score` to `score`.",
         "code": "best_lr, best_score = None, np.inf\nif score < best_score:\n    best_lr, best_score = lr, score",
         "check": "test(\"Remember the best so far\", lambda: best_lr == 0.1 and np.isclose(best_score, 6 * 0.8 ** 10), \"Any finite score beats infinity, so best_lr is 0.1 with its score.\")",
         "expected": "Any finite score beats infinity, so best_lr is 0.1 with its score.",
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
+      },
+      {
+        "title": "Spot a walk that blew up",
+        "instruction": "Create `wild`, the last position of a `descend` walk from `w0` with lr 1.1 for 5000 steps (it overshoots further each step). Then create `finite`, NumPy's test of whether `wild` is a finite number.",
+        "code": "wild = descend(grad, w0, 1.1, 5000)[-1]\nfinite = np.isfinite(wild)",
+        "check": "test(\"Spot a walk that blew up\", lambda: not np.isfinite(wild) and finite == False and bool(np.isfinite(final)), \"wild is inf or nan, so finite is False.\")",
+        "expected": "wild is inf or nan, so finite is False.",
         "reassurance": ""
       },
       {
@@ -201,7 +232,11 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "lrs = [0.01, 0.1, 0.5, 1.1]\nbest_lr, best_score = None, np.inf\nfor lr in lrs:\n    final = descend(grad, w0, lr, steps)[-1]\n    score = abs(grad(final))\n    if np.isfinite(final) and score < best_score:\n        best_lr, best_score = lr, score",
         "check": "test(\"Try every rate\", lambda: best_lr == 0.5 and best_score == 0, \"lr 0.5 lands exactly on 3, so best_lr is 0.5 with score 0.\")",
         "expected": "lr 0.5 lands exactly on 3, so best_lr is 0.5 with score 0.",
-        "reassurance": "A diverging walk ends at infinity or NaN; the finiteness test keeps it out."
+        "reassurance": "A diverging walk ends at infinity or NaN; the finiteness test keeps it out.",
+        "startFrom": [
+          3,
+          5
+        ]
       },
       {
         "title": "Choose a learning rate",
@@ -209,7 +244,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def find_lr(grad, w0, lrs, steps):\n    best_lr, best_score = None, np.inf\n    for lr in lrs:\n        final = descend(grad, w0, lr, steps)[-1]\n        score = abs(grad(final))\n        if np.isfinite(final) and score < best_score:\n            best_lr, best_score = lr, score\n    return best_lr",
         "check": "_g2 = lambda w: 4 * w ** 3\ntest('Choose a learning rate', lambda: find_lr(grad, 0.0, [0.01, 0.1, 0.5, 1.1], 30) == 0.5 and find_lr(grad, 0.0, [1.5, 0.01], 400) == 0.01 and find_lr(_g2, 1.0, [0.001, 0.05], 200) == 0.05, 'lr 0.5 wins on the bowl, a diverging 1.5 is skipped, and another loss picks 0.05.')",
         "expected": "lr 0.5 wins on the bowl, a diverging 1.5 is skipped, and another loss picks 0.05.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7
+        ]
       },
       {
         "title": "Print the walks",
@@ -246,15 +284,29 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def output_grad(probs, y):\n    n, k = probs.shape\n    onehot = np.zeros((n, k))\n    onehot[np.arange(n), y] = 1\n    return (probs - onehot) / n",
         "check": "_p = np.array([[0.7, 0.3], [0.2, 0.8], [0.5, 0.5]])\ntest('The gradient at the output', lambda: np.allclose(output_grad(_p, np.array([0, 0, 1])), (_p - np.array([[1, 0], [1, 0], [0, 1]])) / 3), 'output_grad is (probs − onehot) / n for the three example rows.')",
         "expected": "output_grad is (probs − onehot) / n for the three example rows.",
-        "reassurance": "Softmax and cross-entropy collapse into this one subtraction."
+        "reassurance": "Softmax and cross-entropy collapse into this one subtraction.",
+        "startFrom": [
+          1
+        ]
+      },
+      {
+        "title": "Transpose the hidden values",
+        "instruction": "Create `hT`, the transpose of the cached hidden values `cache[\"h\"]`: its rows are their columns.",
+        "code": "hT = cache[\"h\"].T",
+        "check": "test(\"Transpose the hidden values\", lambda: np.array_equal(hT, cache['h'].T) and not np.array_equal(hT, cache['h']), \"hT holds the hidden values with rows and columns swapped.\")",
+        "expected": "hT holds the hidden values with rows and columns swapped.",
+        "reassurance": ""
       },
       {
         "title": "Output-layer gradients on the demo",
         "instruction": "Create `dlogits` from `output_grad` on the cached probabilities and `y`, then `dW2`: the cached hidden values transposed times `dlogits`, and `db2`: `dlogits` summed over rows.",
-        "code": "dlogits = output_grad(cache[\"probs\"], y)\ndW2 = cache[\"h\"].T @ dlogits\ndb2 = dlogits.sum(axis=0)",
+        "code": "dlogits = output_grad(cache[\"probs\"], y)\nhT = cache[\"h\"].T\ndW2 = hT @ dlogits\ndb2 = dlogits.sum(axis=0)",
         "check": "def _numgrad(P, name, Xs, ys):\n    out = np.zeros_like(P[name])\n    it = np.nditer(P[name], flags=['multi_index'])\n    for _ in it:\n        i = it.multi_index\n        old = P[name][i]\n        P[name][i] = old + 1e-5; lp = loss(forward(Xs, P)[0], ys)\n        P[name][i] = old - 1e-5; lm = loss(forward(Xs, P)[0], ys)\n        P[name][i] = old\n        out[i] = (lp - lm) / 2e-5\n    return out\ntest(\"Output-layer gradients on the demo\", lambda: dW2.shape == (4, 3) and db2.shape == (3,) and np.allclose(dW2, _numgrad(params, 'W2', X, y), atol=1e-6) and np.allclose(db2, _numgrad(params, 'b2', X, y), atol=1e-6), \"dW2 is 4 by 3, db2 has 3 entries, and both match finite differences.\")",
         "expected": "dW2 is 4 by 3, db2 has 3 entries, and both match finite differences.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Gradients of the output layer",
@@ -262,7 +314,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def backward(params, cache, y):\n    dlogits = output_grad(cache[\"probs\"], y)\n    dW2 = cache[\"h\"].T @ dlogits\n    db2 = dlogits.sum(axis=0)\n    return {\"dW2\": dW2, \"db2\": db2}",
         "check": "def _numgrad(P, name, Xs, ys):\n    out = np.zeros_like(P[name])\n    it = np.nditer(P[name], flags=['multi_index'])\n    for _ in it:\n        i = it.multi_index\n        old = P[name][i]\n        P[name][i] = old + 1e-5; lp = loss(forward(Xs, P)[0], ys)\n        P[name][i] = old - 1e-5; lm = loss(forward(Xs, P)[0], ys)\n        P[name][i] = old\n        out[i] = (lp - lm) / 2e-5\n    return out\n_P = init_params(2, 3, 2, seed=2)\n_Xs = np.array([[1.0, -1.0], [0.5, 2.0], [-2.0, 0.3], [0.1, 0.1]])\n_ys = np.array([0, 1, 1, 0])\n_probs, _cache = forward(_Xs, _P)\n_g = backward(_P, _cache, _ys)\ntest('Gradients of the output layer', lambda: _g['dW2'].shape == _P['W2'].shape and _g['db2'].shape == _P['b2'].shape and np.allclose(_g['dW2'], _numgrad(_P, 'W2', _Xs, _ys), atol=1e-6) and np.allclose(_g['db2'], _numgrad(_P, 'b2', _Xs, _ys), atol=1e-6), 'dW2 and db2 have their parameters\\' shapes and match finite differences.')",
         "expected": "dW2 and db2 have their parameters' shapes and match finite differences.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Into the first layer on the demo",
@@ -278,6 +333,18 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def backward(params, cache, y):\n    dlogits = output_grad(cache[\"probs\"], y)\n    dW2 = cache[\"h\"].T @ dlogits\n    db2 = dlogits.sum(axis=0)\n    dz1 = (dlogits @ params[\"W2\"].T) * (cache[\"h\"] > 0)\n    dW1 = cache[\"X\"].T @ dz1\n    db1 = dz1.sum(axis=0)\n    return {\"dW1\": dW1, \"db1\": db1, \"dW2\": dW2, \"db2\": db2}",
         "check": "def _numgrad(P, name, Xs, ys):\n    out = np.zeros_like(P[name])\n    it = np.nditer(P[name], flags=['multi_index'])\n    for _ in it:\n        i = it.multi_index\n        old = P[name][i]\n        P[name][i] = old + 1e-5; lp = loss(forward(Xs, P)[0], ys)\n        P[name][i] = old - 1e-5; lm = loss(forward(Xs, P)[0], ys)\n        P[name][i] = old\n        out[i] = (lp - lm) / 2e-5\n    return out\n_P = init_params(2, 3, 2, seed=2)\n_Xs = np.array([[1.0, -1.0], [0.5, 2.0], [-2.0, 0.3], [0.1, 0.1]])\n_ys = np.array([0, 1, 1, 0])\n_probs, _cache = forward(_Xs, _P)\n_g = backward(_P, _cache, _ys)\ntest('Through relu into the first layer', lambda: set(_g) == {'dW1', 'db1', 'dW2', 'db2'} and np.allclose(_g['dW1'], _numgrad(_P, 'W1', _Xs, _ys), atol=1e-6) and np.allclose(_g['db1'], _numgrad(_P, 'b1', _Xs, _ys), atol=1e-6) and loss(forward(_Xs, {n: _P[n] - 0.5 * _g['d' + n] for n in _P})[0], _ys) < loss(_probs, _ys), 'dW1 and db1 match finite differences, and one descent step lowers the loss.')",
         "expected": "dW1 and db1 match finite differences, and one descent step lowers the loss.",
+        "reassurance": "",
+        "startFrom": [
+          5,
+          6
+        ]
+      },
+      {
+        "title": "Round one gradient size",
+        "instruction": "Create `mean_dW2`: the mean absolute value of `dW2`, rounded to 4 decimals with the array's own rounding method.",
+        "code": "mean_dW2 = np.abs(dW2).mean().round(4)",
+        "check": "test(\"Round one gradient size\", lambda: mean_dW2 == np.abs(dW2).mean().round(4) and abs(mean_dW2 * 10000 - round(mean_dW2 * 10000)) < 1e-6, \"mean_dW2 is the mean |dW2| with 4 decimals.\")",
+        "expected": "mean_dW2 is the mean |dW2| with 4 decimals.",
         "reassurance": ""
       },
       {
@@ -331,7 +398,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "w, b = np.zeros(X.shape[1]), 0.0\nlosses = []\nfor _ in range(epochs):\n    dw, db = gradient(w, b, X, y)\n    w, b = w - lr * dw, b - lr * db\n    losses.append(loss(w, b, X, y))",
         "check": "test(\"Record the loss each epoch\", lambda: len(losses) == 200 and bool(np.isfinite(losses).all()) and losses[-1] < losses[0] / 2, \"Two hundred finite losses, ending below half the first.\")",
         "expected": "Two hundred finite losses, ending below half the first.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Fix train",
@@ -339,7 +409,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def train(X, y, lr=0.5, epochs=200):\n    w, b = np.zeros(X.shape[1]), 0.0\n    losses = []\n    for _ in range(epochs):\n        dw, db = gradient(w, b, X, y)\n        w, b = w - lr * dw, b - lr * db\n        losses.append(loss(w, b, X, y))\n    return w, b, losses",
         "check": "_w, _b, _losses = train(X, y, lr=0.5, epochs=200)\ntest('Step against the gradient', lambda: len(_losses) == 200 and bool(np.isfinite(_losses).all()) and _losses[-1] < _losses[0] / 2 and _losses[-1] < 0.1 and ((sigmoid(X @ _w + _b) > 0.5).astype(int) == y).mean() > 0.95 and _w[0] > 0 and _w[1] > 0, 'Two hundred finite losses that fall far below the start, over 95% accuracy, and weights pointing toward the positive cluster.')",
         "expected": "Two hundred finite losses that fall far below the start, over 95% accuracy, and weights pointing toward the positive cluster.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          4
+        ]
       },
       {
         "title": "Print the training summary",
@@ -384,6 +457,17 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def attention_weights(Q, K, causal=False):\n    s = scores(Q, K)\n    s = s - s.max(axis=1, keepdims=True)\n    e = np.exp(s)\n    return e / e.sum(axis=1, keepdims=True)",
         "check": "_Qs = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])\n_Ks = np.array([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])\n_s = _Qs @ _Ks.T / np.sqrt(2)\n_e = np.exp(_s - _s.max(axis=1, keepdims=True))\ntest('Weigh each row', lambda: np.allclose(attention_weights(_Qs, _Ks), _e / _e.sum(axis=1, keepdims=True)) and np.allclose(attention_weights(_Qs, _Ks).sum(axis=1), 1) and attention_weights(np.array([[0.0, 5.0]]), _Ks)[0].argmax() == 1, 'Each row is a distribution that sums to 1, and a query matching a key attends to it most.')",
         "expected": "Each row is a distribution that sums to 1, and a query matching a key attends to it most.",
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
+      },
+      {
+        "title": "Try the upper triangle",
+        "instruction": "Create `mask`, a boolean array shaped like the demo scores `s` that is True strictly above the diagonal (key index greater than query index) and False elsewhere. Start from an all-True array like `s` and keep its upper triangle, one place above the diagonal.",
+        "code": "mask = np.triu(np.ones_like(s, dtype=bool), k=1)",
+        "check": "test(\"Try the upper triangle\", lambda: mask.dtype == bool and mask.shape == (4, 4) and int(mask.sum()) == 6 and bool(mask[0, 1]) and not mask[1, 0] and not mask[0, 0], \"mask is 4 by 4 with 6 True cells, all above the diagonal.\")",
+        "expected": "mask is 4 by 4 with 6 True cells, all above the diagonal.",
         "reassurance": ""
       },
       {
@@ -392,7 +476,11 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def attention_weights(Q, K, causal=False):\n    s = scores(Q, K)\n    if causal:\n        mask = np.triu(np.ones_like(s, dtype=bool), k=1)\n        s = np.where(mask, -np.inf, s)\n    s = s - s.max(axis=1, keepdims=True)\n    e = np.exp(s)\n    return e / e.sum(axis=1, keepdims=True)",
         "check": "_Qs = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])\n_Ks = np.array([[1.0, 0.0], [0.0, 2.0], [1.0, 1.0]])\n_w = attention_weights(_Qs, _Ks, causal=True)\ntest('Hide the future', lambda: np.allclose(np.triu(_w, k=1), 0) and np.allclose(_w.sum(axis=1), 1) and bool(np.isfinite(_w).all()) and np.isclose(_w[0, 0], 1.0) and np.allclose(_w[-1], attention_weights(_Qs, _Ks)[-1]), 'Weights above the diagonal are 0, rows still sum to 1, the first position attends only to itself, and the last row is unchanged.')",
         "expected": "Weights above the diagonal are 0, rows still sum to 1, the first position attends only to itself, and the last row is unchanged.",
-        "reassurance": "A language model cannot peek at the next token now."
+        "reassurance": "A language model cannot peek at the next token now.",
+        "startFrom": [
+          3,
+          4
+        ]
       },
       {
         "title": "Mix the values",
@@ -416,6 +504,14 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
     "setup": "import numpy as np\n\ndef relu(x):\n    return np.maximum(0, x)\n\ndef forward(X, params):\n    h = relu(X @ params[\"W1\"] + params[\"b1\"])\n    logits = h @ params[\"W2\"] + params[\"b2\"]\n    exp = np.exp(logits - logits.max(axis=1, keepdims=True))\n    probs = exp / exp.sum(axis=1, keepdims=True)\n    return probs, {\"X\": X, \"h\": h, \"probs\": probs}\n\ndef loss(probs, y):\n    return float(-np.log(probs[np.arange(len(y)), y]).mean())\n\ndef backward(params, cache, y):\n    n, k = cache[\"probs\"].shape\n    onehot = np.zeros((n, k))\n    onehot[np.arange(n), y] = 1\n    dlogits = (cache[\"probs\"] - onehot) / n\n    dW2 = cache[\"h\"].T @ dlogits\n    db2 = dlogits.sum(axis=0)\n    dz1 = (dlogits @ params[\"W2\"].T) * (cache[\"h\"] > 0)\n    return {\"dW1\": cache[\"X\"].T @ dz1, \"db1\": dz1.sum(axis=0), \"dW2\": dW2, \"db2\": db2}\n\ndef make_moons(n, noise=0.1, seed=0):\n    rng = np.random.default_rng(seed)\n    t = rng.uniform(0, np.pi, n // 2)\n    outer = np.column_stack([np.cos(t), np.sin(t)])\n    inner = np.column_stack([1 - np.cos(t), 1 - np.sin(t) - 0.5])\n    X = np.vstack([outer, inner]) + rng.normal(0, noise, (2 * (n // 2), 2))\n    y = np.array([0] * (n // 2) + [1] * (n // 2))\n    return X, y\n\nX, y = make_moons(300, noise=0.1, seed=0)",
     "steps": [
       {
+        "title": "Draw some normal numbers",
+        "instruction": "Create `rng`, a NumPy random generator seeded with 0, then `draws`: a 2 by 3 array of standard normal numbers (mean 0, standard deviation 1) drawn from `rng`.",
+        "code": "rng = np.random.default_rng(0)\ndraws = rng.normal(0, 1, (2, 3))",
+        "check": "test(\"Draw some normal numbers\", lambda: draws.shape == (2, 3) and np.allclose(draws, np.random.default_rng(0).normal(0, 1, (2, 3))), \"draws is 2 by 3, the first six normal draws of the seed-0 generator.\")",
+        "expected": "draws is 2 by 3, the first six normal draws of the seed-0 generator.",
+        "reassurance": ""
+      },
+      {
         "title": "Draw the first weights",
         "instruction": "Create `d, hidden_size, k, seed` holding 2, 16, 2 and 0, then `rng`, a NumPy random generator seeded with `seed`, and `W1`: standard normal draws of shape (d, hidden_size) from `rng`, scaled by sqrt(2 / d).",
         "code": "d, hidden_size, k, seed = 2, 16, 2, 0\nrng = np.random.default_rng(seed)\nW1 = rng.normal(0, 1, (d, hidden_size)) * np.sqrt(2 / d)",
@@ -429,7 +525,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def init_params(d, hidden_size, k, seed=0):\n    rng = np.random.default_rng(seed)\n    W1 = rng.normal(0, 1, (d, hidden_size)) * np.sqrt(2 / d)\n    W2 = rng.normal(0, 1, (hidden_size, k)) * np.sqrt(2 / hidden_size)\n    return {\"W1\": W1, \"b1\": np.zeros(hidden_size), \"W2\": W2, \"b2\": np.zeros(k)}",
         "check": "_P = init_params(2, 5, 3, seed=4)\n_r = np.random.default_rng(4)\n_W1 = _r.normal(0, 1, (2, 5)) * np.sqrt(2 / 2)\n_W2 = _r.normal(0, 1, (5, 3)) * np.sqrt(2 / 5)\ntest('Initialise the parameters', lambda: set(_P) == {'W1', 'b1', 'W2', 'b2'} and np.allclose(_P['W1'], _W1) and np.allclose(_P['W2'], _W2) and np.array_equal(_P['b1'], np.zeros(5)) and np.array_equal(_P['b2'], np.zeros(3)), 'Shapes, scaling and seed all match: W1 first, then W2, zero biases.')",
         "expected": "Shapes, scaling and seed all match: W1 first, then W2, zero biases.",
-        "reassurance": "He initialisation keeps the signal alive through relu."
+        "reassurance": "He initialisation keeps the signal alive through relu.",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Forward and backward on the demo",
@@ -453,7 +552,10 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def step_once(params, X, y, lr):\n    probs, cache = forward(X, params)\n    grads = backward(params, cache, y)\n    new = {name: params[name] - lr * grads[\"d\" + name] for name in params}\n    return new, loss(forward(X, new)[0], y)",
         "check": "_P0 = init_params(2, 16, 2, 0)\n_P1, _l1 = step_once(_P0, X, y, 1.0)\ntest('One step of descent', lambda: set(_P1) == set(_P0) and all(_P1[n].shape == _P0[n].shape for n in _P0) and _l1 < loss(forward(X, _P0)[0], y) and not np.allclose(_P1['W1'], _P0['W1']), 'The parameters keep their shapes, change, and the loss after one step is below the untrained loss.')",
         "expected": "The parameters keep their shapes, change, and the loss after one step is below the untrained loss.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Start a fresh network",
@@ -477,7 +579,11 @@ export const NN_GUIDES: Record<string, CodingGuide> = {
         "code": "def train_mlp(X, y, hidden_size=16, lr=1.0, epochs=500, seed=0):\n    params = init_params(X.shape[1], hidden_size, int(y.max()) + 1, seed)\n    losses = []\n    for _ in range(epochs):\n        params, current = step_once(params, X, y, lr)\n        losses.append(current)\n    return params, losses",
         "check": "_Xm, _ym = make_moons(300, noise=0.1, seed=2)\n_params, _losses = train_mlp(_Xm, _ym, hidden_size=16, lr=1.0, epochs=120, seed=0)\ntest('The training loop', lambda: len(_losses) == 120 and bool(np.isfinite(_losses).all()) and _losses[-1] < _losses[0] / 2 and np.allclose(_losses, train_mlp(_Xm, _ym, epochs=120, seed=0)[1]) and not np.allclose(train_mlp(_Xm, _ym, epochs=40, seed=1)[1], train_mlp(_Xm, _ym, epochs=40, seed=0)[1]), 'One loss per epoch, all finite, falling below half the start, reproducible per seed and different across seeds.')",
         "expected": "One loss per epoch, all finite, falling below half the start, reproducible per seed and different across seeds.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          6,
+          7
+        ]
       },
       {
         "title": "Predict classes",

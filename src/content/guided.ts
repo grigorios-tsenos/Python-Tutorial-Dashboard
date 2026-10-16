@@ -21,6 +21,8 @@ export interface CodingStep {
   expected: string
   /** shown once the step passes: a short takeaway, or '' when the check says it all */
   reassurance: string
+  /** earlier steps whose drafts open this step's editor, so a wrap or an update edits the learner's own code instead of retyping it */
+  startFrom?: number[]
 }
 
 export interface CodingGuide {
@@ -40,4 +42,9 @@ export function guidedSource(guide: CodingGuide, drafts: string[], step: number)
 
 export function guidedCheck(guide: CodingGuide, step: number, lessonCheck: string): string {
   return [guide.steps[step].check, step === guide.steps.length - 1 ? lessonCheck : ''].filter(Boolean).join('\n')
+}
+
+/** What the editor shows for a step the learner has not written yet: their own drafts of the steps it builds on. */
+export function seedDraft(guide: CodingGuide, drafts: string[], step: number): string {
+  return (guide.steps[step].startFrom ?? []).map(i => (drafts[i] ?? '').trimEnd()).filter(Boolean).join('\n')
 }

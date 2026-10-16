@@ -71,15 +71,22 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def summarize(x):\n    x = np.asarray(x, dtype=float)\n    p25, p50, p75, p95, p99 = np.percentile(x, [25, 50, 75, 95, 99])\n    iqr = p75 - p25\n    std = np.std(x, ddof=1)\n    return {\"p50\": p50, \"p95\": p95, \"p99\": p99, \"iqr\": iqr, \"std\": std}",
         "check": "test('Wrap it in a function', lambda: set(summarize(latency)) == {'p50', 'p95', 'p99', 'iqr', 'std'} and all(np.isclose(summarize(latency)[k], v) for k, v in [('p50', p50), ('p95', p95), ('p99', p99), ('iqr', iqr), ('std', std)]) and np.isclose(summarize(np.array([3.0, 1.0, 2.0]))['p50'], 2.0), 'summarize(latency) matches your five numbers, and an array works as well as a list.')",
         "expected": "summarize(latency) matches your five numbers, and an array works as well as a list.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1,
+          2
+        ]
       },
       {
         "title": "Refuse an empty input",
-        "instruction": "Update `summarize` so that, right after converting, it raises `ValueError` when `x` holds no values. Write the whole updated definition.",
+        "instruction": "Update `summarize` so that, right after converting, it raises `ValueError` when `x` holds no values.",
         "code": "def summarize(x):\n    x = np.asarray(x, dtype=float)\n    if x.size == 0:\n        raise ValueError(\"summarize needs at least one value\")\n    p25, p50, p75, p95, p99 = np.percentile(x, [25, 50, 75, 95, 99])\n    iqr = p75 - p25\n    std = np.std(x, ddof=1)\n    return {\"p50\": p50, \"p95\": p95, \"p99\": p99, \"iqr\": iqr, \"std\": std}",
         "check": "def _rejects():\n    try:\n        summarize([])\n    except ValueError:\n        return True\n    return False\ntest('Refuse an empty input', lambda: _rejects() and set(summarize(latency)) == {'p50', 'p95', 'p99', 'iqr', 'std'} and np.isclose(summarize([5])['iqr'], 0.0), 'An empty input raises ValueError; a single value still has an iqr of 0.')",
         "expected": "An empty input raises ValueError; a single value still has an iqr of 0.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Print the summary",
@@ -95,9 +102,17 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
     "setup": "import numpy as np",
     "steps": [
       {
+        "title": "Make a seeded generator",
+        "instruction": "Store `seed` (0) and create `rng`: a NumPy random generator seeded with `seed`, so every run draws the same numbers.",
+        "code": "seed = 0\nrng = np.random.default_rng(seed)",
+        "check": "test(\"Make a seeded generator\", lambda: seed == 0 and isinstance(rng, np.random.Generator) and rng.bit_generator.state == np.random.default_rng(0).bit_generator.state, \"rng is a NumPy generator seeded with 0.\")",
+        "expected": "rng is a NumPy generator seeded with 0.",
+        "reassurance": ""
+      },
+      {
         "title": "Draw conversion counts",
-        "instruction": "Store the settings `p` (0.12), `n` (50 visitors), `trials` (5) and `seed` (0). Create `rng`, a NumPy random generator seeded with `seed`, and `counts`: `trials` binomial draws, each the number of conversions among `n` visitors who convert with probability `p`.",
-        "code": "p, n, trials, seed = 0.12, 50, 5, 0\nrng = np.random.default_rng(seed)\ncounts = rng.binomial(n, p, size=trials)",
+        "instruction": "Store the settings `p` (0.12), `n` (50 visitors) and `trials` (5). Create `counts`: `trials` binomial draws from `rng`, each the number of conversions among `n` visitors who convert with probability `p`.",
+        "code": "p, n, trials = 0.12, 50, 5\ncounts = rng.binomial(n, p, size=trials)",
         "check": "test('Draw conversion counts', lambda: np.array_equal(counts, np.random.default_rng(0).binomial(50, 0.12, size=5)), 'counts holds five conversion counts out of 50, reproducible from seed 0.')",
         "expected": "counts holds five conversion counts out of 50, reproducible from seed 0.",
         "reassurance": ""
@@ -112,11 +127,14 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Wrap it in a function",
-        "instruction": "Define `simulate_rates(p, n, trials, seed=0)` that repeats your two steps with its own arguments and returns the array of rates.",
+        "instruction": "Define `simulate_rates(p, n, trials, seed=0)` that repeats your generator, draw and rate steps with its own arguments and returns the array of rates.",
         "code": "def simulate_rates(p, n, trials, seed=0):\n    rng = np.random.default_rng(seed)\n    counts = rng.binomial(n, p, size=trials)\n    rates = counts / n\n    return rates",
         "check": "test('Wrap it in a function', lambda: simulate_rates(0.1, 50, 200, seed=3).shape == (200,) and np.allclose(simulate_rates(0.1, 50, 200, seed=3), np.random.default_rng(3).binomial(50, 0.1, size=200) / 50) and not np.array_equal(simulate_rates(0.1, 50, 200, seed=3), simulate_rates(0.1, 50, 200, seed=4)), 'Two hundred rates, multiples of 1/50, identical for the same seed and different for another seed.')",
         "expected": "Two hundred rates, multiples of 1/50, identical for the same seed and different for another seed.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Reject impossible experiments",
@@ -124,7 +142,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def simulate_rates(p, n, trials, seed=0):\n    if not 0 <= p <= 1 or n < 1 or trials < 1:\n        raise ValueError(\"need 0 <= p <= 1, n >= 1 and trials >= 1\")\n    rng = np.random.default_rng(seed)\n    counts = rng.binomial(n, p, size=trials)\n    rates = counts / n\n    return rates",
         "check": "def _rejects(*args):\n    try:\n        simulate_rates(*args)\n    except ValueError:\n        return True\n    return False\ntest('Reject impossible experiments', lambda: _rejects(1.5, 10, 10) and _rejects(-0.1, 10, 10) and _rejects(0.5, 0, 10) and _rejects(0.5, 10, 0) and simulate_rates(1.0, 20, 5).sum() == 5, 'Bad p, n or trials raise ValueError; p = 1 still converts everyone.')",
         "expected": "Bad p, n or trials raise ValueError; p = 1 still converts everyone.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Measure the wobble at two sample sizes",
@@ -177,7 +198,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def bootstrap_stats(x, stat=np.mean, n_boot=1000, seed=0):\n    x = np.asarray(x, dtype=float)\n    rng = np.random.default_rng(seed)\n    resamples = rng.choice(x, size=(n_boot, len(x)), replace=True)\n    return stat(resamples, axis=1)",
         "check": "test('Wrap it in a function', lambda: bootstrap_stats(latency, n_boot=500, seed=1).shape == (500,) and np.allclose(bootstrap_stats(latency, n_boot=500, seed=1), np.mean(np.random.default_rng(1).choice(np.asarray(latency, dtype=float), size=(500, 8), replace=True), axis=1)), 'Five hundred resampled means, reproducible from seed 1, every one inside the data range.')",
         "expected": "Five hundred resampled means, reproducible from seed 1, every one inside the data range.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Refuse an empty sample",
@@ -185,7 +209,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def bootstrap_stats(x, stat=np.mean, n_boot=1000, seed=0):\n    x = np.asarray(x, dtype=float)\n    if len(x) == 0:\n        raise ValueError(\"cannot bootstrap an empty sample\")\n    rng = np.random.default_rng(seed)\n    resamples = rng.choice(x, size=(n_boot, len(x)), replace=True)\n    return stat(resamples, axis=1)",
         "check": "def _rejects():\n    try:\n        bootstrap_stats([])\n    except ValueError:\n        return True\n    return False\ntest('Refuse an empty sample', lambda: _rejects() and bootstrap_stats([5.0] * 10).tolist() == [5.0] * 1000, 'An empty list raises ValueError; a constant sample gives constant statistics.')",
         "expected": "An empty list raises ValueError; a constant sample gives constant statistics.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Read off the interval",
@@ -209,7 +236,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def bootstrap_ci(x, stat=np.mean, n_boot=1000, alpha=0.05, seed=0):\n    if not 0 < alpha < 1:\n        raise ValueError(\"alpha must be between 0 and 1\")\n    stats = bootstrap_stats(x, stat, n_boot, seed)\n    low, high = np.percentile(stats, [100 * alpha / 2, 100 * (1 - alpha / 2)])\n    return float(low), float(high)",
         "check": "def _rejects(alpha):\n    try:\n        bootstrap_ci([1, 2, 3], alpha=alpha)\n    except ValueError:\n        return True\n    return False\ntest('Guard alpha', lambda: _rejects(0) and _rejects(1.5) and (lambda w, n: w[1] - w[0] < n[1] - n[0])(bootstrap_ci(latency, alpha=0.5, n_boot=2000), bootstrap_ci(latency, n_boot=2000)), 'alpha of 0 or 1.5 raises ValueError; a larger alpha gives a narrower interval.')",
         "expected": "alpha of 0 or 1.5 raises ValueError; a larger alpha gives a narrower interval.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Print the intervals",
@@ -238,6 +268,14 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "a, b = np.asarray(control, dtype=float), np.asarray(treatment, dtype=float)\npooled = np.concatenate([a, b])",
         "check": "test('Pool the groups', lambda: pooled.shape == (40,) and pooled.dtype == float and pooled[:20].tolist() == control and pooled[20:].tolist() == treatment, 'pooled holds the 20 control values followed by the 20 treatment values.')",
         "expected": "pooled holds the 20 control values followed by the 20 treatment values.",
+        "reassurance": ""
+      },
+      {
+        "title": "Try a shuffle",
+        "instruction": "Create `shuffled`: a shuffled copy of the array `a`, drawn with a NumPy generator seeded with 1. `a` itself must stay in its original order.",
+        "code": "shuffled = np.random.default_rng(1).permutation(a)",
+        "check": "test(\"Try a shuffle\", lambda: sorted(shuffled.tolist()) == sorted(a.tolist()) and shuffled.tolist() != a.tolist() and a.tolist() == control, \"shuffled holds the 20 control values in a new order; a is unchanged.\")",
+        "expected": "shuffled holds the 20 control values in a new order; a is unchanged.",
         "reassurance": ""
       },
       {
@@ -270,7 +308,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def permutation_diffs(a, b, n_perm=2000, seed=0):\n    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)\n    rng = np.random.default_rng(seed)\n    pooled = np.concatenate([a, b])\n    shuffles = (rng.permutation(pooled) for _ in range(n_perm))\n    diffs = np.array([s[len(a):].mean() - s[:len(a)].mean() for s in shuffles])\n    return diffs",
         "check": "_a = np.array([0.0, 1, 0, 0, 1, 0, 0, 0, 1, 0])\n_b = np.array([1.0, 1, 0, 1, 1, 0, 1, 1, 0, 1])\n_g = np.random.default_rng(2)\n_pool = np.concatenate([_a, _b])\n_ref = np.array([(lambda s: s[10:].mean() - s[:10].mean())(_g.permutation(_pool)) for _ in range(300)])\ntest('Wrap the shuffles', lambda: permutation_diffs(_a, _b, n_perm=300, seed=2).shape == (300,) and np.allclose(permutation_diffs(_a, _b, n_perm=300, seed=2), _ref) and permutation_diffs([1, 2, 3], [10, 20, 30, 40], n_perm=5).shape == (5,), 'Three hundred shuffled gaps, reproducible from the seed; unequal group sizes split at len(a).')",
         "expected": "Three hundred shuffled gaps, reproducible from the seed; unequal group sizes split at len(a).",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Count the extreme shuffles",
@@ -286,7 +327,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def permutation_pvalue(a, b, n_perm=2000, seed=0):\n    observed = abs(mean_diff(a, b))\n    diffs = permutation_diffs(a, b, n_perm, seed)\n    count = int((np.abs(diffs) >= observed).sum())\n    return (count + 1) / (n_perm + 1)",
         "check": "_r = np.random.default_rng(0)\n_same = _r.normal(0, 1, 40)\n_fa, _fb = _r.normal(0, 1, 40), _r.normal(2, 1, 40)\ntest('Wrap the p-value', lambda: permutation_pvalue(_same, _same.copy(), n_perm=500) == 1.0 and 0 < permutation_pvalue(_fa, _fb, n_perm=500) < 0.01 and np.isclose(permutation_pvalue(_fa, _fb, n_perm=500), permutation_pvalue(_fb, _fa, n_perm=500)), 'Identical groups give exactly 1.0; groups two units apart give a tiny, non-zero, symmetric p-value.')",
         "expected": "Identical groups give exactly 1.0; groups two units apart give a tiny, non-zero, symmetric p-value.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          7
+        ]
       },
       {
         "title": "Reject empty groups",
@@ -294,7 +338,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def permutation_pvalue(a, b, n_perm=2000, seed=0):\n    if len(a) == 0 or len(b) == 0:\n        raise ValueError(\"both groups need data\")\n    observed = abs(mean_diff(a, b))\n    diffs = permutation_diffs(a, b, n_perm, seed)\n    count = int((np.abs(diffs) >= observed).sum())\n    return (count + 1) / (n_perm + 1)",
         "check": "def _rejects():\n    try:\n        permutation_pvalue([], [1, 2])\n    except ValueError:\n        return True\n    return False\ntest('Reject empty groups', lambda: _rejects() and 0 < permutation_pvalue(control, treatment) < 0.05, 'An empty group raises ValueError; the demo groups differ with p below 0.05.')",
         "expected": "An empty group raises ValueError; the demo groups differ with p below 0.05.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Report the result",
@@ -339,7 +386,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def mean_ci(x, z=1.96):\n    x = np.asarray(x, dtype=float)\n    if len(x) < 2:\n        raise ValueError(\"need at least two values for an interval\")\n    se = np.std(x, ddof=1) / np.sqrt(len(x))\n    return float(x.mean() - z * se), float(x.mean() + z * se)",
         "check": "def _rejects():\n    try:\n        mean_ci([4.0])\n    except ValueError:\n        return True\n    return False\ntest('Refuse a single value', lambda: _rejects() and mean_ci(after)[1] < mean_ci(before)[0], 'A single value raises ValueError; the before and after intervals no longer overlap.')",
         "expected": "A single value raises ValueError; the before and after intervals no longer overlap.",
-        "reassurance": "The 5 ms improvement is now detectable."
+        "reassurance": "The 5 ms improvement is now detectable.",
+        "startFrom": [
+          2
+        ]
       },
       {
         "title": "Print both intervals",
@@ -368,7 +418,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def posterior(prior, sens, fpr, positive=True):\n    if positive:\n        p_positive = sens * prior + fpr * (1 - prior)\n        return sens * prior / p_positive\n    p_negative = (1 - sens) * prior + (1 - fpr) * (1 - prior)\n    return (1 - sens) * prior / p_negative",
         "check": "test('Update on a negative result', lambda: abs(posterior(0.3, 0.9, 0.1, positive=False) - 0.1 * 0.3 / (0.1 * 0.3 + 0.9 * 0.7)) < 1e-12 and posterior(0.99, 1.0, 0.0, positive=False) == 0.0 and abs(posterior(0.01, 0.99, 0.05) - 0.99 * 0.01 / (0.99 * 0.01 + 0.05 * 0.99)) < 1e-12, 'A negative result lowers the belief; a perfect negative drives it to 0; positives still work.')",
         "expected": "A negative result lowers the belief; a perfect negative drives it to 0; positives still work.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0
+        ]
       },
       {
         "title": "Reject impossible probabilities",
@@ -376,7 +429,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def posterior(prior, sens, fpr, positive=True):\n    if not all(0 <= p <= 1 for p in (prior, sens, fpr)):\n        raise ValueError(\"probabilities must be between 0 and 1\")\n    if positive:\n        p_positive = sens * prior + fpr * (1 - prior)\n        return sens * prior / p_positive\n    p_negative = (1 - sens) * prior + (1 - fpr) * (1 - prior)\n    return (1 - sens) * prior / p_negative",
         "check": "def _rejects(*args):\n    try:\n        posterior(*args)\n    except ValueError:\n        return True\n    return False\ntest('Reject impossible probabilities', lambda: _rejects(1.2, 0.9, 0.1) and _rejects(0.5, -0.1, 0.1) and _rejects(0.5, 0.9, 1.5) and 0 < posterior(0.5, 0.9, 0.1) < 1, 'Values outside 0 to 1 raise ValueError; valid ones still produce a probability.')",
         "expected": "Values outside 0 to 1 raise ValueError; valid ones still produce a probability.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          1
+        ]
       },
       {
         "title": "Apply two results in turn",
@@ -392,7 +448,10 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def posterior_after(prior, sens, fpr, results):\n    for result in results:\n        prior = posterior(prior, sens, fpr, result)\n    return prior",
         "check": "test('Wrap the loop', lambda: abs(posterior_after(0.2, 0.9, 0.1, [True, False]) - posterior(posterior(0.2, 0.9, 0.1, True), 0.9, 0.1, False)) < 1e-12 and posterior_after(0.01, 0.99, 0.05, [True, True]) > 0.75 and posterior_after(0.37, 0.9, 0.1, []) == 0.37, 'Two flags push 1% up past 75%; a flag then a clear equals two single updates; no results leaves the prior.')",
         "expected": "Two flags push 1% up past 75%; a flag then a clear equals two single updates; no results leaves the prior.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3
+        ]
       },
       {
         "title": "Print the spam numbers",
@@ -429,7 +488,11 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def lift_ci(control, treatment, alpha=0.05, n_boot=2000, seed=0):\n    rng = np.random.default_rng(seed)\n    boot_c = rng.choice(control, size=(n_boot, len(control)), replace=True).mean(axis=1)\n    boot_t = rng.choice(treatment, size=(n_boot, len(treatment)), replace=True).mean(axis=1)\n    low, high = np.percentile(boot_t - boot_c, [100 * alpha / 2, 100 * (1 - alpha / 2)])\n    return float(low), float(high)",
         "check": "_c = np.asarray([0, 1, 0, 0, 1, 0, 1, 0] * 10, dtype=float)\n_t = np.asarray([1, 1, 0, 1, 1, 0, 1, 0] * 10, dtype=float)\n_g = np.random.default_rng(3)\n_bc = _g.choice(_c, size=(300, 80), replace=True).mean(axis=1)\n_bt = _g.choice(_t, size=(300, 80), replace=True).mean(axis=1)\n_ref = np.percentile(_bt - _bc, [2.5, 97.5])\ntest('Wrap the lift interval', lambda: np.allclose(lift_ci(_c, _t, 0.05, 300, 3), _ref) and lift_ci(_c, _t, 0.05, 300, 3)[0] < _t.mean() - _c.mean() < lift_ci(_c, _t, 0.05, 300, 3)[1] and all(type(v) is float for v in lift_ci(_c, _t, 0.05, 300, 3)), 'The interval matches a control-first resampling with seed 3, brackets the observed lift and holds plain floats.')",
         "expected": "The interval matches a control-first resampling with seed 3, brackets the observed lift and holds plain floats.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          0,
+          1
+        ]
       },
       {
         "title": "Pool the groups for shuffling",
@@ -453,7 +516,11 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def permutation_p(control, treatment, n_perm=2000, seed=0):\n    rng = np.random.default_rng(seed)\n    pooled = np.concatenate([control, treatment])\n    observed = abs(treatment.mean() - control.mean())\n    shuffles = (rng.permutation(pooled) for _ in range(n_perm))\n    gaps = np.array([s[len(control):].mean() - s[:len(control)].mean() for s in shuffles])\n    p_value = (int((np.abs(gaps) >= observed).sum()) + 1) / (n_perm + 1)\n    return p_value",
         "check": "_r = np.random.default_rng(1)\n_pc = _r.binomial(1, 0.10, 500).astype(float)\n_pt = _r.binomial(1, 0.16, 500).astype(float)\ntest('Wrap the p-value', lambda: permutation_p(_pc, _pc.copy(), n_perm=200) == 1.0 and 0 < permutation_p(_pc, _pt, n_perm=500, seed=3) < 0.05 and permutation_p(_pc, _pt, n_perm=500, seed=3) == permutation_p(_pc, _pt, n_perm=500, seed=3), 'Identical groups give exactly 1.0; a real 6-point lift gives a small, reproducible p-value.')",
         "expected": "Identical groups give exactly 1.0; a real 6-point lift gives a small, reproducible p-value.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          3,
+          4
+        ]
       },
       {
         "title": "Ship a significant win",
@@ -465,11 +532,14 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
       },
       {
         "title": "Stop a significant loss",
-        "instruction": "Update `decide` so it returns `stop` when `p_value` is below `alpha` and `lift` is negative. Write the whole updated definition.",
+        "instruction": "Update `decide` so it returns `stop` when `p_value` is below `alpha` and `lift` is negative.",
         "code": "def decide(lift, p_value, alpha):\n    if p_value < alpha and lift > 0: return \"ship\"\n    if p_value < alpha and lift < 0: return \"stop\"\n    return \"inconclusive\"",
         "check": "test('Stop a significant loss', lambda: decide(0.03, 0.01, 0.05) == 'ship' and decide(-0.03, 0.01, 0.05) == 'stop' and decide(0.03, 0.2, 0.05) == 'inconclusive' and decide(0.0, 0.001, 0.05) == 'inconclusive', 'Significant and positive ships, significant and negative stops, everything else is inconclusive.')",
         "expected": "Significant and positive ships, significant and negative stops, everything else is inconclusive.",
-        "reassurance": "Inconclusive is not the same as no effect: the data simply cannot tell the lift from chance."
+        "reassurance": "Inconclusive is not the same as no effect: the data simply cannot tell the lift from chance.",
+        "startFrom": [
+          6
+        ]
       },
       {
         "title": "Gather the report numbers",
@@ -485,23 +555,32 @@ export const STATS_GUIDES: Record<string, CodingGuide> = {
         "code": "def ab_report(control, treatment, alpha=0.05, n_boot=2000, n_perm=2000, seed=0):\n    lift = float(treatment.mean() - control.mean())\n    p_value = permutation_p(control, treatment, n_perm, seed)\n    ci = lift_ci(control, treatment, alpha, n_boot, seed)\n    return {\"control_rate\": float(control.mean()), \"treatment_rate\": float(treatment.mean()), \"lift\": lift,\n            \"ci\": ci, \"p_value\": p_value, \"decision\": decide(lift, p_value, alpha)}",
         "check": "test('Assemble the report', lambda: (lambda _q: set(_q) == {'control_rate', 'treatment_rate', 'lift', 'ci', 'p_value', 'decision'} and np.isclose(_q['control_rate'], 0.25) and np.isclose(_q['lift'], 0.5) and type(_q['ci']) is tuple and type(_q['p_value']) is float and ab_report(control, treatment, n_boot=200, n_perm=200)['decision'] == 'ship')(ab_report(np.array([0.0, 1, 0, 0]), np.array([1.0, 1, 0, 1]), n_boot=10, n_perm=10)), 'A tiny test reports all six keys with a lift of 0.5, and the demo report says ship.')",
         "expected": "A tiny test reports all six keys with a lift of 0.5, and the demo report says ship.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          8
+        ]
       },
       {
         "title": "Accept plain lists",
-        "instruction": "Update `ab_report` so it first converts both groups to float arrays. Write the whole updated definition.",
+        "instruction": "Update `ab_report` so it first converts both groups to float arrays.",
         "code": "def ab_report(control, treatment, alpha=0.05, n_boot=2000, n_perm=2000, seed=0):\n    control, treatment = np.asarray(control, dtype=float), np.asarray(treatment, dtype=float)\n    lift = float(treatment.mean() - control.mean())\n    p_value = permutation_p(control, treatment, n_perm, seed)\n    ci = lift_ci(control, treatment, alpha, n_boot, seed)\n    return {\"control_rate\": float(control.mean()), \"treatment_rate\": float(treatment.mean()), \"lift\": lift,\n            \"ci\": ci, \"p_value\": p_value, \"decision\": decide(lift, p_value, alpha)}",
         "check": "test('Accept plain lists', lambda: (lambda _q: np.isclose(_q['lift'], 0.5) and type(_q['treatment_rate']) is float)(ab_report([0, 1, 0, 0], [1, 1, 0, 1], n_boot=10, n_perm=10)), 'Plain lists of 0s and 1s now work: the lift is 0.5.')",
         "expected": "Plain lists of 0s and 1s now work: the lift is 0.5.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          9
+        ]
       },
       {
         "title": "Reject an empty group",
-        "instruction": "Update `ab_report` so that, right after converting, it raises `ValueError` when either group is empty. Write the whole updated definition.",
+        "instruction": "Update `ab_report` so that, right after converting, it raises `ValueError` when either group is empty.",
         "code": "def ab_report(control, treatment, alpha=0.05, n_boot=2000, n_perm=2000, seed=0):\n    control, treatment = np.asarray(control, dtype=float), np.asarray(treatment, dtype=float)\n    if len(control) == 0 or len(treatment) == 0: raise ValueError(\"both groups need visitors\")\n    lift = float(treatment.mean() - control.mean())\n    p_value = permutation_p(control, treatment, n_perm, seed)\n    ci = lift_ci(control, treatment, alpha, n_boot, seed)\n    return {\"control_rate\": float(control.mean()), \"treatment_rate\": float(treatment.mean()), \"lift\": lift,\n            \"ci\": ci, \"p_value\": p_value, \"decision\": decide(lift, p_value, alpha)}",
         "check": "def _rejects():\n    try:\n        ab_report([], [1, 0])\n    except ValueError:\n        return True\n    return False\ndef _rejects2():\n    try:\n        ab_report([1, 0], [])\n    except ValueError:\n        return True\n    return False\ntest('Reject an empty group', lambda: _rejects() and _rejects2(), 'An empty control or treatment group raises ValueError.')",
         "expected": "An empty control or treatment group raises ValueError.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          10
+        ]
       },
       {
         "title": "Print the checkout report",

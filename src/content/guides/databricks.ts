@@ -100,7 +100,7 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "query += \" ORDER BY n_trips DESC, zone\"",
         "check": "test(\"Order the report\", lambda: [tuple(row) for row in spark.sql(query, args={\"city\": \"London\", \"min_trips\": 2}).collect()] == [(\"Camden\", 3, 15.0), (\"Soho\", 2, 15.25)], \"Camden comes before Soho.\")",
         "expected": "Camden comes before Soho.",
-        "reassurance": "The query produces the expected report. The wrapper will use each caller\u2019s DataFrame and arguments."
+        "reassurance": "The query produces the expected report. The wrapper will use each caller’s DataFrame and arguments."
       },
       {
         "title": "Expose the report function",
@@ -108,7 +108,10 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def zone_report(spark, trips, city, min_trips):\n    trips.createOrReplaceTempView(\"trips\")\n    return spark.sql(query, args={\"city\": city, \"min_trips\": min_trips})",
         "check": "",
         "expected": "London reports two zones at minimum 2; quoted city names remain values.",
-        "reassurance": "The complete checks cover quoted names, injection attempts, ties and empty results."
+        "reassurance": "The complete checks cover quoted names, injection attempts, ties and empty results.",
+        "startFrom": [
+          0
+        ]
       }
     ]
   },
@@ -206,7 +209,11 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def service_metrics(events):\n    grouped = events.groupBy(\"region\")\n    requests = F.count(\"*\").alias(\"requests\")\n    measured = F.count(\"latency_ms\").alias(\"measured\")\n    users = F.countDistinct(\"user_id\").alias(\"users\")\n    avg_latency = F.round(F.avg(\"latency_ms\"), 1).alias(\"avg_latency_ms\")\n    summary = grouped.agg(requests, measured, users, avg_latency)\n    return summary.orderBy(\"region\")",
         "check": "test(\"Sort and wrap in a function\", lambda: [tuple(row) for row in service_metrics(events).collect()] == [(\"EU\", 3, 2, 2, 120.0), (\"US\", 2, 2, 1, 80.0)], \"EU: 3 requests, 2 measured, 2 users, 120.0 ms. US: 2, 2, 1, 80.0 ms.\")",
         "expected": "EU: 3 requests, 2 measured, 2 users, 120.0 ms. US: 2, 2, 1, 80.0 ms.",
-        "reassurance": "The last check adds null-only groups and empty data."
+        "reassurance": "The last check adds null-only groups and empty data.",
+        "startFrom": [
+          0,
+          4
+        ]
       },
       {
         "title": "Inspect the regional report",
@@ -259,7 +266,10 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def append_events(current, batch):\n    valid = batch.filter(F.col(\"event_id\").isNotNull() & (F.trim(F.col(\"event_id\")) != \"\")).dropDuplicates([\"event_id\"])\n    unseen = valid.join(current.select(\"event_id\"), \"event_id\", \"left_anti\")\n    return current.unionByName(unseen)",
         "check": "",
         "expected": "Replaying the batch leaves only e1 and e2, with the original e1 payload.",
-        "reassurance": "The full check covers replay, reordered columns, blank IDs, empty inputs and unchanged sources."
+        "reassurance": "The full check covers replay, reordered columns, blank IDs, empty inputs and unchanged sources.",
+        "startFrom": [
+          2
+        ]
       }
     ]
   },
@@ -296,7 +306,11 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def expectation_reason(countries):\n    reason = F.when(F.col(\"user\").isNull() | (F.trim(F.col(\"user\")) == \"\"), \"missing_user\")\n    reason = reason.when(F.col(\"amount\").try_cast(\"double\").isNull(), \"bad_amount\")\n    reason = reason.when(F.col(\"country\").isNull() | ~F.col(\"country\").isin(countries), \"unknown_country\")\n    return reason",
         "check": "test(\"Build reasons for any country list\", lambda: orders.withColumn(\"reason\", expectation_reason([])).filter(F.col(\"reason\").isNull()).count() == 0, \"With no permitted countries, no row passes all rules.\")",
         "expected": "With no permitted countries, no row passes all rules.",
-        "reassurance": "The country list is now an input."
+        "reassurance": "The country list is now an input.",
+        "startFrom": [
+          0,
+          1
+        ]
       },
       {
         "title": "Tag and quarantine rows",
@@ -320,7 +334,10 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def apply_expectations(df, countries):\n    tagged = df.withColumn(\"reason\", expectation_reason(countries))\n    valid = tagged.filter(F.col(\"reason\").isNull()).drop(\"reason\").withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))\n    quarantine = tagged.filter(F.col(\"reason\").isNotNull())\n    return valid, quarantine",
         "check": "test(\"Split valid and quarantined rows\", lambda: apply_expectations(orders, COUNTRIES)[0].count() == 2 and apply_expectations(orders, COUNTRIES)[1].count() == 4, \"Two valid rows and four quarantined rows.\")",
         "expected": "Two valid rows and four quarantined rows.",
-        "reassurance": "The full checks inspect reasons, schemas and raw values."
+        "reassurance": "The full checks inspect reasons, schemas and raw values.",
+        "startFrom": [
+          5
+        ]
       },
       {
         "title": "Inspect both outputs",
@@ -381,23 +398,47 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def silver_frame(bronze):\n    named = bronze.filter(F.col(\"user\").isNotNull() & (F.trim(F.col(\"user\")) != \"\"))\n    typed = named.withColumn(\"amount\", F.col(\"amount\").try_cast(\"double\"))\n    priced = typed.filter(F.col(\"amount\").isNotNull())\n    return priced.dropDuplicates([\"order_id\"])\nsilver = silver_frame(bronze)",
         "check": "test(\"Clean silver rows\", lambda: silver.count() == 4 and dict(silver.dtypes)[\"amount\"] == \"double\", \"Four valid unique orders with double amounts.\")",
         "expected": "Four valid unique orders with double amounts.",
+        "reassurance": "",
+        "startFrom": [
+          3,
+          4
+        ]
+      },
+      {
+        "title": "Define the revenue column",
+        "instruction": "Create `revenue`: the sum of `amount` with `F.sum`, rounded to two decimals and named `revenue`. It is a column expression, so nothing is computed until a frame uses it.",
+        "code": "revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")",
+        "check": "test(\"Define the revenue column\", lambda: silver.agg(revenue).collect()[0][\"revenue\"] == 67.0, \"Applied to all of silver, revenue totals 67.0.\")",
+        "expected": "Applied to all of silver, revenue totals 67.0.",
         "reassurance": ""
       },
       {
         "title": "Total revenue per city",
-        "instruction": "Create `revenue` (sum of `amount` with `F.sum`, rounded to two decimals, named `revenue`) and `orders` (row count named `orders`). Group `silver` by `city` and apply both into `totals`.",
-        "code": "revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")\norders = F.count(\"*\").alias(\"orders\")\ntotals = silver.groupBy(\"city\").agg(revenue, orders)",
+        "instruction": "Create `orders` (row count named `orders`). Group `silver` by `city` and apply your `revenue` and `orders` into `totals`.",
+        "code": "orders = F.count(\"*\").alias(\"orders\")\ntotals = silver.groupBy(\"city\").agg(revenue, orders)",
         "check": "test(\"Total revenue per city\", lambda: {row[\"city\"]: (row[\"revenue\"], row[\"orders\"]) for row in totals.collect()} == {\"NYC\": (50.0, 2), \"LA\": (12.0, 1), \"SF\": (5.0, 1)}, \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
         "expected": "NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.",
         "reassurance": ""
       },
       {
+        "title": "Sort by revenue",
+        "instruction": "Create `ranked` from `totals`, ordered by decreasing `revenue`. Use `F.desc` to mark the column as descending.",
+        "code": "ranked = totals.orderBy(F.desc(\"revenue\"))",
+        "check": "test(\"Sort by revenue\", lambda: [row[\"city\"] for row in ranked.collect()] == [\"NYC\", \"LA\", \"SF\"], \"ranked lists NYC, LA, SF.\")",
+        "expected": "ranked lists NYC, LA, SF.",
+        "reassurance": ""
+      },
+      {
         "title": "Aggregate gold revenue",
-        "instruction": "Define `gold_frame(silver)`: repeat your three lines inside it and return `totals` ordered by decreasing revenue (`F.desc`) with `city` breaking ties. Then store `gold_frame(silver)` in `gold`.",
+        "instruction": "Define `gold_frame(silver)`: repeat your `revenue`, `orders` and `totals` lines inside it and return `totals` ordered by decreasing revenue (`F.desc`) with `city` breaking ties. Then store `gold_frame(silver)` in `gold`.",
         "code": "def gold_frame(silver):\n    revenue = F.round(F.sum(\"amount\"), 2).alias(\"revenue\")\n    orders = F.count(\"*\").alias(\"orders\")\n    totals = silver.groupBy(\"city\").agg(revenue, orders)\n    return totals.orderBy(F.desc(\"revenue\"), \"city\")\ngold = gold_frame(silver)",
         "check": "test(\"Aggregate gold revenue\", lambda: [tuple(row) for row in gold.collect()] == [(\"NYC\", 50.0, 2), (\"LA\", 12.0, 1), (\"SF\", 5.0, 1)], \"NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.\")",
         "expected": "NYC 50.0 / 2 orders; LA 12.0 / 1; SF 5.0 / 1.",
-        "reassurance": ""
+        "reassurance": "",
+        "startFrom": [
+          6,
+          7
+        ]
       },
       {
         "title": "Save all three layers",
@@ -413,8 +454,11 @@ export const DATABRICKS_GUIDES: Record<string, CodingGuide> = {
         "code": "def run_pipeline(spark, raw_rows):\n    bronze = bronze_frame(spark, raw_rows)\n    save_layer(bronze, \"main.shop.bronze\")\n    silver = silver_frame(bronze)\n    save_layer(silver, \"main.shop.silver\")\n    gold = gold_frame(silver)\n    save_layer(gold, \"main.shop.gold_revenue\")\n    return gold",
         "check": "",
         "expected": "Three Delta tables are saved and the gold DataFrame is returned.",
-        "reassurance": "The complete boss checks change the data, rerun the pipeline and finish with an empty batch."
+        "reassurance": "The complete boss checks change the data, rerun the pipeline and finish with an empty batch.",
+        "startFrom": [
+          10
+        ]
       }
     ]
   }
-};
+}

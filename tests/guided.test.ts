@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LESSONS } from '../src/content'
-import { CODING_GUIDES, guidedCheck, guidedSource } from '../src/content/guided'
+import { CODING_GUIDES, guidedCheck, guidedSource, seedDraft } from '../src/content/guided'
 import { allPassed } from '../src/engine/outputText'
 import { sanitize } from '../src/store/model'
 import { run } from './pyodide-node'
@@ -28,6 +28,39 @@ it('provides a guided path with verification for every coding lesson', () => {
       expect(guidedCheck(guide, index, lesson.check), `${lesson.id} step ${index + 1}`).toContain('test(')
     }
   }
+})
+
+const lines = (code: string) => code.split('\n').map(line => line.trim()).filter(Boolean)
+
+it('opens wrap and update steps on the learner\'s own code instead of asking them to retype it', () => {
+  for (const lesson of codingLessons) {
+    const steps = CODING_GUIDES[lesson.id].steps
+    const written = new Set<string>()
+    for (const [index, step] of steps.entries()) {
+      const mine = lines(step.code)
+      const from = step.startFrom ?? []
+      expect([...from].sort((a, b) => a - b), `${lesson.id} step ${index + 1}`).toEqual([...new Set(from)])
+      for (const earlier of from) {
+        expect(earlier, `${lesson.id} step ${index + 1} starts from an earlier step`).toBeLessThan(index)
+        expect(lines(steps[earlier].code).some(line => mine.includes(line)), `${lesson.id} step ${index + 1} builds on step ${earlier + 1}`).toBe(true)
+      }
+      const seeded = new Set(from.flatMap(earlier => lines(steps[earlier].code)))
+      const retyped = mine.filter(line => written.has(line) && !seeded.has(line))
+      expect(retyped.length, `${lesson.id} step ${index + 1} retypes ${JSON.stringify(retyped)}`).toBeLessThanOrEqual(3)
+      mine.forEach(line => written.add(line))
+    }
+  }
+})
+
+it('seeds a step only with the learner\'s drafts, never the reference code', () => {
+  const guide = { steps: [
+    { title: 'a', instruction: 'a', code: 'x = 1', check: '', expected: 'a', reassurance: '' },
+    { title: 'b', instruction: 'b', code: 'y = 2', check: '', expected: 'b', reassurance: '' },
+    { title: 'c', instruction: 'c', code: 'def f():\n    x = 1\n    y = 2', check: '', expected: 'c', reassurance: '', startFrom: [0, 1] },
+  ] }
+  expect(seedDraft(guide, ['x = 10  ', 'y = 20'], 2)).toBe('x = 10\ny = 20')
+  expect(seedDraft(guide, [], 2)).toBe('')
+  expect(seedDraft(guide, ['x = 10'], 1)).toBe('')
 })
 
 it('renders goals and verification without showing reference implementation code', () => {
